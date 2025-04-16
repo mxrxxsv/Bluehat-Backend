@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import workers from "../Objects/workers";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
+import profile from '../assets/worker.png';
 
 const rainbowColors = [
   "#FF595E",
@@ -94,7 +95,7 @@ const FindWorker = () => {
   };
 
   const isMouseOver = (e) => {
-    e.currentTarget.style.backgroundColor = "#f0f4ff";
+    e.currentTarget.style.backgroundColor = "#f4f6f6";
   };
 
   const isMouseOut = (e) => {
@@ -111,10 +112,10 @@ const FindWorker = () => {
   };
 
   return (
-    <div className="p-4 max-w-7xl mx-auto">
-      <div className="flex gap-6">
+    <div className="max-w-5xl mx-auto">
+      <div className="flex gap-4">
         {/* LEFT PANEL - Skills by Category */}
-        <div className="w-64 border-r border-gray-200 pr-4">
+        <div className="w-50 border-r border-gray-200 pr-4">
           <h3 className="text-lg font-bold mb-4">Filter by Skill</h3>
           <div className="flex flex-col gap-4">
             {skillCategories.map((category) => (
@@ -250,9 +251,10 @@ const FindWorker = () => {
                     <div className="flex flex-col justify-between h-full mr-4" />
                     <div className="flex items-start gap-4 flex-1">
                       <img
-                        src={worker.profileImage || "/default-profile.png"}
+                        // src={worker.profileImage || "../assets/worker.png"}
+                        src={profile}
                         alt={worker.name}
-                        className="w-24 h-24 rounded-full object-cover"
+                        className="w-24 h-24 rounded-full object-cover border pt-3"
                       />
                       <div className="flex flex-col justify-between h-full">
                         <h2 className="text-xl font-semibold text-left">
