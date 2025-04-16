@@ -14,4 +14,6 @@ const advertisement = [
         description: "Dreaming of becoming a certified caregiver? Da Vinci is now accepting enrollees for a TESDA-Accredited Caregiving NCII Scholarship with FREE tuition!"
     }
 
-]
+];
+
+export default advertisement;

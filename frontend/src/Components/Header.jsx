@@ -99,15 +99,17 @@ const Header = () => {
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
 
           <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
+            <Link to="/chat">
+              <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
+            </Link>
 
-            <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
             <Bell
               className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
               onClick={handleNotificationClick} // Handle Bell icon click
             />
 
             {showNotifications && (
-              <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-10">
+              <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-90">
                 <div className="p-4 text-sm text-gray-700">
                   <p className="font-semibold mb-2">Notifications</p>
                   <ul className="space-y-2">
@@ -169,7 +171,7 @@ const Header = () => {
               <Link to="/ads" className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
                 ? "text-sky-500"
                 : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"}`}
-                >Advertisement</Link>
+              >Advertisement</Link>
             </li>
             {/* <li>
               <a href="#" className="block py-2 px-3 text-neutral-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500 md:p-0 ">About Us</a>

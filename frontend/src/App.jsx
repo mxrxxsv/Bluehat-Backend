@@ -8,6 +8,7 @@ import AdsPage from "./Components/AdsPage";
 import WorkerPortfolio from "./Components/WorkerPortfolio";
 import JobDetail from "./Components/JobDetail";
 import Header from "./Components/Header";
+import ChatPage from "./Components/ChatPage";
 import "./App.css";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/ads" element={<AdsPage />} />
         <Route path="/worker/:id" element={<WorkerPortfolio />} />
+        <Route path="/chat" element={<ChatPage />} />
       </Routes>
     </>
   );
