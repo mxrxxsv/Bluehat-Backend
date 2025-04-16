@@ -104,7 +104,7 @@ const ChatPage = () => {
             <div className="flex flex-row md:absolute">
                 <p className="text-[32px] text-left font-medium text-sky-500  pl-6 md:pl-13">Message</p>
 
-                <button className="ml-4 md:ml-260 p-3 bg-sky-500 rounded-[12px] text-[#f6f6f6] cursor-pointer shadow-sm z-30"
+                <button className="ml-4 md:ml-300 p-3 bg-sky-500 rounded-[12px] text-[#f6f6f6] cursor-pointer shadow-sm z-30"
                     onClick={openModal}
                 >Hire Now</button>
             </div>
@@ -201,7 +201,7 @@ const ChatPage = () => {
 
                                 <button
                                     onClick={() => handleToggleDropdown(index)}
-                                    className="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 rounded-lg"
+                                    className="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 rounded-lg cursor-pointer"
                                     type="button"
                                 >
                                     <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 4 15">

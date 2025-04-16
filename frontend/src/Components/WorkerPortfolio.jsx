@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import workers from "../Objects/workers";
+import profile from '../assets/worker.png';
 
 const WorkerPortfolio = () => {
   const { id } = useParams();
@@ -24,7 +25,8 @@ const WorkerPortfolio = () => {
       {/* Top Section: Profile Picture and Basic Info */}
       <div className="flex items-start gap-6">
         <img
-          src={worker.profileImage || "/default-profile.png"}
+          // src={worker.profileImage || "/default-profile.png"}
+          src={profile}
           alt={worker.name}
           className="w-32 h-32 object-cover rounded-md border"
         />
@@ -96,7 +98,8 @@ const WorkerPortfolio = () => {
               className="flex items-start gap-4 border p-4 rounded-md text-left"
             >
               <img
-                src={review.clientImage || "/default-client.png"}
+                // src={review.clientImage || "/default-client.png"}
+                src={profile}
                 alt={review.clientName}
                 className="w-12 h-12 rounded-full object-cover border"
               />
