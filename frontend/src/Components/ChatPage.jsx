@@ -185,7 +185,7 @@ const ChatPage = () => {
                     <div className="h-[300px] md:h-[400px] overflow-y-auto px-2">
 
                         {messages.map((msg, index) => (
-                            <div key={index} className={`flex items-start gap-2.5 mb-4 relative ${msg.sender === 'me' ? 'justify-end' : ''}`}>
+                            <div key={index} className={`flex items-start gap-2.5 mb-4 relative ${msg.sender === 'me' ? 'justify-end text-left' : ''}`}>
                                 <div className="flex flex-col gap-1 w-full max-w-[320px]">
                                     <div className={`flex items-center space-x-2 rtl:space-x-reverse ${msg.sender === 'me' ? 'justify-end' : ''}`}>
                                         <span className={`text-sm font-semibold ${msg.sender === 'me' ? 'text-black' : 'text-gray-900'}`}>
