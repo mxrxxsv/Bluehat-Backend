@@ -52,14 +52,7 @@ const ChatPage = () => {
         {
             name: 'You',
             time: '12:23',
-            content: 'Hi',
-            status: 'Sent',
-            sender: "me",
-        },
-        {
-            name: 'You',
-            time: '12:23',
-            content: 'Sure! I’m available on April 12.',
+            content: 'Hi, sure! I’m available on April 12.',
             status: 'Sent',
             sender: "me",
         },
@@ -201,8 +194,8 @@ const ChatPage = () => {
                                     </span>
                                     <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.time}</span>
                                 </div>
-                                <div className={`flex flex-col leading-1.5 p-4 border-gray-200 ${msg.sender === 'me' ? 'bg-gray-200 rounded-s-xl rounded-ee-xl' : 'bg-sky-500 rounded-e-xl rounded-es-xl'}`}>
-                                    <p className={`text-sm font-normal text-left ${msg.sender === 'me' ? 'text-gray-900 dark:text-black' : 'text-white'}`}>{msg.content}</p>
+                                <div className={`flex flex-col leading-1.5 p-4 border-gray-200 ${msg.sender === 'me' ? 'bg-sky-500 rounded-s-xl rounded-ee-xl' : 'bg-gray-200 rounded-e-xl rounded-es-xl'}`}>
+                                    <p className={`text-sm font-normal text-left ${msg.sender === 'me' ? 'text-white' : 'text-gray-900'}`}>{msg.content}</p>
                                 </div>
                                 <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.status}</span>
                             </div>
@@ -218,7 +211,7 @@ const ChatPage = () => {
                             </button>
 
                             {dropdownOpen === index && (
-                                <div ref={dropdownRef} className={`absolute ${msg.sender === 'me' ? 'md:left-130' : ''} right-10 top-5 md:right-130 md:top-5 z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600`}>
+                                <div ref={dropdownRef} className={`absolute ${msg.sender === 'me' ? 'md:left-170' : ''} right-10 top-5 md:right-170 md:top-5 z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600`}>
                                     <ul className="py-2 text-sm text-gray-700 dark:text-gray-200">
                                         {['Reply', 'Forward', 'Copy', 'Report', 'Delete'].map((action, i) => (
                                             <li key={i}>
