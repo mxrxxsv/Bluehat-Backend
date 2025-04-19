@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import contact from "../Objects/contacts.js";
 
 const ChatPage = () => {
 
@@ -129,24 +130,31 @@ const ChatPage = () => {
             <aside
                 ref={sidebarRef}
                 id="default-sidebar"
-                className={`absolute top-50 md:top-48 left-0 z-40 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] md:opacity-100 opacity-98 shadow-md ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full' 
+                className={`absolute top-50 md:top-48 left-0 z-40 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] md:opacity-100 opacity-98 shadow-md ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     } sm:translate-x-0 overflow-clip`}
                 aria-label="Sidebar"
             >
-                <div class="h-full px-3 overflow-y-auto">
-                    <ul class="space-y-2 font-medium">
+                <div className="h-full px-3 overflow-y-auto">
+                    <ul className="space-y-2 font-medium">
 
-                        <li>
-                            <a href="#" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-dark hover:bg-blue-200 group">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                </svg>
+                        {contact.map((cont) => {
+                            return (
+                                <li>
+                                    <a href="#" className="flex items-center p-2 text-gray-900 rounded-lg dark:text-dark hover:bg-[#f0f0f0] hover:shadow-sm group">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                        </svg>
 
-                                <span class="flex-1 ms-3 whitespace-nowrap">Bonnie Green</span>
-                                <span class="inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">2</span>
-                            </a>
-                        </li>
-                        <li>
+                                        <span className="flex-1 ms-3 whitespace-nowrap text-left">{cont.name}</span>
+                                        <span className={`inline-flex items-center justify-center w-3 h-3 p-3 ms-3 text-sm font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300 ${cont.inbox ? '': 'hidden'} `} >{cont.inbox ? cont.inbox : null}</span>
+                                    </a>
+                                </li>
+                            )
+                        })}
+
+
+
+                        {/* <li>
                             <a href="#" class="flex items-center p-2 text-gray-900 rounded-lg dark:text-dark hover:bg-blue-200 group">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -172,7 +180,7 @@ const ChatPage = () => {
 
                                 <span class="flex-1 ms-3 whitespace-nowrap">Paul</span>
                             </a>
-                        </li>
+                        </li> */}
 
 
                     </ul>
@@ -181,62 +189,62 @@ const ChatPage = () => {
 
 
             <div class="p-4 sm:ml-64 overflow-hidden">
-          
-                    <div className="h-[300px] md:h-[400px] overflow-y-auto px-2">
 
-                        {messages.map((msg, index) => (
-                            <div key={index} className={`flex items-start gap-2.5 mb-4 relative ${msg.sender === 'me' ? 'justify-end text-left' : ''}`}>
-                                <div className="flex flex-col gap-1 w-full max-w-[320px]">
-                                    <div className={`flex items-center space-x-2 rtl:space-x-reverse ${msg.sender === 'me' ? 'justify-end' : ''}`}>
-                                        <span className={`text-sm font-semibold ${msg.sender === 'me' ? 'text-black' : 'text-gray-900'}`}>
-                                            {msg.sender === 'me' ? 'You' : msg.name}
-                                        </span>
-                                        <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.time}</span>
-                                    </div>
-                                    <div className={`flex flex-col leading-1.5 p-4 border-gray-200 ${msg.sender === 'me' ? 'bg-gray-200 rounded-s-xl rounded-ee-xl' : 'bg-sky-500 rounded-e-xl rounded-es-xl'}`}>
-                                        <p className={`text-sm font-normal text-left ${msg.sender === 'me' ? 'text-gray-900 dark:text-black' : 'text-white'}`}>{msg.content}</p>
-                                    </div>
-                                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.status}</span>
+                <div className="h-[300px] md:h-[400px] overflow-y-auto px-2">
+
+                    {messages.map((msg, index) => (
+                        <div key={index} className={`flex items-start gap-2.5 mb-4 relative ${msg.sender === 'me' ? 'justify-end text-left' : ''}`}>
+                            <div className="flex flex-col gap-1 w-full max-w-[320px]">
+                                <div className={`flex items-center space-x-2 rtl:space-x-reverse ${msg.sender === 'me' ? 'justify-end' : ''}`}>
+                                    <span className={`text-sm font-semibold ${msg.sender === 'me' ? 'text-black' : 'text-gray-900'}`}>
+                                        {msg.sender === 'me' ? 'You' : msg.name}
+                                    </span>
+                                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.time}</span>
                                 </div>
-
-                                <button
-                                    onClick={() => handleToggleDropdown(index)}
-                                    className="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 rounded-lg cursor-pointer"
-                                    type="button"
-                                >
-                                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 4 15">
-                                        <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                                    </svg>
-                                </button>
-
-                                {dropdownOpen === index && (
-                                    <div ref={dropdownRef} className={`absolute ${msg.sender === 'me' ? 'md:left-130' : ''} right-10 top-5 md:right-130 md:top-5 z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600`}>
-                                        <ul className="py-2 text-sm text-gray-700 dark:text-gray-200">
-                                            {['Reply', 'Forward', 'Copy', 'Report', 'Delete'].map((action, i) => (
-                                                <li key={i}>
-                                                    <button
-                                                        onClick={() => {
-                                                            console.log(`${action} clicked for message index ${index}`);
-                                                            setDropdownOpen(null);
-                                                        }}
-                                                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                                                    >
-                                                        {action}
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
+                                <div className={`flex flex-col leading-1.5 p-4 border-gray-200 ${msg.sender === 'me' ? 'bg-gray-200 rounded-s-xl rounded-ee-xl' : 'bg-sky-500 rounded-e-xl rounded-es-xl'}`}>
+                                    <p className={`text-sm font-normal text-left ${msg.sender === 'me' ? 'text-gray-900 dark:text-black' : 'text-white'}`}>{msg.content}</p>
+                                </div>
+                                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{msg.status}</span>
                             </div>
-                        ))}
+
+                            <button
+                                onClick={() => handleToggleDropdown(index)}
+                                className="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 rounded-lg cursor-pointer"
+                                type="button"
+                            >
+                                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 4 15">
+                                    <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                                </svg>
+                            </button>
+
+                            {dropdownOpen === index && (
+                                <div ref={dropdownRef} className={`absolute ${msg.sender === 'me' ? 'md:left-130' : ''} right-10 top-5 md:right-130 md:top-5 z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600`}>
+                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-200">
+                                        {['Reply', 'Forward', 'Copy', 'Report', 'Delete'].map((action, i) => (
+                                            <li key={i}>
+                                                <button
+                                                    onClick={() => {
+                                                        console.log(`${action} clicked for message index ${index}`);
+                                                        setDropdownOpen(null);
+                                                    }}
+                                                    className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                                                >
+                                                    {action}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    ))}
 
 
-                        {/*  */}
+                    {/*  */}
 
                 </div>
 
-                <div className="bg-white h-16 md:w-240 p-2 m-2 rounded-[30px] shadow-md md:mx-0">
+                <div className="bg-white h-16 md:w-240 p-2 m-2 rounded-[30px] shadow-md md:mx-0 md:mt-12">
 
                     <form class="flex items-center max-w-sm">
                         <div class="relative w-full">

@@ -160,7 +160,7 @@ const FindWorker = () => {
         {/* RIGHT PANEL - Search and Results */}
         <div className="flex-1 mx-4">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col gap-4">
             {/* Search Bar */}
             <div className="relative w-full">
               <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
