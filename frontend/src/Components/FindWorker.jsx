@@ -167,7 +167,7 @@ const FindWorker = () => {
               <input
                 type="text"
                 placeholder="Search by name, skill, or location"
-                className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-[20px] w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-[20px] w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
                 value={filtering.search}
                 onChange={(e) =>
                   setFiltering((prev) => ({ ...prev, search: e.target.value }))
@@ -209,7 +209,7 @@ const FindWorker = () => {
               </select>
 
               <select
-                className="w-48 h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm cursor-pointer"
+                className="w-48 h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
                 value={filtering.priceRange}
                 onChange={(e) =>
                   setFiltering((prev) => ({
