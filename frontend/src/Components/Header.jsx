@@ -109,7 +109,7 @@ const Header = () => {
             />
 
             {showNotifications && (
-              <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-90">
+              <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-100">
                 <div className="p-4 text-sm text-gray-700">
                   <p className="font-semibold mb-2">Notifications</p>
                   <ul className="space-y-2">
