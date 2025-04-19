@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import workers from "../Objects/workers";
 import profile from '../assets/worker.png';
+import education from '../Objects/educations'
+import certificates from '../Objects/certificates'
 
 const WorkerPortfolio = () => {
   const { id } = useParams();
@@ -15,9 +17,9 @@ const WorkerPortfolio = () => {
   const averageRating =
     worker.reviews.length > 0
       ? (
-          worker.reviews.reduce((sum, r) => sum + r.rating, 0) /
-          worker.reviews.length
-        ).toFixed(1)
+        worker.reviews.reduce((sum, r) => sum + r.rating, 0) /
+        worker.reviews.length
+      ).toFixed(1)
       : "No ratings";
 
   return (
@@ -33,7 +35,11 @@ const WorkerPortfolio = () => {
         <div className="flex-1 space-y-1 text-left">
           <h1 className="text-3xl font-bold">{worker.name}</h1>
           <p className="text-gray-700">{worker.description}</p>
-          <p className="text-sm text-gray-500">{worker.location}</p>
+          <p className="text-sm text-gray-500 flex flex-row"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+          </svg>
+            {worker.location}</p>
           <p className="text-sm text-gray-500">
             Age: {worker.age} •  Gender: {worker.gender}
           </p>
@@ -80,6 +86,48 @@ const WorkerPortfolio = () => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Certificate */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">
+          Certificates
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {certificates.map((cert, index) => (
+            <div key={index} className="shadow p-2 rounded-md bg-white shadow-sm">
+              <img
+                src={cert.image}
+                alt={cert.title || `Certificate ${index + 1}`}
+                className="w-full h-auto rounded-md"
+              />
+              {cert.title && (
+                <p className="text-sm text-center mt-2 text-gray-700 font-bold">
+                  {cert.title}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+
+      {/* Education */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">
+          Education
+        </h2>
+        <div className="space-y-4">
+          {education.map((edu, index) => (
+            <div key={index} className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm">
+              <h3 className="font-semibold text-lg">{edu.school}</h3>
+              <p className="text-sm text-gray-500">
+                {edu.years} • {edu.attainment}
+              </p>
+            </div>
+          ))}
+        </div>
+
       </div>
 
       {/* Reviews Section */}
