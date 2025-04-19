@@ -10,13 +10,15 @@ import JobDetail from "./Components/JobDetail";
 import Header from "./Components/Header";
 import ChatPage from "./Components/ChatPage";
 import "./App.css";
+import HomePage from "./Components/HomePage";
 
 function App() {
   return (
     <>
       <Header />
       <Routes>
-        <Route path="/find-workers" element={<FindWorker />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/find-work" element={<FindWork />} />
         <Route path="/job/:id" element={<JobDetail />} />
         <Route path="/find-workers" element={<FindWorker />} />
@@ -24,6 +26,7 @@ function App() {
         <Route path="/worker/:id" element={<WorkerPortfolio />} />
         <Route path="/chat" element={<ChatPage />} />
       </Routes>
+
     </>
   );
 }
