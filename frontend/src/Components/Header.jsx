@@ -91,9 +91,9 @@ const Header = () => {
     // </header>
 
 
-    <header className="w-full z-20 top-0 start-0 pt-4">
+    <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
-        <Link to="/bluehat" className="flex items-center space-x-3 rtl:space-x-reverse">
+        <Link to="/find-workers" className="flex items-center space-x-3 rtl:space-x-reverse">
           <img src={logo} className="h-15 w-28 md:h-20 md:w-40" alt="Flowbite Logo" />
         </Link>
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
@@ -129,7 +129,7 @@ const Header = () => {
 
 
             <span className="pl-4 text-gray-700 text-[16px] font-medium">
-              Chlyde
+              User
             </span>
             <img
               src={profile}

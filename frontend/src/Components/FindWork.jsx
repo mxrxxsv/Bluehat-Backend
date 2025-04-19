@@ -25,7 +25,7 @@ const FindWork = () => {
   });
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
+    <div className="max-w-5xl mx-auto p-4 mt-30">
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input

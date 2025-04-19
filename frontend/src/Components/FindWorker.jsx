@@ -112,10 +112,10 @@ const FindWorker = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto mt-30">
       <div className="flex gap-4">
         {/* LEFT PANEL - Skills by Category */}
-        <div className="w-50 border-r border-gray-200 pr-4">
+        <div className="w-50 border-r border-gray-200 pr-4 hidden md:block">
           <h3 className="text-lg font-bold mb-4">Filter by Skill</h3>
           <div className="flex flex-col gap-4">
             {skillCategories.map((category) => (
@@ -158,7 +158,7 @@ const FindWorker = () => {
         </div>
 
         {/* RIGHT PANEL - Search and Results */}
-        <div className="flex-1">
+        <div className="flex-1 mx-4">
           {/* Search and Filters */}
           <div className="flex flex-col gap-4 mb-6">
             {/* Search Bar */}
@@ -295,7 +295,7 @@ const FindWorker = () => {
                         e.preventDefault();
                         handleBookmarkClick(worker.id);
                       }}
-                      className="flex items-center gap-1 absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      className="flex items-center gap-1 absolute bottom-2 md:bottom-4 right-4 bg-blue-500 text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-600 shadow-md cursor-pointer"
                     >
                       {isBookmark[worker.id] ? (
                         <BookmarkCheck size={16} />

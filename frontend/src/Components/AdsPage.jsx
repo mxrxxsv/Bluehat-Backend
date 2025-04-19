@@ -3,7 +3,7 @@ import adPost from "../Objects/advertisement.js";
 const AdsPage = () => {
   return (
     <>
-      <div className='mt-10 ml-5 md:mt-10 md:ml-30 w-75 md:w-95 mb-8'>
+      <div className='mt-30 ml-5 md:mt-40 md:ml-30 w-75 md:w-95 mb-8'>
         <h1 className='text-[24px] text-left md:text-[32px] font-medium text-[#252525] opacity-80' >Free Government Training
           and Certification</h1>
       </div>

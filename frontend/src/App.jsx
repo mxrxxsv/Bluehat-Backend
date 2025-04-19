@@ -16,7 +16,7 @@ function App() {
     <>
       <Header />
       <Routes>
-        <Route path="/" element={<FindWorker />} />
+        <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
         <Route path="/job/:id" element={<JobDetail />} />
         <Route path="/find-workers" element={<FindWorker />} />

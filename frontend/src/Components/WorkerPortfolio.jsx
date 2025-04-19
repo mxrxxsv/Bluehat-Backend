@@ -21,7 +21,7 @@ const WorkerPortfolio = () => {
       : "No ratings";
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto">
+    <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30">
       {/* Top Section: Profile Picture and Basic Info */}
       <div className="flex items-start gap-6">
         <img
