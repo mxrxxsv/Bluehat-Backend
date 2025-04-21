@@ -30,7 +30,7 @@ const Header = () => {
 
 
   const authPages = ["/home", "/"];
-  const opPages = ["/signup", "login"];
+  const opPages = ["/signup", "/login"];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
   const hideOp = opPages.includes(currentPath);
@@ -116,13 +116,15 @@ const Header = () => {
 
               {showAuthButtons ? (
                 <>
-                  <Link to="/bluehat/workerpage" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-xs hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md'>Log in</Link>
-                  <Link
-                    to="/signup"
-                    className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-4 py-2 shadow-xs hover:shadow-md"
-                  >
-                    Sign up
-                  </Link>
+                  <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
+                    <Link to="/login" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-xs hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md'>Log in</Link>
+                    <Link
+                      to="/signup"
+                      className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-xs hover:shadow-md"
+                    >
+                      Sign up
+                    </Link>
+                  </div>
                 </>
               ) : (
                 <>
