@@ -2,15 +2,16 @@ import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import { Routes, Route } from "react-router-dom";
-import FindWorker from "./Components/FindWorker";
-import FindWork from "./Components/FindWork";
-import AdsPage from "./Components/AdsPage";
-import WorkerPortfolio from "./Components/WorkerPortfolio";
-import JobDetail from "./Components/JobDetail";
-import Header from "./Components/Header";
-import ChatPage from "./Components/ChatPage";
+import FindWorker from "./Pages/FindWorker";
+import FindWork from "./Pages/FindWork";
+import AdsPage from "./Pages/AdsPage";
+import WorkerPortfolio from "./Pages/WorkerPortfolio";
+import JobDetail from "./Pages/JobDetail";
+import Header from "./Pages/Header";
+import ChatPage from "./Pages/ChatPage";
 import "./App.css";
-import HomePage from "./Components/HomePage";
+import HomePage from "./Pages/HomePage";
+import Signup from "./Pages/Signup";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/ads" element={<AdsPage />} />
         <Route path="/worker/:id" element={<WorkerPortfolio />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/signup" element={<Signup />} />
       </Routes>
 
     </>
