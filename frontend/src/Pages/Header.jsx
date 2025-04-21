@@ -30,7 +30,7 @@ const Header = () => {
 
 
   const authPages = ["/home", "/"];
-  const opPages = ["/signup", "/login"];
+  const opPages = ["/signup", "/login", "/workersignup", "/clientsignup"];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
   const hideOp = opPages.includes(currentPath);

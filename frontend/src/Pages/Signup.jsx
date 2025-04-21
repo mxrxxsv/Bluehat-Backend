@@ -12,14 +12,14 @@ const Signup = () => {
 
             <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-14 px-4">
 
-                <Link to="" className="w-80 h-50 p-6 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg hover:border-[#55b3f3] hover:border-1">
+                <Link to="/clientsignup" className="w-80 h-50 p-6 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg hover:border-[#55b3f3] hover:border-1">
                     <img className="w-10 h-10 text-gray-500 mx-auto mb-3" src={client} alt="client" />
                     <p className="text-[22px] font-medium text-gray-900">
                         I’m a client, hiring for a project
                     </p>
                 </Link>
 
-                <Link to="" className="w-80 h-50 p-6 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg hover:border-[#55b3f3] hover:border-1">
+                <Link to="/workersignup" className="w-80 h-50 p-6 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg hover:border-[#55b3f3] hover:border-1">
                     <img className="w-10 h-10 text-gray-500 mx-auto mb-3" src={worker} alt="worker" />
                     <p className="text-[22px] font-medium text-gray-900">
                         I’m a freelancer, looking for work
