@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import workers from "../Objects/workers";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
+import profile from '../assets/worker.png';
 
 const rainbowColors = [
   "#FF595E",
@@ -94,7 +95,7 @@ const FindWorker = () => {
   };
 
   const isMouseOver = (e) => {
-    e.currentTarget.style.backgroundColor = "#f0f4ff";
+    e.currentTarget.style.backgroundColor = "#f4f6f6";
   };
 
   const isMouseOut = (e) => {
@@ -111,16 +112,16 @@ const FindWorker = () => {
   };
 
   return (
-    <div className="p-4 max-w-7xl mx-auto">
-      <div className="flex gap-6">
+    <div className="max-w-5xl mx-auto mt-30">
+      <div className="flex gap-4">
         {/* LEFT PANEL - Skills by Category */}
-        <div className="w-64 border-r border-gray-200 pr-4">
-          <h3 className="text-lg font-bold mb-4">Filter by Skill</h3>
-          <div className="flex flex-col gap-4">
+        <div className="w-50 border-r border-gray-200 pr-4 hidden md:block">
+          <h3 className="text-lg font-bold mb-4 text-[#252525]">Filter by Skill</h3>
+          <div className="flex flex-col gap-2">
             {skillCategories.map((category) => (
               <div key={category.id}>
                 <div
-                  className="flex items-center justify-between cursor-pointer mb-2"
+                  className="flex items-center p-2 justify-between cursor-pointer mb-2 hover:shadow-md hover:bg-white hover:rounded-[12px]"
                   onClick={() => handleCollapseToggle(category.id)}
                 >
                   <h4 className="text-sm font-semibold text-gray-700">
@@ -139,10 +140,10 @@ const FindWorker = () => {
                       .map((skill) => (
                         <button
                           key={skill.id}
-                          className={`px-3 py-1 text-xs rounded-full border ${
+                          className={`px-3 py-1 text-xs rounded-full border cursor-pointer ${
                             filtering.selectedSkills.includes(skill.name)
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-blue-100"
+                              ? "bg-blue-400 text-white"
+                              : "bg-gray-100 text-gray-700 hover:text-white hover:bg-blue-400"
                           }`}
                           onClick={() => handleSkillToggle(skill.name)} // Handle multiple selection
                         >
@@ -157,16 +158,16 @@ const FindWorker = () => {
         </div>
 
         {/* RIGHT PANEL - Search and Results */}
-        <div className="flex-1">
+        <div className="flex-1 mx-4 mt-1">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col gap-4">
             {/* Search Bar */}
             <div className="relative w-full">
-              <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search by name, skill, or location"
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-[20px] w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
                 value={filtering.search}
                 onChange={(e) =>
                   setFiltering((prev) => ({ ...prev, search: e.target.value }))
@@ -177,7 +178,7 @@ const FindWorker = () => {
             {/* Other Filters */}
             <div className="flex flex-col md:flex-row flex-wrap gap-4">
               <select
-                className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full md:w-auto h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
                 value={filtering.location}
                 onChange={(e) =>
                   setFiltering((prev) => ({
@@ -193,7 +194,7 @@ const FindWorker = () => {
               </select>
 
               <select
-                className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full md:w-auto h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
                 value={filtering.rating}
                 onChange={(e) =>
                   setFiltering((prev) => ({ ...prev, rating: e.target.value }))
@@ -208,7 +209,7 @@ const FindWorker = () => {
               </select>
 
               <select
-                className="w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-48 h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
                 value={filtering.priceRange}
                 onChange={(e) =>
                   setFiltering((prev) => ({
@@ -227,7 +228,7 @@ const FindWorker = () => {
           </div>
 
           {/* Results */}
-          <div className="flex flex-col items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-4">
             {filteredWorkers.map((worker) => {
               const avgRating = worker.reviews?.length
                 ? (
@@ -248,11 +249,12 @@ const FindWorker = () => {
                     onMouseOut={isMouseOut}
                   >
                     <div className="flex flex-col justify-between h-full mr-4" />
-                    <div className="flex items-start gap-4 flex-1">
+                    <div className="flex items-start gap-4 flex-1 text-[#252525]">
                       <img
-                        src={worker.profileImage || "/default-profile.png"}
+                        // src={worker.profileImage || "../assets/worker.png"}
+                        src={profile}
                         alt={worker.name}
-                        className="w-24 h-24 rounded-full object-cover"
+                        className="w-24 h-24 rounded-full object-cover border pt-3"
                       />
                       <div className="flex flex-col justify-between h-full">
                         <h2 className="text-xl font-semibold text-left">
@@ -269,11 +271,11 @@ const FindWorker = () => {
                           {worker.skills.map((skill, index) => (
                             <span
                               key={index}
-                              className="text-white px-3 py-1 rounded-full text-xs"
-                              style={{
-                                backgroundColor:
-                                  rainbowColors[index % rainbowColors.length],
-                              }}
+                              className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+                              // style={{
+                              //   backgroundColor:
+                              //     rainbowColors[index % rainbowColors.length],
+                              // }}
                             >
                               {skill}
                             </span>
@@ -293,7 +295,7 @@ const FindWorker = () => {
                         e.preventDefault();
                         handleBookmarkClick(worker.id);
                       }}
-                      className="flex items-center gap-1 absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      className="flex items-center gap-1 absolute bottom-2 md:bottom-4 right-3 bg-blue-500 text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-600 shadow-md cursor-pointer"
                     >
                       {isBookmark[worker.id] ? (
                         <BookmarkCheck size={16} />
