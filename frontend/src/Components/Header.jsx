@@ -5,6 +5,7 @@ import logo from '../assets/BlueHat_logo.png';
 import profile from '../assets/client.png';
 
 const Header = () => {
+
   // State to handle notifications visibility
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -26,6 +27,11 @@ const Header = () => {
   const currentPath = location.pathname;
 
   const isActive = (path) => currentPath === path;
+
+
+  const authPages = ["/home", "/"];
+  // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
+  const showAuthButtons = authPages.includes(currentPath);
 
   return (
     // <header className="w-full bg-white shadow">
@@ -98,47 +104,64 @@ const Header = () => {
         </Link>
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
 
-          <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
-            <Link to="/chat">
-              <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
-            </Link>
+          {showAuthButtons ? (
+            <>
+              <Link to="/bluehat/workerpage" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-xs hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md'>Log in</Link>
+              <Link
+                to="/bluehat/singnup"
+                className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-4 py-2 shadow-xs hover:shadow-md"
+              >
+                Sign up
+              </Link>
+            </>
+          ) : (
+            <>
 
-            <Bell
-              className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
-              onClick={handleNotificationClick} // Handle Bell icon click
-            />
+              <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
+                <Link to="/chat">
+                  <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
+                </Link>
 
-            {showNotifications && (
-              <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-100">
-                <div className="p-4 text-sm text-gray-700">
-                  <p className="font-semibold mb-2">Notifications</p>
-                  <ul className="space-y-2">
-                    {notifications.map((notification, index) => (
-                      <li
-                        key={index}
-                        className="p-2 hover:bg-gray-100 rounded-md text-left"
-                      >
-                        {notification}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <Bell
+                  className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
+                  onClick={handleNotificationClick} // Handle Bell icon click
+                />
+
+                {showNotifications && (
+                  <div className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-100">
+                    <div className="p-4 text-sm text-gray-700">
+                      <p className="font-semibold mb-2">Notifications</p>
+                      <ul className="space-y-2">
+                        {notifications.map((notification, index) => (
+                          <li
+                            key={index}
+                            className="p-2 hover:bg-gray-100 rounded-md text-left"
+                          >
+                            {notification}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+
+
+                <span className="pl-4 text-gray-700 text-[16px] font-medium">
+                  User
+                </span>
+                <img
+                  src={profile}
+                  alt="Profile"
+                  className="pb-2 h-8 w-8 rounded-full object-cover"
+                />
+
+
               </div>
-            )}
 
+            </>
 
-
-            <span className="pl-4 text-gray-700 text-[16px] font-medium">
-              User
-            </span>
-            <img
-              src={profile}
-              alt="Profile"
-              className="pb-2 h-8 w-8 rounded-full object-cover"
-            />
-
-
-          </div>
+          )}
 
           <button
             type="button"
