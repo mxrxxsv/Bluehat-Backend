@@ -14,6 +14,7 @@ const AdsPage = () => {
         return (
           <a key={ad.id}
             href={ad.link}
+            target="_blank"
             className="flex flex-col md:mx-auto items-center bg-white rounded-lg shadow-md md:flex-row md:max-w-xl hover:bg-gray-100 mt-6 mx-6 text-left mb-8">
               <div className="flex flex-col justify-between p-4 leading-normal">
               <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-[#252525] opacity-80">{ad.title}</h5>

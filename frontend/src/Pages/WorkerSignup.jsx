@@ -25,27 +25,27 @@ const WorkerSignup = () => {
 
                 <div className="grid gap-6 mb-6 md:grid-cols-2">
                     <div>
-                        <label htmlFor="first_name" className="block mb-2 text-sm font-medium text-gray-900">First name</label>
+                        <label htmlFor="first_name" className="text-left block mb-2 text-sm font-medium text-gray-900">First name</label>
                         <input type="text" id="first_name" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="John" />
                     </div>
                     <div>
-                        <label htmlFor="last_name" className="block mb-2 text-sm font-medium text-gray-900">Last name</label>
+                        <label htmlFor="last_name" className="text-left block mb-2 text-sm font-medium text-gray-900">Last name</label>
                         <input type="text" id="last_name" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="Doe" />
                     </div>
                 </div>
 
                 <div className="mb-6">
-                    <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900">Work Email address</label>
+                    <label htmlFor="email" className="text-left block mb-2 text-sm font-medium text-gray-900">Work Email address</label>
                     <input type="email" id="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="john.doe@company.com" />
                 </div>
 
                 <div className="mb-6">
-                    <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900">Password</label>
+                    <label htmlFor="password" className="text-left block mb-2 text-sm font-medium text-gray-900">Password</label>
                     <input type="password" id="password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="•••••••••" />
                 </div>
 
                 <div className="mb-6">
-                    <label htmlFor="confirm_password" className="block mb-2 text-sm font-medium text-gray-900">Confirm password</label>
+                    <label htmlFor="confirm_password" className="text-left block mb-2 text-sm font-medium text-gray-900">Confirm password</label>
                     <input type="password" id="confirm_password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5" placeholder="•••••••••" />
                 </div>
 
@@ -58,7 +58,7 @@ const WorkerSignup = () => {
 
                 <button
                     type="submit"
-                    className="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center focus:ring-4 focus:outline-none focus:ring-blue-300"
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg text-sm px-5 py-2.5 focus:ring-4 focus:outline-none focus:ring-blue-300 cursor-pointer"
                 >
                     Create account
                 </button>
@@ -75,10 +75,10 @@ const WorkerSignup = () => {
                                     Yes
                                 </button>
                             </Link>
-                            <Link to="/bluehat/workerpage" >
+                            <Link to="/find-work" >
                                 <button
                                     onClick={closeModal}
-                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg shadow-sm"
+                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg shadow-sm cursor-pointer"
                                 >
                                     Later
                                 </button>
