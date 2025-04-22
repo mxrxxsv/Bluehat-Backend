@@ -6,7 +6,7 @@ const Login = () => {
 
     return (
         <>
-            <div className="mt-35 mx-full bg-white h-130 w-full">
+            <div className="mt-35 mx-full md:bg-white h-130 w-full">
 
 
                 <div className="md:grid md:grid-cols-[750px_750px] h-80 md:w-full gap-2">
@@ -15,7 +15,7 @@ const Login = () => {
                     </div>
 
 
-                    <div className="mx-auto md:mx-20 mt-10 md:ml-65">
+                    <div className="ml-7 md:mx-20 md:mt-10 md:ml-65">
                         <div class="w-90 lg:max-w-xl p-6 space-y-8 sm:p-8 bg-white rounded-lg shadow-md">
                             <h2 class="text-2xl font-bold text-gray-900">
                                 Login to <span className="text-[#55b3f3]">FixIT</span> 
