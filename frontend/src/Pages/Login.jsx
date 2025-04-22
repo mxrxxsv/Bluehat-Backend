@@ -40,7 +40,7 @@ const Login = () => {
                                 </div>
                                 <button type="submit" className="w-full px-3 py-2 text-base font-medium text-center text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300 cursor-pointer">Login</button>
                                 <div class="text-sm font-medium text-gray-900">
-                                    Not registered yet? <Link to="/find-work" className="text-[#55b3f3] hover:underline">Create account</Link>
+                                    Not registered yet? <Link to="/signup" className="text-[#55b3f3] hover:underline">Create account</Link>
                                 </div>
                             </form>
                         </div>
