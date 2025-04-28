@@ -30,7 +30,7 @@ const Header = () => {
 
 
   const authPages = ["/home", "/"];
-  const opPages = ["/signup", "/login"];
+  const opPages = ["/signup", "/login", "/workersignup", "/clientsignup"];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
   const hideOp = opPages.includes(currentPath);
@@ -116,11 +116,11 @@ const Header = () => {
 
               {showAuthButtons ? (
                 <>
-                  <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
-                    <Link to="/login" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-xs hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md'>Log in</Link>
+                  <div className="w-20 pt-1 md:pt-0 md:w-43 flex flex-row gap-1 md:gap-1">
+                    <Link to="/login" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex'>Log in</Link>
                     <Link
                       to="/signup"
-                      className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-xs hover:shadow-md"
+                      className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-sm hover:shadow-md"
                     >
                       Sign up
                     </Link>
@@ -189,7 +189,7 @@ const Header = () => {
               </button>
             </div>
             <nav className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${isOpen ? "block" : "hidden"} bg-white`} id="navbar-sticky">
-              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6]">
+              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left">
                 <li>
                   <Link to="/find-work" className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
                     ? "text-sky-500"
