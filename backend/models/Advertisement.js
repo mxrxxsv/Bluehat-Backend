@@ -1,13 +1,8 @@
 const mongoose = require("mongoose");
 
-const adsSchema = new mongoose.Schema(
+const advertisementSchema = new mongoose.Schema(
   {
-    companyName: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    adTitle: {
+    title: {
       type: String,
       required: true,
     },
@@ -15,33 +10,20 @@ const adsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    category: {
+    imageUrl: {
       type: String,
       required: true,
     },
-    imageUrl: {
+    link: {
       type: String,
-      default: null,
+      required: true,
     },
-    price: {
-      type: Number,
-      default: 0,
-    },
-    status: {
-      type: String,
-      enum: ["Active", "Expired"],
-      default: "Active",
-    },
-    datePosted: {
-      type: Date,
-      default: Date.now,
-    },
-    expirationDate: {
-      type: Date,
-      default: null,
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Advertisement", adsSchema);
+module.exports = mongoose.model("Advertisement", advertisementSchema);
