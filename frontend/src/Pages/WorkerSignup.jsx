@@ -50,7 +50,7 @@ const WorkerSignup = () => {
                 </div>
 
                 <div className="flex items-center mb-6">
-                    <input id="remember" type="checkbox" className="w-4 h-4 text-sky-600 bg-gray-100 border-gray-300 rounded focus:ring-sky-500" />
+                    <input id="remember" type="checkbox" className="w-4 h-4 mb-5 md:mb-0 text-sky-600 bg-gray-100 border-gray-300 rounded focus:ring-sky-500" />
                     <label htmlFor="remember" className="ml-2 text-sm font-medium text-gray-900">
                         Yes, I understand and agree to the <a href="#" className="text-blue-600 hover:underline">BlueHat Terms of Service</a>.
                     </label>
