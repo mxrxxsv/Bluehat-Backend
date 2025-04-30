@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 
 const emailVerification = async (pin, email, userName) => {
   try {
-    let mailOptions = {
+    const mailOptions = {
       from: `"BlueHat" <${process.env.EMAIL}>`,
       to: email,
       subject: "Verify your email",
@@ -19,15 +19,29 @@ const emailVerification = async (pin, email, userName) => {
         "{verificationCode}",
         pin
       ).replace("{verificationName}", userName),
-      category: "Email Verification",
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Email sent:", info.response);
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("❌ Error sending email:", error.message);
-    return false;
+
+    // Detect invalid recipient errors (bounce-backs)
+    if (
+      error.responseCode === 550 ||
+      (error.message && error.message.toLowerCase().includes("user unknown"))
+    ) {
+      return {
+        success: false,
+        reason: "Email address does not exist.",
+      };
+    }
+
+    return {
+      success: false,
+      reason: "Failed to send email. Try again later.",
+    };
   }
 };
 
