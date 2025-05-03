@@ -11,6 +11,7 @@ const Client = require("../models/Client");
 const Worker = require("../models/Worker");
 const generateTokenandSetCookie = require("../utils/generateTokenandCookie");
 
+const verifyToken = require("../middleware/verifyToken");
 const router = express.Router();
 
 router.post("/signup-try", verifyCaptcha, async (req, res) => {
@@ -42,6 +43,11 @@ router.post("/signup-try", verifyCaptcha, async (req, res) => {
     }
 
     if (!email.endsWith("@gmail.com")) throw new Error("Only Gmail is allowed");
+
+    const existingEmail = await Credential.findOne({ email });
+    if (existingEmail) {
+      throw new Error("Email already exists");
+    }
 
     const existing = await PendingSignup.findOne({ email });
     if (existing)
@@ -85,7 +91,7 @@ router.post("/verify", async (req, res) => {
   const { email, code } = req.body;
 
   try {
-    const pending = await PendingSignup.findOne({ email });
+    const pending = await PendingSignup.findOne({ email }).select("+password");
 
     if (!pending) {
       return res
@@ -137,7 +143,7 @@ router.post("/verify", async (req, res) => {
       email: pending.email,
       password: pending.password, // already hashed
       userType: pending.userType,
-      isVerified: true,
+      isAuthenticated: true,
     });
     await credential.save();
 
@@ -229,4 +235,69 @@ router.post("/resend-code", verifyCaptcha, async (req, res) => {
   res.json({ success: true, message: "New verification code sent" });
 });
 
+router.post("/login-try", verifyCaptcha, async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required" });
+    }
+
+    const user = await Credential.findOne({ email }).select("+password");
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User does not exist" });
+    }
+
+    const isCorrectPassword = await bcrypt.compare(password, user.password);
+    if (!isCorrectPassword) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Wrong password" });
+    }
+
+    // Generate JWT and set it as cookie
+    generateTokenandSetCookie(res, user._id);
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Login successfully" });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+router.get("/check-auth-try", verifyToken, async (req, res) => {
+  try {
+    const credential = await Credential.findById(req.user).select("-password");
+
+    if (!credential) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: credential,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post("/logout-try", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.status(200).json({ success: true, message: "Logged out successfully" });
+});
 module.exports = router;

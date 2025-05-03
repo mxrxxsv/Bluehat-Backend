@@ -2,17 +2,17 @@ const jwt = require("jsonwebtoken");
 
 const verifyToken = (req, res, next) => {
   const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "No token found" });
+  }
+
   try {
-    if (!token) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User unauthorized" });
-    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.userId;
+    req.user = decoded;
     next();
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.status(403).json({ success: false, message: "Invalid token" });
   }
 };
 
