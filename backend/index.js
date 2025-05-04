@@ -1,20 +1,80 @@
+// index.js
+require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const connectDb = require("./db/connectDb");
 const helmet = require("helmet");
-const app = express();
-require("dotenv").config();
+const cors = require("cors");
+const morgan = require("morgan");
+const connectDb = require("./db/connectDb");
+const rateLimiter = require("./utils/rateLimit");
 
-const adsRoute = require("./routes/advertisement.route");
 const verTryRoute = require("./routes/ver.route");
+const adsRoute = require("./routes/advertisement.route");
+const jobRoute = require("./routes/job.route");
+
+const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
-app.use(cookieParser());
+// 1) Security headers
 app.use(helmet());
-app.use("/advertisement", adsRoute);
+
+// 2) CORS — only allow your front-end origins
+app.use(cors());
+
+// 3) Request parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// 4) Logging
+app.use(morgan("combined"));
+
+// 5) Rate limiting (apply globally)
+app.use(rateLimiter);
+
+// 6) Health check
+app.get("/healthz", (req, res) => res.sendStatus(200));
+
+// 7) Routes
 app.use("/ver", verTryRoute);
-app.listen(PORT, () => {
-  connectDb();
-  console.log("Server listening to port", PORT);
+app.use("/advertisement", adsRoute);
+app.use("/jobs", jobRoute);
+
+// 8) 404 handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Not Found" });
 });
+
+// 9) Centralized error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
+
+// Start after DB is connected
+connectDb()
+  .then(() => {
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server listening on port ${PORT}`);
+    });
+
+    // 10) Graceful shutdown
+    const shutdown = () => {
+      console.log("👋 Shutting down...");
+      server.close(() => {
+        console.log("HTTP server closed.");
+        process.exit(0);
+      });
+      // force kill after 10s
+      setTimeout(() => process.exit(1), 10000);
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to DB:", err);
+    process.exit(1);
+  });

@@ -1,74 +1,158 @@
 const express = require("express");
 const router = express.Router();
-
 const Advertisement = require("../models/Advertisement");
-const { getAdvertisements } = require("../controllers/ads.controller");
+const verifyAdmin = require("../middleware/verifyAdmin");
+const { body, validationResult } = require("express-validator");
+const rateLimiter = require("../utils/rateLimit");
 
-router.get("/", getAdvertisements);
-
-router.post("/add-ad", async (req, res) => {
-  const { title, description, imageUrl, link } = req.body;
-  try {
-    if (!title || !description) {
-      throw new Error("All fields are required");
+// Input validation for advertisement fields
+const validateAd = [
+  body("title")
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage("Title is required and must be less than 100 chars"),
+  body("companyName")
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage("Company Name is required and must be valid"),
+  body("description")
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage("Description is required and max 1000 chars"),
+  body("imageUrl").isURL().withMessage("Invalid image URL"),
+  body("link").isURL().withMessage("Invalid link"),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
     }
+    next();
+  },
+];
+
+// CREATE Advertisement (Admin only)
+router.post("/", verifyAdmin, validateAd, async (req, res) => {
+  try {
+    const { title, companyName, description, imageUrl, link } = req.body;
+
     const newAd = new Advertisement({
       title,
+      companyName,
       description,
       imageUrl,
       link,
+      uploadedBy: req.user._id,
     });
-    await newAd.save();
 
-    res.status(201).json({
-      success: true,
-      message: "New Advertisement Created",
-      advertisement: { ...newAd._doc },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const savedAd = await newAd.save();
+    res.status(201).json(savedAd);
+  } catch (err) {
+    res
+      .status(400)
+      .json({ message: "Failed to create advertisement", error: err.message });
   }
 });
 
-// router.delete("/delete-ad/:id", async (req, res) => {
-//   const { id } = req.params;
-//   try {
-//     const deletedAd = await Advertisement.findByIdAndDelete(id);
+// GET All Advertisements (with filters, pagination, and rate limiting)
+router.get("/", rateLimiter, async (req, res) => {
+  try {
+    const {
+      companyName,
+      sortBy = "createdAt",
+      order = "desc",
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-//     if (!deletedAd) {
-//       res.status(404).json({
-//         success: false,
-//         message: "Advertisement not found",
-//       });
-//     }
-//     res
-//       .status(200)
-//       .json({ success: true, message: "Advertisement deleted successfully" });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// });
+    const filter = {
+      isDeleted: false,
+      ...(companyName && { companyName: new RegExp(companyName, "i") }),
+    };
 
-// router.put("/update-ad/:id", async (req, res) => {
-//   const { id } = req.params;
-//   const updateData = req.body;
+    const ads = await Advertisement.find(filter)
+      .populate("uploadedBy", "userName")
+      .sort({ [sortBy]: order === "asc" ? 1 : -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit));
 
-//   try {
-//     const updatedAd = await Advertisement.findByIdAndUpdate(id, updateData, {
-//       new: true,
-//       runValidators: true,
-//     });
+    const total = await Advertisement.countDocuments(filter);
 
-//     if (!updatedAd) {
-//       res
-//         .status(404)
-//         .json({ success: false, message: "No advertisement found" });
-//     }
-//     res.status(200).json({
-//       success: true,
-//       message: "Advertisement successfully updated",
-//       data: updatedAd,
-//     });
-//   } catch (error) {}
-// });
+    const totalPages = Math.ceil(total / limit);
+    res.status(200).json({
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      hasNextPage: Number(page) < totalPages,
+      hasPrevPage: Number(page) > 1,
+      results: ads,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch advertisements", error: err.message });
+  }
+});
+
+// GET Advertisement by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const ad = await Advertisement.findOne({
+      _id: req.params.id,
+      isDeleted: false,
+    }).populate("uploadedBy", "userName");
+
+    if (!ad)
+      return res.status(404).json({ message: "Advertisement not found" });
+
+    res.status(200).json(ad);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error retrieving advertisement", error: err.message });
+  }
+});
+
+// UPDATE Advertisement (Admin only)
+router.put("/:id", verifyAdmin, validateAd, async (req, res) => {
+  try {
+    const { title, companyName, description, imageUrl, link } = req.body;
+
+    const updatedAd = await Advertisement.findByIdAndUpdate(
+      req.params.id,
+      { $set: { title, companyName, description, imageUrl, link } },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedAd)
+      return res.status(404).json({ message: "Advertisement not found" });
+
+    res.status(200).json(updatedAd);
+  } catch (err) {
+    res
+      .status(400)
+      .json({ message: "Failed to update advertisement", error: err.message });
+  }
+});
+
+// SOFT DELETE Advertisement (Admin only)
+router.delete("/:id", verifyAdmin, async (req, res) => {
+  try {
+    const deletedAd = await Advertisement.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
+
+    if (!deletedAd)
+      return res.status(404).json({ message: "Advertisement not found" });
+
+    res.status(200).json({ message: "Advertisement deleted successfully" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to delete advertisement", error: err.message });
+  }
+});
+
 module.exports = router;
