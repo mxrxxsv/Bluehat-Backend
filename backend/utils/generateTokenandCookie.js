@@ -1,9 +1,13 @@
 const jwt = require("jsonwebtoken");
 
-const generateTokenandSetCookie = (res, userId) => {
-  const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
+const generateTokenandSetCookie = (res, credential) => {
+  const token = jwt.sign(
+    { userId: credential._id, role: credential.userType },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    }
+  );
 
   res.cookie("token", token, {
     httpOnly: true, //XSS attack

@@ -4,7 +4,6 @@ const generateAuthenticationCode = require("../utils/generateAuthenticationCode"
 const emailVerification = require("../mailer/emailVerification");
 const verifyCaptcha = require("../middleware/verifyCaptcha");
 
-//for verify route
 const PendingSignup = require("../models/PendingSignup");
 const Credential = require("../models/Credential");
 const Client = require("../models/Client");
@@ -12,9 +11,45 @@ const Worker = require("../models/Worker");
 const generateTokenandSetCookie = require("../utils/generateTokenandCookie");
 
 const verifyToken = require("../middleware/verifyToken");
+const authLimiter = require("../utils/rateLimit");
+
 const router = express.Router();
 
-router.post("/signup-try", verifyCaptcha, async (req, res) => {
+const ALLOWED_EMAIL_DOMAINS = ["@gmail.com", "@yahoo.com", "@outlook.com"];
+
+const isPasswordStrong = (password) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
+
+const createClientProfile = async (pending, credentialId) => {
+  const client = new Client({
+    credentialId,
+    lastName: pending.lastName,
+    firstName: pending.firstName,
+    middleName: pending.middleName,
+    contactNumber: pending.contactNumber,
+    profilePicture: pending.profilePicture,
+    address: pending.address,
+  });
+  await client.save();
+};
+
+const createWorkerProfile = async (pending, credentialId) => {
+  const worker = new Worker({
+    credentialId,
+    lastName: pending.lastName,
+    firstName: pending.firstName,
+    middleName: pending.middleName,
+    contactNumber: pending.contactNumber,
+    profilePicture: pending.profilePicture,
+    workerSkills: pending.workerSkills,
+    portfolio: pending.portfolio,
+    address: pending.address,
+  });
+  await worker.save();
+};
+
+// Signup try
+router.post("/signup-try", authLimiter, verifyCaptcha, async (req, res) => {
   try {
     const {
       email,
@@ -30,6 +65,7 @@ router.post("/signup-try", verifyCaptcha, async (req, res) => {
       portfolio,
     } = req.body;
 
+    // 1) Basic required fields
     if (
       !email ||
       !password ||
@@ -42,17 +78,63 @@ router.post("/signup-try", verifyCaptcha, async (req, res) => {
       throw new Error("All fields are required");
     }
 
-    if (!email.endsWith("@gmail.com")) throw new Error("Only Gmail is allowed");
-
-    const existingEmail = await Credential.findOne({ email });
-    if (existingEmail) {
-      throw new Error("Email already exists");
+    // 2) Domain check
+    const validDomain = ALLOWED_EMAIL_DOMAINS.some((d) => email.endsWith(d));
+    if (!validDomain) {
+      throw new Error("Only emails from trusted providers are allowed");
     }
 
-    const existing = await PendingSignup.findOne({ email });
-    if (existing)
-      throw new Error("Verification already pending for this email");
+    // 3) Password strength
+    if (!isPasswordStrong(password)) {
+      throw new Error(
+        "Password must be at least 8 characters and include upper, lower, number & special char"
+      );
+    }
 
+    // 4) Prevent duplicates
+    if (await Credential.findOne({ email })) {
+      throw new Error("Email already exists");
+    }
+    if (await PendingSignup.findOne({ email })) {
+      throw new Error("Verification already pending for this email");
+    }
+
+    // 5) Worker‐specific shape checks
+    if (userType === "worker") {
+      // address must be array of {region, city, district, street, unit?}
+      if (
+        !Array.isArray(address) ||
+        address.some((a) => !a.region || !a.city || !a.district || !a.street)
+      ) {
+        throw new Error(
+          "Worker address must be an array of objects with region, city, district, and street"
+        );
+      }
+
+      // workerSkills must be array of { skillCategory:ObjectId, skills:[String] }
+      if (
+        !Array.isArray(workerSkills) ||
+        workerSkills.some(
+          (ws) =>
+            !ws.skillCategory ||
+            !Array.isArray(ws.skills) ||
+            ws.skills.length === 0
+        )
+      ) {
+        throw new Error(
+          "workerSkills must be [{ skillCategory: ObjectId, skills: [String] }]"
+        );
+      }
+
+      // portfolio must be array of { projectLink:String, … }
+      if (!Array.isArray(portfolio) || portfolio.some((p) => !p.projectLink)) {
+        throw new Error(
+          "portfolio must be an array of objects each with a projectLink URL"
+        );
+      }
+    }
+
+    // 6) Everything looks good—hash & store pending
     const hashedPassword = await bcrypt.hash(password, 10);
     const authCode = generateAuthenticationCode();
 
@@ -69,25 +151,34 @@ router.post("/signup-try", verifyCaptcha, async (req, res) => {
       workerSkills,
       portfolio,
       authenticationCode: authCode,
-      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000, // 10 min
+      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000,
     });
 
+    // 7) Send verification email
     const userName = `${firstName} ${lastName}`;
-    const sent = await emailVerification(authCode, email, userName);
-
+    let sent;
+    try {
+      sent = await emailVerification(authCode, email, userName);
+    } catch (err) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Email failed", error: err.message });
+    }
     if (!sent.success) {
       return res
         .status(400)
-        .json({ success: false, message: "Email not sent" });
+        .json({ success: false, message: sent.reason || "Email not sent" });
     }
 
+    // 8) Done
     res.status(200).json({ success: true, message: "Verification email sent" });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 });
 
-router.post("/verify", async (req, res) => {
+// Verify code
+router.post("/verify", authLimiter, async (req, res) => {
   const { email, code } = req.body;
 
   try {
@@ -99,7 +190,6 @@ router.post("/verify", async (req, res) => {
         .json({ success: false, message: "No pending signup found" });
     }
 
-    // 1) Check if temporarily blocked due to too many failed attempts
     if (pending.blockedUntil && pending.blockedUntil > Date.now()) {
       const secs = Math.ceil((pending.blockedUntil - Date.now()) / 1000);
       return res.status(429).json({
@@ -108,13 +198,11 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    // 2) Check if the code is correct
     if (pending.authenticationCode !== code) {
       pending.verifyAttempts += 1;
 
-      // Block after 5 failed attempts
       if (pending.verifyAttempts >= 5) {
-        pending.blockedUntil = Date.now() + 15 * 60 * 1000; // 15 minutes block
+        pending.blockedUntil = Date.now() + 15 * 60 * 1000;
         await pending.save();
         return res.status(429).json({
           success: false,
@@ -131,54 +219,29 @@ router.post("/verify", async (req, res) => {
       });
     }
 
-    // 3) Check if the code has expired
     if (pending.authenticationCodeExpiresAt < Date.now()) {
       return res
         .status(400)
         .json({ success: false, message: "Verification code expired" });
     }
 
-    // 4) Create the credential
     const credential = new Credential({
       email: pending.email,
-      password: pending.password, // already hashed
+      password: pending.password,
       userType: pending.userType,
       isAuthenticated: true,
     });
     await credential.save();
 
-    // 5) Create Client or Worker profile based on user type
     if (pending.userType === "client") {
-      const client = new Client({
-        credentialId: credential._id,
-        lastName: pending.lastName,
-        firstName: pending.firstName,
-        middleName: pending.middleName,
-        contactNumber: pending.contactNumber,
-        profilePicture: pending.profilePicture,
-        address: pending.address,
-      });
-      await client.save();
+      await createClientProfile(pending, credential._id);
     } else if (pending.userType === "worker") {
-      const worker = new Worker({
-        credentialId: credential._id,
-        lastName: pending.lastName,
-        firstName: pending.firstName,
-        middleName: pending.middleName,
-        contactNumber: pending.contactNumber,
-        profilePicture: pending.profilePicture,
-        workerSkills: pending.workerSkills,
-        portfolio: pending.portfolio,
-      });
-      await worker.save();
+      await createWorkerProfile(pending, credential._id);
     }
 
-    // 6) Clean up the pending signup entry
     await PendingSignup.deleteOne({ email });
 
-    // 7) Optionally generate and set a token in cookie (e.g. for authenticated sessions)
     generateTokenandSetCookie(res, credential);
-
     res
       .status(201)
       .json({ success: true, message: "Email verified and account created!" });
@@ -187,6 +250,7 @@ router.post("/verify", async (req, res) => {
   }
 });
 
+// Resend code
 router.post("/resend-code", verifyCaptcha, async (req, res) => {
   const { email } = req.body;
 
@@ -197,7 +261,6 @@ router.post("/resend-code", verifyCaptcha, async (req, res) => {
       .json({ success: false, message: "No pending signup for this email" });
   }
 
-  // Optionally throttle resends: e.g. allow 1 resend per 5 minutes
   if (
     pending.lastResendAt &&
     Date.now() - pending.lastResendAt < 5 * 60 * 1000
@@ -211,16 +274,15 @@ router.post("/resend-code", verifyCaptcha, async (req, res) => {
     });
   }
 
-  // Generate and save new code
   const newCode = generateAuthenticationCode();
+
   pending.authenticationCode = newCode;
   pending.authenticationCodeExpiresAt = Date.now() + 10 * 60 * 1000;
-  pending.verifyAttempts = 0; // reset attempts
-  pending.blockedUntil = undefined; // clear block
+  pending.verifyAttempts = 0;
+  pending.blockedUntil = undefined;
   pending.lastResendAt = Date.now();
   await pending.save();
 
-  // Send email
   const sent = await emailVerification(
     newCode,
     email,
@@ -235,7 +297,8 @@ router.post("/resend-code", verifyCaptcha, async (req, res) => {
   res.json({ success: true, message: "New verification code sent" });
 });
 
-router.post("/login-try", verifyCaptcha, async (req, res) => {
+// Login
+router.post("/login-try", authLimiter, verifyCaptcha, async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -246,7 +309,6 @@ router.post("/login-try", verifyCaptcha, async (req, res) => {
     }
 
     const user = await Credential.findOne({ email }).select("+password");
-
     if (!user) {
       return res
         .status(400)
@@ -260,9 +322,7 @@ router.post("/login-try", verifyCaptcha, async (req, res) => {
         .json({ success: false, message: "Wrong password" });
     }
 
-    // Generate JWT and set it as cookie
     generateTokenandSetCookie(res, user._id);
-
     user.lastLogin = new Date();
     await user.save();
 
@@ -272,25 +332,56 @@ router.post("/login-try", verifyCaptcha, async (req, res) => {
   }
 });
 
+// Check auth
 router.get("/check-auth-try", verifyToken, async (req, res) => {
   try {
-    const credential = await Credential.findById(req.user).select("-password");
+    const { userId } = req.user;
 
+    // Fetch credentials without password
+    const credential = await Credential.findById(userId).select("-password");
     if (!credential) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
 
+    let user;
+
+    if (credential.userType === "client") {
+      user = await Client.findOne({ credentialId: userId });
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Client not found" });
+      }
+    } else if (credential.userType === "worker") {
+      user = await Worker.findOne({ credentialId: userId });
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Worker not found" });
+      }
+    }
+
     res.status(200).json({
       success: true,
-      data: credential,
+      data: {
+        id: credential._id,
+        name: user ? `${user.firstName} ${user.lastName}` : null,
+        email: credential.email,
+        userType: credential.userType,
+        isAuthenticated: credential.isAuthenticated,
+        isVerified: credential.isVerified,
+        lastLogin: credential.lastLogin,
+      },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("Error in /check-auth-try:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+// Logout
 router.post("/logout-try", (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
@@ -300,4 +391,5 @@ router.post("/logout-try", (req, res) => {
 
   res.status(200).json({ success: true, message: "Logged out successfully" });
 });
+
 module.exports = router;

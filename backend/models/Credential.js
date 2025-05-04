@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 
 const CredentialSchema = new mongoose.Schema(
@@ -80,6 +81,19 @@ const CredentialSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Only hash if it’s been modified *and* isn’t already a bcrypt hash:
+CredentialSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  // If it already looks like a $2a$ or $2b$... bcrypt hash, skip
+  if (/^\$2[aby]\$/.test(this.password)) {
+    return next();
+  }
+
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
 
 // Virtual field for checking if the account is locked
 CredentialSchema.virtual("isLocked").get(function () {
