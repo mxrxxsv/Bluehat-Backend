@@ -15,6 +15,7 @@ import Signup from "./Pages/Signup";
 import Login from "./Pages/Login";
 import WorkerSignup from "./Pages/WorkerSignup";
 import ClientSignup from "./Pages/ClientSignup";
+import ForgetPass from "./Pages/ForgetPass";
 
 function App() {
   return (
@@ -31,8 +32,9 @@ function App() {
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/workersignup" element={<WorkerSignup />}/>
-        <Route path="/clientsignup" element={<ClientSignup />}/>
+        <Route path="/workersignup" element={<WorkerSignup />} />
+        <Route path="/clientsignup" element={<ClientSignup />} />
+        <Route path="/forgetpass" element={<ForgetPass />} />
       </Routes>
 
     </>
