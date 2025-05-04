@@ -81,7 +81,7 @@ const WorkerSignup = () => {
     return (
         <>
             <form onSubmit={handleCreateAccount} className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto mt-30 p-6 bg-white shadow-md rounded-lg">
-                <p className="text-left text-xl md:text-2xl font-medium mb-6 opacity-80">Sign up as a worker</p>
+                <p className="text-center text-xl md:text-2xl font-medium mb-6 opacity-80">Sign up as a worker</p>
 
                 <div className="grid gap-6 mb-6 md:grid-cols-2">
                     <div>
