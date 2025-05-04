@@ -10,7 +10,7 @@ router.post("/", verifyToken, async (req, res) => {
   try {
     const { clientId, jobTitle, description, price, location, category, tags } =
       req.body;
-    // Ensure the token userId matches clientId or has role
+
     if (req.user.userId.toString() !== clientId.toString()) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
@@ -24,6 +24,7 @@ router.post("/", verifyToken, async (req, res) => {
       category,
       tags,
     });
+
     const saved = await job.save();
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
@@ -31,10 +32,19 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// Get all jobs (public, only verified/not deleted)
+// Get all jobs (public, only verified/not deleted) with pagination & filtering
 router.get("/", async (req, res) => {
   try {
-    const jobs = await Job.find({ isVerified: true, isDeleted: false });
+    const { page = 1, limit = 10, category, tag } = req.query;
+    const filter = { isVerified: true, isDeleted: false };
+
+    if (category) filter.category = category;
+    if (tag) filter.tags = tag;
+
+    const jobs = await Job.find(filter)
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
     res.status(200).json({ success: true, data: jobs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -49,14 +59,17 @@ router.get("/:id", async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid job ID" });
     }
+
     const job = await Job.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
       { $inc: { views: 1 } },
       { new: true }
     );
+
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
+
     res.status(200).json({ success: true, data: job });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -70,11 +83,28 @@ router.put("/:id", verifyToken, async (req, res) => {
     if (!job || job.isDeleted) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
-    // Only client who posted it can update
-    if (req.user.userId.toString() !== job.clientId.toString()) {
+
+    if (
+      req.user.userId.toString() !== job.clientId.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
-    Object.assign(job, req.body);
+
+    const allowedFields = [
+      "jobTitle",
+      "description",
+      "price",
+      "location",
+      "category",
+      "tags",
+    ];
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        job[field] = req.body[field];
+      }
+    });
+
     const updated = await job.save();
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
@@ -89,11 +119,17 @@ router.delete("/:id", verifyToken, async (req, res) => {
     if (!job || job.isDeleted) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
-    if (req.user.userId.toString() !== job.clientId.toString()) {
+
+    if (
+      req.user.userId.toString() !== job.clientId.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
+
     job.isDeleted = true;
     await job.save();
+
     res
       .status(200)
       .json({ success: true, message: "Job deleted successfully" });
@@ -105,17 +141,27 @@ router.delete("/:id", verifyToken, async (req, res) => {
 // Admin: verify a job
 router.patch("/:id/verify", verifyToken, async (req, res) => {
   try {
-    // Assuming req.user has role info and admin role is "admin"
     if (req.user.role !== "admin") {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
+
     const job = await Job.findById(req.params.id);
     if (!job || job.isDeleted) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
+
+    if (job.isVerified) {
+      return res
+        .status(200)
+        .json({ success: true, message: "Job already verified", data: job });
+    }
+
     job.isVerified = true;
     await job.save();
-    res.status(200).json({ success: true, data: job });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Job verified successfully", data: job });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
