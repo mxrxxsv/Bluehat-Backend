@@ -266,7 +266,7 @@ const WorkerSignup = () => {
                         <h2 className="text-xl font-semibold mb-4 text-center">Verify Account</h2>
                         <p className="mb-6 text-gray-600 text-center">Do you want to verify your profile now?</p>
                         <div className="flex justify-center gap-4">
-                            <Link to="/bluehat/workerquestion">
+                            <Link to="/workerquestion">
                                 <button className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-2 rounded-lg shadow-sm">
                                     Yes
                                 </button>
