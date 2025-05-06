@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 
 const ClientSignup = () => {
-    const [showModal, setShowModal] = useState(false);
+    const [showOTPModal, setShowOTPModal] = useState(false);
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
@@ -11,12 +12,23 @@ const ClientSignup = () => {
         confirm_password: '',
         agree: false,
     });
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [timer, setTimer] = useState(60);
     const [errors, setErrors] = useState({});
     const [showPasswordStrength, setShowPasswordStrength] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+
+    useEffect(() => {
+        let countdown;
+        if (showOTPModal && timer > 0) {
+            countdown = setTimeout(() => setTimer(timer - 1), 1000);
+        }
+        return () => clearTimeout(countdown);
+    }, [timer, showOTPModal]);
 
     const handleChange = (e) => {
         const { id, value, type, checked } = e.target;
@@ -32,7 +44,6 @@ const ClientSignup = () => {
 
         if (!first_name.trim()) newErrors.first_name = "First name is required.";
         if (!last_name.trim()) newErrors.last_name = "Last name is required.";
-
         if (!email.trim()) {
             newErrors.email = "Email is required.";
         } else if (!/^\S+@\S+\.\S+$/.test(email)) {
@@ -67,14 +78,41 @@ const ClientSignup = () => {
 
     const handleCreateAccount = (e) => {
         e.preventDefault();
-        setShowPasswordStrength(true); // Show password strength checks on button click
+        setShowPasswordStrength(true);
         if (validate()) {
-            setShowModal(true);
+            setShowOTPModal(true);
+            setTimer(60);
         }
     };
 
-    const closeModal = () => {
-        setShowModal(false);
+    const handleOtpChange = (index, value) => {
+        if (!/^[0-9]?$/.test(value)) return;
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+
+        if (value && index < 5) {
+            const nextInput = document.getElementById(`otp-${index + 1}`);
+            if (nextInput) nextInput.focus();
+        }
+    };
+
+    const verifyOtp = () => {
+        const enteredOtp = otp.join('');
+        if (enteredOtp.length === 6) {
+            setShowOTPModal(false);
+            setShowVerifyModal(true);
+        }
+    };
+
+    const resendOtp = () => {
+        setOtp(["", "", "", "", "", ""]);
+        setTimer(60);
+        // You can trigger resend OTP API here if needed
+    };
+
+    const closeVerifyModal = () => {
+        setShowVerifyModal(false);
     };
 
     return (
@@ -180,12 +218,52 @@ const ClientSignup = () => {
                 </button>
             </form>
 
-            {showModal && (
+            {/* OTP Modal */}
+            {showOTPModal && (
+                <div className="fixed inset-0 z-50 bg-white bg-opacity-90 flex items-center justify-center">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full text-center">
+                        <h2 className="text-lg font-semibold mb-2">Enter OTP</h2>
+                        <p className="mb-4 text-gray-600">Please enter the 6-digit code sent to your email.</p>
+
+                        <div className="flex justify-center gap-2 mb-4">
+                            {otp.map((digit, index) => (
+                                <input
+                                    key={index}
+                                    id={`otp-${index}`}
+                                    type="text"
+                                    maxLength={1}
+                                    value={digit}
+                                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                                    className="w-10 h-10 text-center border border-gray-300 rounded-md text-xl"
+                                />
+                            ))}
+                        </div>
+
+                        {timer > 0 ? (
+                            <p className="text-sm text-gray-600 mb-2">Resend OTP in {timer}s</p>
+                        ) : (
+                            <button onClick={resendOtp} className="text-blue-500 text-sm underline mb-2">Resend OTP</button>
+                        )}
+
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={verifyOtp}
+                                className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-2 rounded-lg shadow-sm"
+                            >
+                                Verify OTP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Post-OTP Verification Modal */}
+            {showVerifyModal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 bg-white bg-opacity-80">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-11/12 max-w-md text-left">
-                        <h2 className="text-xl font-semibold mb-4">Verify Account</h2>
-                        <p className="mb-6 text-gray-600">Do you want to verify your profile now?</p>
-                        <div className="flex justify-start gap-4">
+                        <h2 className="text-xl font-semibold mb-4 text-center">Verify Account</h2>
+                        <p className="mb-6 text-gray-600 text-center">Do you want to verify your profile now?</p>
+                        <div className="flex justify-center gap-4">
                             <Link to="/bluehat/workerquestion">
                                 <button className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-2 rounded-lg shadow-sm">
                                     Yes
@@ -193,7 +271,7 @@ const ClientSignup = () => {
                             </Link>
                             <Link to="/find-workers">
                                 <button
-                                    onClick={closeModal}
+                                    onClick={closeVerifyModal}
                                     className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg shadow-sm cursor-pointer"
                                 >
                                     Later
