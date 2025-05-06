@@ -30,75 +30,13 @@ const Header = () => {
 
 
   const authPages = ["/home", "/"];
-  const opPages = ["/signup", "/login", "/workersignup", "/clientsignup", "/forgetpass"];
+  const opPages = ["/signup", "/login", "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion"];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
   const hideOp = opPages.includes(currentPath);
 
   return (
-    // <header className="w-full bg-white shadow">
-    //   <div className="w-full px-6 py-3 flex items-center justify-between">
-    //     {/* Left - Logo */}
-    //     <div className="flex items-center gap-2">
-    //       <img src={logo} alt="Logo" className="h-8 w-8" />
-    //       <span className="font-semibold text-lg">Fixit</span>
-    //     </div>
-
-    //     {/* Center - Navigation Links */}
-    //     <nav className="hidden md:flex gap-6 text-gray-700">
-    //       <Link to="/find-work" className="hover:text-blue-600">
-    //         Find Work
-    //       </Link>
-    //       <Link to="/find-workers" className="hover:text-blue-600">
-    //         Find Workers
-    //       </Link>
-    //       <Link to="/ads" className="hover:text-blue-600">
-    //         Advertisement
-    //       </Link>
-    //     </nav>
-
-    //     {/* Right - Icons and User Info */}
-    //     <div className="flex items-center gap-4 relative">
-    //       <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
-    //       <Bell
-    //         className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
-    //         onClick={handleNotificationClick} // Handle Bell icon click
-    //       />
-
-    //       {/* Notification dropdown */}
-    //       {showNotifications && (
-    //         <div className="absolute right-30 mt-70 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-10">
-    //           <div className="p-4 text-sm text-gray-700">
-    //             <p className="font-semibold mb-2">Notifications</p>
-    //             <ul className="space-y-2">
-    //               {notifications.map((notification, index) => (
-    //                 <li
-    //                   key={index}
-    //                   className="p-2 hover:bg-gray-100 rounded-md text-left"
-    //                 >
-    //                   {notification}
-    //                 </li>
-    //               ))}
-    //             </ul>
-    //           </div>
-    //         </div>
-    //       )}
-
-    //       <div className="flex items-center gap-2">
-    //         <span className="text-gray-700 font-medium">
-    //           Chlyde Adrian Benavidez
-    //         </span>
-    //         <img
-    //           src="/user-profile.jpg"
-    //           alt="Profile"
-    //           className="h-8 w-8 rounded-full object-cover"
-    //         />
-    //       </div>
-    //     </div>
-    //   </div>
-    // </header>
-
-
+  
     <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
         <Link to="/home" className="flex items-center space-x-3 rtl:space-x-reverse">

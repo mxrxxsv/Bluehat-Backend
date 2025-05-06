@@ -16,6 +16,7 @@ import Login from "./Pages/Login";
 import WorkerSignup from "./Pages/WorkerSignup";
 import ClientSignup from "./Pages/ClientSignup";
 import ForgetPass from "./Pages/ForgetPass";
+import WorkerQuestion from "./Pages/WorkerQuestion";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path="/workersignup" element={<WorkerSignup />} />
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
+        <Route path="/workerquestion" element={<WorkerQuestion />}/>
       </Routes>
 
     </>
