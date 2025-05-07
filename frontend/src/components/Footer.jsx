@@ -4,7 +4,7 @@ const Footer = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const authPages = ["/home", "/"];
+    const authPages = ["/home"];
     const opPages = [
         "/signup",
         "/login",
@@ -12,8 +12,14 @@ const Footer = () => {
         "/clientsignup",
         "/forgetpass",
         "/workerquestion",
-    ];
+        "/chat",
+        "/find-workers",
+        "/find-work",
+        "/worker/:id",
+        "/ads",
 
+
+    ];
     if (opPages.includes(currentPath)) return null;
 
     return (
