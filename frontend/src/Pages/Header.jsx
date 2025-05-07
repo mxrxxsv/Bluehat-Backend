@@ -5,11 +5,9 @@ import logo from '../assets/BlueHat_logo.png';
 import profile from '../assets/client.png';
 
 const Header = () => {
-
-  // State to handle notifications visibility
+  
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Toggle notifications visibility
   const handleNotificationClick = () => {
     setShowNotifications((prev) => !prev);
   };

@@ -17,11 +17,13 @@ import WorkerSignup from "./Pages/WorkerSignup";
 import ClientSignup from "./Pages/ClientSignup";
 import ForgetPass from "./Pages/ForgetPass";
 import WorkerQuestion from "./Pages/WorkerQuestion";
+import Footer from "./components/Footer";
 
 function App() {
   return (
     <>
       <Header />
+      
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
@@ -38,6 +40,8 @@ function App() {
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />}/>
       </Routes>
+
+      <Footer />
 
     </>
   );
