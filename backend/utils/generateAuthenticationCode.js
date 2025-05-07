@@ -1,4 +1,3 @@
-// utils/generateAuthenticationCode.js
 const crypto = require("crypto");
 
 function generateAuthenticationCode(length = 6) {

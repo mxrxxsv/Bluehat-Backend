@@ -114,7 +114,7 @@ const pendingSignupSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String,
-    default: "https://example.com/default-profile.jpg", // Placeholder image URL
+    default: "",
     validate: {
       validator: function (v) {
         return !v || /^https?:\/\/.+\..+/.test(v);

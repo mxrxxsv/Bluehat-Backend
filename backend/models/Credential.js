@@ -11,7 +11,7 @@ const CredentialSchema = new mongoose.Schema(
       unique: true,
       validate: {
         validator: function (v) {
-          return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(v);
+          return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
         },
         message: "Invalid email format",
       },

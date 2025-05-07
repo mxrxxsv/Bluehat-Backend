@@ -14,6 +14,10 @@ const verifyToken = require("../middleware/verifyToken");
 const authLimiter = require("../utils/rateLimit");
 const router = express.Router();
 
+const multer = require("multer");
+const cloudinary = require("../db/cloudinary");
+const fs = require("fs");
+
 const ALLOWED_EMAIL_DOMAINS = ["@gmail.com"];
 
 const isPasswordStrong = (password) =>
@@ -22,29 +26,38 @@ const isPasswordStrong = (password) =>
 const validatePhoneNumber = (contactNumber) =>
   /^[+]?[0-9]{10,15}$/.test(contactNumber);
 
+const safeParseArray = (input) => {
+  if (Array.isArray(input)) return input;
+  try {
+    return JSON.parse(input);
+  } catch {
+    return [];
+  }
+};
+
 const createClientProfile = async (pending, credentialId, session) => {
   try {
     const clientProfile = new Client({
       credentialId,
-      lastName: pending.lastName,
       firstName: pending.firstName,
+      lastName: pending.lastName,
       contactNumber: pending.contactNumber,
       sex: pending.sex,
       dateOfBirth: pending.dateOfBirth,
       maritalStatus: pending.maritalStatus,
       address: {
-        region: pending.address.region,
-        city: pending.address.city,
-        district: pending.address.district,
-        street: pending.address.street,
-        unit: pending.address.unit || null,
+        region: pending.address?.region || "",
+        city: pending.address?.city || "",
+        district: pending.address?.district || "",
+        street: pending.address?.street || "",
+        unit: pending.address?.unit || null,
       },
       profilePicture: pending.profilePicture || null,
     });
 
     await clientProfile.save({ session });
   } catch (error) {
-    throw new Error("Error creating client profile: " + error.message);
+    throw new Error("Error creating client profile in DB: " + error.message);
   }
 };
 
@@ -52,148 +65,234 @@ const createWorkerProfile = async (pending, credentialId, session) => {
   try {
     const workerProfile = new Worker({
       credentialId,
-      lastName: pending.lastName,
       firstName: pending.firstName,
+      lastName: pending.lastName,
       contactNumber: pending.contactNumber,
       sex: pending.sex,
       dateOfBirth: pending.dateOfBirth,
       maritalStatus: pending.maritalStatus,
       address: {
-        region: pending.address.region,
-        city: pending.address.city,
-        district: pending.address.district,
-        street: pending.address.street,
-        unit: pending.address.unit || null,
+        region: pending.address?.region || "",
+        city: pending.address?.city || "",
+        district: pending.address?.district || "",
+        street: pending.address?.street || "",
+        unit: pending.address?.unit || null,
       },
       profilePicture: pending.profilePicture || null,
       biography: pending.biography || "",
       workerSkills: pending.workerSkills || [],
-      portfolio: pending.portfolio || [],
       experience: Array.isArray(pending.experience) ? pending.experience : [],
-      certificates: pending.certificates || [],
+      portfolio: Array.isArray(pending.portfolio) ? pending.portfolio : [],
+      certificates: Array.isArray(pending.certificates)
+        ? pending.certificates
+        : [],
+      current_status: "available",
+      current_job_id: null,
     });
 
     await workerProfile.save({ session });
   } catch (error) {
-    throw new Error("Error creating worker profile: " + error.message);
+    throw new Error("Error creating worker profile in DB: " + error.message);
   }
 };
 
-router.post("/signup", authLimiter, verifyCaptcha, async (req, res) => {
-  try {
-    const {
-      userType,
-      email,
-      password,
-      lastName,
-      firstName,
-      contactNumber,
-      sex,
-      dateOfBirth,
-      maritalStatus,
-      address,
-      profilePicture,
-      biography,
-      workerSkills,
-      portfolio,
-      experience,
-      certificates,
-    } = req.body;
-
-    if (!["client", "worker"].includes(userType))
-      throw new Error("Invalid user type.");
-
-    const trimmedEmail = email?.trim().toLowerCase();
-    const trimmedContactNumber = contactNumber?.trim();
-
-    if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail))
-      throw new Error("Invalid email format.");
-
-    const domain = trimmedEmail.split("@")[1];
-    if (!ALLOWED_EMAIL_DOMAINS.some((d) => domain === d.replace("@", "")))
-      throw new Error("Only emails from trusted providers are allowed.");
-
-    if (!isPasswordStrong(password))
-      throw new Error(
-        "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character."
-      );
-
-    if (!validatePhoneNumber(trimmedContactNumber))
-      throw new Error("Invalid contact number format. Must be 10-15 digits.");
-
-    const requiredFields = ["region", "city", "district", "street"];
-    for (const field of requiredFields) {
-      if (!address?.[field]?.trim())
-        throw new Error(`${field} in address is required.`);
-    }
-
-    const parsedDateOfBirth = new Date(dateOfBirth);
-    if (!dateOfBirth || isNaN(parsedDateOfBirth))
-      throw new Error("Invalid date of birth.");
-
-    const [existingCredential, existingPending] = await Promise.all([
-      Credential.findOne({ email: trimmedEmail }),
-      PendingSignup.findOne({ email: trimmedEmail }),
-    ]);
-    if (existingCredential) throw new Error("Email already registered.");
-    if (existingPending)
-      throw new Error(
-        "A verification process is already pending for this email."
-      );
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const authCode = generateAuthenticationCode();
-
-    const pendingData = {
-      email: trimmedEmail,
-      password: hashedPassword,
-      userType,
-      lastName: lastName.trim(),
-      firstName: firstName.trim(),
-      contactNumber: trimmedContactNumber,
-      sex,
-      dateOfBirth: parsedDateOfBirth,
-      maritalStatus,
-      address: {
-        region: address.region.trim(),
-        city: address.city.trim(),
-        district: address.district.trim(),
-        street: address.street.trim(),
-        unit: address.unit?.trim() || null,
-      },
-      profilePicture: profilePicture?.trim() || null,
-      authenticationCode: authCode,
-      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000,
-    };
-
-    if (userType === "worker") {
-      Object.assign(pendingData, {
-        biography: biography?.trim() || "",
-        workerSkills: Array.isArray(workerSkills) ? workerSkills : [],
-        portfolio: Array.isArray(portfolio) ? portfolio : [],
-        experience: Array.isArray(experience) ? experience : [],
-        certificates: Array.isArray(certificates) ? certificates : [],
-      });
-    }
-
-    await PendingSignup.create(pendingData);
-
-    const sent = await emailVerification(
-      authCode,
-      trimmedEmail,
-      `${firstName} ${lastName}`
-    );
-    if (!sent.success)
-      throw new Error(sent.reason || "Failed to send verification email.");
-
-    res.status(200).json({
-      success: true,
-      message: `${userType} verification email sent successfully.`,
-    });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
+const upload = multer({
+  dest: "uploads/",
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
+
+const multiUpload = upload.fields([
+  { name: "profilePicture", maxCount: 1 },
+  { name: "portfolio", maxCount: 10 },
+  { name: "certificates", maxCount: 10 },
+]);
+
+router.post(
+  "/signup",
+  authLimiter,
+  verifyCaptcha,
+  multiUpload,
+  async (req, res) => {
+    try {
+      const {
+        userType,
+        email,
+        password,
+        lastName,
+        firstName,
+        contactNumber,
+        sex,
+        dateOfBirth,
+        maritalStatus,
+        address,
+        biography,
+        workerSkills,
+        experience,
+      } = req.body;
+
+      // Sanitize inputs
+      const trimmedEmail = email?.trim().toLowerCase();
+      const trimmedContactNumber = contactNumber?.trim();
+      const safeFirstName = firstName?.trim();
+      const safeLastName = lastName?.trim();
+
+      if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
+        throw new Error("Invalid email format.");
+      }
+
+      const emailDomain = trimmedEmail.split("@")[1]?.toLowerCase();
+      if (!ALLOWED_EMAIL_DOMAINS.includes(`@${emailDomain}`)) {
+        throw new Error("Only emails from trusted providers are allowed.");
+      }
+
+      if (!isPasswordStrong(password)) {
+        throw new Error(
+          "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character."
+        );
+      }
+
+      if (!validatePhoneNumber(trimmedContactNumber)) {
+        throw new Error("Invalid contact number format. Must be 10-15 digits.");
+      }
+
+      const requiredFields = ["region", "city", "district", "street"];
+      for (const field of requiredFields) {
+        if (!address?.[field]?.trim())
+          throw new Error(`${field} in address is required.`);
+      }
+
+      const parsedDateOfBirth = new Date(dateOfBirth);
+      if (!dateOfBirth || isNaN(parsedDateOfBirth)) {
+        throw new Error("Invalid date of birth.");
+      }
+
+      const [existingCredential, existingPending] = await Promise.all([
+        Credential.findOne({ email: trimmedEmail }),
+        PendingSignup.findOne({ email: trimmedEmail }),
+      ]);
+
+      if (existingCredential) throw new Error("Email already registered.");
+      if (existingPending)
+        throw new Error(
+          "A verification process is already pending for this email."
+        );
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const authCode = Math.floor(100000 + Math.random() * 900000).toString(); // simple code
+      const files = req.files || {};
+
+      // Handle profile picture upload
+      let profileResult = null;
+      const profilePicFile = files["profilePicture"]?.[0];
+      if (profilePicFile) {
+        profileResult = await cloudinary.uploader.upload(profilePicFile.path, {
+          folder: "profile_pictures",
+        });
+        await fs.promises.unlink(profilePicFile.path);
+      }
+
+      // Handle portfolio upload
+      const portfolioResults = [];
+      if (files["portfolio"]) {
+        for (const file of files["portfolio"]) {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              folder: "portfolio",
+            });
+            portfolioResults.push({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          } catch (err) {
+            console.error("Portfolio upload failed:", err);
+          } finally {
+            await fs.promises.unlink(file.path);
+          }
+        }
+      }
+
+      // Handle certificate upload
+      const certificateResults = [];
+      if (files["certificates"]) {
+        for (const file of files["certificates"]) {
+          try {
+            const result = await cloudinary.uploader.upload(file.path, {
+              folder: "certificates",
+            });
+            certificateResults.push({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          } catch (err) {
+            console.error("Certificates upload failed:", err);
+          } finally {
+            await fs.promises.unlink(file.path);
+          }
+        }
+      }
+
+      if (!["client", "worker"].includes(userType)) {
+        throw new Error("Invalid user type.");
+      }
+
+      const pendingData = {
+        email: trimmedEmail,
+        password: hashedPassword,
+        userType,
+        firstName: safeFirstName,
+        lastName: safeLastName,
+        contactNumber: trimmedContactNumber,
+        sex,
+        dateOfBirth: parsedDateOfBirth,
+        maritalStatus,
+        address: {
+          region: address.region.trim(),
+          city: address.city.trim(),
+          district: address.district.trim(),
+          street: address.street.trim(),
+          unit: address.unit?.trim() || null,
+        },
+        profilePicture: profileResult
+          ? {
+              url: profileResult.secure_url,
+              public_id: profileResult.public_id,
+            }
+          : null,
+        authenticationCode: authCode,
+        authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000, // 10 mins
+      };
+
+      if (userType === "worker") {
+        Object.assign(pendingData, {
+          biography: biography?.trim() || "",
+          workerSkills: safeParseArray(workerSkills),
+          experience: safeParseArray(experience),
+          portfolio: portfolioResults,
+          certificates: certificateResults,
+        });
+      }
+
+      await PendingSignup.create(pendingData);
+
+      const sent = await emailVerification(
+        authCode,
+        trimmedEmail,
+        `${safeFirstName} ${safeLastName}`
+      );
+
+      if (!sent.success) {
+        throw new Error(sent.reason || "Failed to send verification email.");
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `${userType} verification email sent successfully.`,
+      });
+    } catch (err) {
+      res.status(400).json({ success: false, message: err.message });
+    }
+  }
+);
 
 //verify
 router.post("/verify", authLimiter, async (req, res) => {
@@ -317,7 +416,7 @@ router.post("/resend-code", verifyCaptcha, async (req, res) => {
 });
 
 // Login
-router.post("/login-try", authLimiter, verifyCaptcha, async (req, res) => {
+router.post("/login", authLimiter, verifyCaptcha, async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -352,7 +451,7 @@ router.post("/login-try", authLimiter, verifyCaptcha, async (req, res) => {
 });
 
 // Check auth
-router.get("/check-auth-try", verifyToken, async (req, res) => {
+router.get("/check-auth", verifyToken, async (req, res) => {
   try {
     const { userId } = req.user;
 
@@ -371,27 +470,27 @@ router.get("/check-auth-try", verifyToken, async (req, res) => {
       if (!user) {
         return res
           .status(404)
-          .json({ success: false, message: "Client not found" });
+          .json({ success: false, message: "User not found" });
       }
     } else if (credential.userType === "worker") {
       user = await Worker.findOne({ credentialId: userId });
       if (!user) {
         return res
           .status(404)
-          .json({ success: false, message: "Worker not found" });
+          .json({ success: false, message: "User not found" });
       }
     }
 
+    credential.lastLogin = new Date();
+    await credential.save();
     res.status(200).json({
       success: true,
       data: {
         id: credential._id,
         name: user ? `${user.firstName} ${user.lastName}` : null,
-        email: credential.email,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
-        lastLogin: credential.lastLogin,
       },
     });
   } catch (err) {
@@ -401,7 +500,7 @@ router.get("/check-auth-try", verifyToken, async (req, res) => {
 });
 
 // Logout
-router.post("/logout-try", (req, res) => {
+router.post("/logout", (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

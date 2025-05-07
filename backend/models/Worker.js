@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 
+const isCloudinaryURL = (url) =>
+  /^https:\/\/res\.cloudinary\.com\/.*\.(jpg|jpeg|png|gif|bmp|webp)$/.test(url);
+
 const WorkerSchema = new mongoose.Schema(
   {
     credentialId: {
@@ -93,13 +96,17 @@ const WorkerSchema = new mongoose.Schema(
       },
     },
     profilePicture: {
-      type: String,
-      default: null,
-      validate: {
-        validator: function (v) {
-          return !v || /^https?:\/\/.+\..+/.test(v);
+      url: {
+        type: String,
+        required: true,
+        validate: {
+          validator: isCloudinaryURL,
+          message: "Invalid profile picture URL",
         },
-        message: "Invalid profile picture URL",
+      },
+      public_id: {
+        type: String,
+        required: true,
       },
     },
     biography: {
@@ -132,14 +139,18 @@ const WorkerSchema = new mongoose.Schema(
           default: "",
           trim: true,
         },
-        projectLink: {
-          type: String,
-          required: true,
-          validate: {
-            validator: function (v) {
-              return /^https?:\/\/.+\..+/.test(v);
+        image: {
+          url: {
+            type: String,
+            required: true,
+            validate: {
+              validator: isCloudinaryURL,
+              message: "Invalid URL",
             },
-            message: "Invalid URL format",
+          },
+          public_id: {
+            type: String,
+            required: true,
           },
         },
       },
@@ -167,14 +178,12 @@ const WorkerSchema = new mongoose.Schema(
         endYear: {
           type: Number,
           default: null,
-          validate: [
-            {
-              validator: function (v) {
-                return v === null || v <= new Date().getFullYear();
-              },
-              message: "End year must not be in the future",
+          validate: {
+            validator: function (v) {
+              return v === null || v <= new Date().getFullYear();
             },
-          ],
+            message: "End year must not be in the future",
+          },
         },
         responsibilities: {
           type: String,
@@ -185,15 +194,17 @@ const WorkerSchema = new mongoose.Schema(
     ],
     certificates: [
       {
-        certificateLink: {
+        url: {
           type: String,
           required: true,
           validate: {
-            validator: function (v) {
-              return /^https?:\/\/.+\..+/.test(v);
-            },
-            message: "Invalid URL format",
+            validator: isCloudinaryURL,
+            message: "Invalid  URL",
           },
+        },
+        public_id: {
+          type: String,
+          required: true,
         },
       },
     ],
@@ -207,7 +218,6 @@ const WorkerSchema = new mongoose.Schema(
       type: String,
       enum: ["Available", "Working", "Not Available"],
       default: "Available",
-      index: true,
     },
     currentJob: {
       type: mongoose.Schema.Types.ObjectId,
@@ -217,7 +227,6 @@ const WorkerSchema = new mongoose.Schema(
     blocked: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   { timestamps: true }
