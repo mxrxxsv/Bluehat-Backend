@@ -115,6 +115,21 @@ CredentialSchema.methods.incLoginAttempts = function () {
   return this.save();
 };
 
+CredentialSchema.pre("findOneAndDelete", async function (next) {
+  const cred = await this.model.findOne(this.getFilter());
+  if (!cred) return next();
+
+  if (cred.userType === "worker") {
+    const Worker = mongoose.model("Worker");
+    await Worker.findOneAndDelete({ credentialId: cred._id });
+  } else if (cred.userType === "client") {
+    const Client = mongoose.model("Client");
+    await Client.findOneAndDelete({ credentialId: cred._id });
+  }
+
+  next();
+});
+
 CredentialSchema.set("toObject", { virtuals: true });
 CredentialSchema.set("toJSON", { virtuals: true });
 

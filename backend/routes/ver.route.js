@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const generateAuthenticationCode = require("../utils/generateAuthenticationCode");
 const emailVerification = require("../mailer/emailVerification");
 const verifyCaptcha = require("../middleware/verifyCaptcha");
-
+const mongoose = require("mongoose");
 const PendingSignup = require("../models/PendingSignup");
 const Credential = require("../models/Credential");
 const Client = require("../models/Client");
@@ -12,218 +12,231 @@ const generateTokenandSetCookie = require("../utils/generateTokenandCookie");
 
 const verifyToken = require("../middleware/verifyToken");
 const authLimiter = require("../utils/rateLimit");
-
 const router = express.Router();
 
-const ALLOWED_EMAIL_DOMAINS = ["@gmail.com", "@yahoo.com", "@outlook.com"];
+const ALLOWED_EMAIL_DOMAINS = ["@gmail.com"];
 
 const isPasswordStrong = (password) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
 
-const createClientProfile = async (pending, credentialId) => {
-  const client = new Client({
-    credentialId,
-    lastName: pending.lastName,
-    firstName: pending.firstName,
-    middleName: pending.middleName,
-    contactNumber: pending.contactNumber,
-    profilePicture: pending.profilePicture,
-    address: pending.address,
-  });
-  await client.save();
-};
+const validatePhoneNumber = (contactNumber) =>
+  /^[+]?[0-9]{10,15}$/.test(contactNumber);
 
-const createWorkerProfile = async (pending, credentialId) => {
-  const worker = new Worker({
-    credentialId,
-    lastName: pending.lastName,
-    firstName: pending.firstName,
-    middleName: pending.middleName,
-    contactNumber: pending.contactNumber,
-    profilePicture: pending.profilePicture,
-    workerSkills: pending.workerSkills,
-    portfolio: pending.portfolio,
-    address: pending.address,
-  });
-  await worker.save();
-};
-
-// Signup try
-router.post("/signup-try", authLimiter, verifyCaptcha, async (req, res) => {
+const createClientProfile = async (pending, credentialId, session) => {
   try {
-    const {
-      email,
-      password,
-      userType,
-      lastName,
-      firstName,
-      middleName,
-      contactNumber,
-      profilePicture,
-      address,
-      workerSkills,
-      portfolio,
-    } = req.body;
-
-    // 1) Basic required fields
-    if (
-      !email ||
-      !password ||
-      !userType ||
-      !lastName ||
-      !firstName ||
-      !middleName ||
-      !contactNumber
-    ) {
-      throw new Error("All fields are required");
-    }
-
-    // 2) Domain check
-    const validDomain = ALLOWED_EMAIL_DOMAINS.some((d) => email.endsWith(d));
-    if (!validDomain) {
-      throw new Error("Only emails from trusted providers are allowed");
-    }
-
-    // 3) Password strength
-    if (!isPasswordStrong(password)) {
-      throw new Error(
-        "Password must be at least 8 characters and include upper, lower, number & special char"
-      );
-    }
-
-    // 4) Prevent duplicates
-    if (await Credential.findOne({ email })) {
-      throw new Error("Email already exists");
-    }
-    if (await PendingSignup.findOne({ email })) {
-      throw new Error("Verification already pending for this email");
-    }
-
-    // 5) Worker‐specific shape checks
-    if (userType === "worker") {
-      // address must be array of {region, city, district, street, unit?}
-      if (
-        !Array.isArray(address) ||
-        address.some((a) => !a.region || !a.city || !a.district || !a.street)
-      ) {
-        throw new Error(
-          "Worker address must be an array of objects with region, city, district, and street"
-        );
-      }
-
-      // workerSkills must be array of { skillCategory:ObjectId, skills:[String] }
-      if (
-        !Array.isArray(workerSkills) ||
-        workerSkills.some(
-          (ws) =>
-            !ws.skillCategory ||
-            !Array.isArray(ws.skills) ||
-            ws.skills.length === 0
-        )
-      ) {
-        throw new Error(
-          "workerSkills must be [{ skillCategory: ObjectId, skills: [String] }]"
-        );
-      }
-
-      // portfolio must be array of { projectLink:String, … }
-      if (!Array.isArray(portfolio) || portfolio.some((p) => !p.projectLink)) {
-        throw new Error(
-          "portfolio must be an array of objects each with a projectLink URL"
-        );
-      }
-    }
-
-    // 6) Everything looks good—hash & store pending
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const authCode = generateAuthenticationCode();
-
-    await PendingSignup.create({
-      email,
-      password: hashedPassword,
-      userType,
-      lastName,
-      firstName,
-      middleName,
-      contactNumber,
-      profilePicture,
-      address,
-      workerSkills,
-      portfolio,
-      authenticationCode: authCode,
-      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000,
+    const clientProfile = new Client({
+      credentialId,
+      lastName: pending.lastName,
+      firstName: pending.firstName,
+      contactNumber: pending.contactNumber,
+      sex: pending.sex,
+      dateOfBirth: pending.dateOfBirth,
+      maritalStatus: pending.maritalStatus,
+      address: {
+        region: pending.address.region,
+        city: pending.address.city,
+        district: pending.address.district,
+        street: pending.address.street,
+        unit: pending.address.unit || null,
+      },
+      profilePicture: pending.profilePicture || null,
     });
 
-    // 7) Send verification email
-    const userName = `${firstName} ${lastName}`;
-    let sent;
-    try {
-      sent = await emailVerification(authCode, email, userName);
-    } catch (err) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Email failed", error: err.message });
-    }
-    if (!sent.success) {
-      return res
-        .status(400)
-        .json({ success: false, message: sent.reason || "Email not sent" });
+    await clientProfile.save({ session });
+  } catch (error) {
+    throw new Error("Error creating client profile: " + error.message);
+  }
+};
+
+const createWorkerProfile = async (pending, credentialId, session) => {
+  try {
+    const workerProfile = new Worker({
+      credentialId,
+      lastName: pending.lastName,
+      firstName: pending.firstName,
+      contactNumber: pending.contactNumber,
+      sex: pending.sex,
+      dateOfBirth: pending.dateOfBirth,
+      maritalStatus: pending.maritalStatus,
+      address: {
+        region: pending.address.region,
+        city: pending.address.city,
+        district: pending.address.district,
+        street: pending.address.street,
+        unit: pending.address.unit || null,
+      },
+      profilePicture: pending.profilePicture || null,
+      biography: pending.biography || "",
+      workerSkills: pending.workerSkills || [],
+      portfolio: pending.portfolio || [],
+      experience: Array.isArray(pending.experience) ? pending.experience : [],
+      certificates: pending.certificates || [],
+    });
+
+    await workerProfile.save({ session });
+  } catch (error) {
+    throw new Error("Error creating worker profile: " + error.message);
+  }
+};
+
+router.post("/signup", authLimiter, verifyCaptcha, async (req, res) => {
+  try {
+    const {
+      userType,
+      email,
+      password,
+      lastName,
+      firstName,
+      contactNumber,
+      sex,
+      dateOfBirth,
+      maritalStatus,
+      address,
+      profilePicture,
+      biography,
+      workerSkills,
+      portfolio,
+      experience,
+      certificates,
+    } = req.body;
+
+    if (!["client", "worker"].includes(userType))
+      throw new Error("Invalid user type.");
+
+    const trimmedEmail = email?.trim().toLowerCase();
+    const trimmedContactNumber = contactNumber?.trim();
+
+    if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail))
+      throw new Error("Invalid email format.");
+
+    const domain = trimmedEmail.split("@")[1];
+    if (!ALLOWED_EMAIL_DOMAINS.some((d) => domain === d.replace("@", "")))
+      throw new Error("Only emails from trusted providers are allowed.");
+
+    if (!isPasswordStrong(password))
+      throw new Error(
+        "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character."
+      );
+
+    if (!validatePhoneNumber(trimmedContactNumber))
+      throw new Error("Invalid contact number format. Must be 10-15 digits.");
+
+    const requiredFields = ["region", "city", "district", "street"];
+    for (const field of requiredFields) {
+      if (!address?.[field]?.trim())
+        throw new Error(`${field} in address is required.`);
     }
 
-    // 8) Done
-    res.status(200).json({ success: true, message: "Verification email sent" });
+    const parsedDateOfBirth = new Date(dateOfBirth);
+    if (!dateOfBirth || isNaN(parsedDateOfBirth))
+      throw new Error("Invalid date of birth.");
+
+    const [existingCredential, existingPending] = await Promise.all([
+      Credential.findOne({ email: trimmedEmail }),
+      PendingSignup.findOne({ email: trimmedEmail }),
+    ]);
+    if (existingCredential) throw new Error("Email already registered.");
+    if (existingPending)
+      throw new Error(
+        "A verification process is already pending for this email."
+      );
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const authCode = generateAuthenticationCode();
+
+    const pendingData = {
+      email: trimmedEmail,
+      password: hashedPassword,
+      userType,
+      lastName: lastName.trim(),
+      firstName: firstName.trim(),
+      contactNumber: trimmedContactNumber,
+      sex,
+      dateOfBirth: parsedDateOfBirth,
+      maritalStatus,
+      address: {
+        region: address.region.trim(),
+        city: address.city.trim(),
+        district: address.district.trim(),
+        street: address.street.trim(),
+        unit: address.unit?.trim() || null,
+      },
+      profilePicture: profilePicture?.trim() || null,
+      authenticationCode: authCode,
+      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000,
+    };
+
+    if (userType === "worker") {
+      Object.assign(pendingData, {
+        biography: biography?.trim() || "",
+        workerSkills: Array.isArray(workerSkills) ? workerSkills : [],
+        portfolio: Array.isArray(portfolio) ? portfolio : [],
+        experience: Array.isArray(experience) ? experience : [],
+        certificates: Array.isArray(certificates) ? certificates : [],
+      });
+    }
+
+    await PendingSignup.create(pendingData);
+
+    const sent = await emailVerification(
+      authCode,
+      trimmedEmail,
+      `${firstName} ${lastName}`
+    );
+    if (!sent.success)
+      throw new Error(sent.reason || "Failed to send verification email.");
+
+    res.status(200).json({
+      success: true,
+      message: `${userType} verification email sent successfully.`,
+    });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 });
 
-// Verify code
+//verify
 router.post("/verify", authLimiter, async (req, res) => {
-  const { email, code } = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const pending = await PendingSignup.findOne({ email }).select("+password");
+    const { email, code } = req.body;
+    const trimmedEmail = email?.trim().toLowerCase();
+    const pending = await PendingSignup.findOne({ email: trimmedEmail })
+      .select("+password")
+      .session(session);
 
-    if (!pending) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No pending signup found" });
-    }
+    if (!pending) throw new Error("No pending signup found for this email.");
 
     if (pending.blockedUntil && pending.blockedUntil > Date.now()) {
       const secs = Math.ceil((pending.blockedUntil - Date.now()) / 1000);
-      return res.status(429).json({
-        success: false,
-        message: `Too many attempts. Try again in ${secs}s`,
-      });
+      throw new Error(`Too many attempts. Try again in ${secs}s`);
     }
 
     if (pending.authenticationCode !== code) {
-      pending.verifyAttempts += 1;
+      pending.verifyAttempts = (pending.verifyAttempts || 0) + 1;
 
       if (pending.verifyAttempts >= 5) {
         pending.blockedUntil = Date.now() + 15 * 60 * 1000;
-        await pending.save();
-        return res.status(429).json({
-          success: false,
-          message: "Too many failed attempts. Please wait 15 minutes.",
-        });
       }
 
-      await pending.save();
+      await pending.save({ session });
+      await session.commitTransaction();
+      session.endSession();
+
+      const remaining = Math.max(0, 5 - pending.verifyAttempts);
       return res.status(400).json({
         success: false,
-        message: `Invalid code. You have ${
-          5 - pending.verifyAttempts
-        } tries left.`,
+        message:
+          remaining > 0
+            ? `Invalid code. You have ${remaining} attempt(s) left.`
+            : "Too many failed attempts. Try again later.",
       });
     }
 
-    if (pending.authenticationCodeExpiresAt < Date.now()) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Verification code expired" });
-    }
+    if (pending.authenticationCodeExpiresAt < Date.now())
+      throw new Error("Verification code has expired.");
 
     const credential = new Credential({
       email: pending.email,
@@ -231,22 +244,28 @@ router.post("/verify", authLimiter, async (req, res) => {
       userType: pending.userType,
       isAuthenticated: true,
     });
-    await credential.save();
+
+    await credential.save({ session });
 
     if (pending.userType === "client") {
-      await createClientProfile(pending, credential._id);
+      await createClientProfile(pending, credential._id, session);
     } else if (pending.userType === "worker") {
-      await createWorkerProfile(pending, credential._id);
+      await createWorkerProfile(pending, credential._id, session);
     }
 
-    await PendingSignup.deleteOne({ email });
+    await PendingSignup.deleteOne({ email: trimmedEmail }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     generateTokenandSetCookie(res, credential);
-    res
+    return res
       .status(201)
-      .json({ success: true, message: "Email verified and account created!" });
+      .json({ success: true, message: "Email verified and account created." });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(400).json({ success: false, message: error.message });
   }
 });
 

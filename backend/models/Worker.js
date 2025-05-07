@@ -5,11 +5,14 @@ const WorkerSchema = new mongoose.Schema(
     credentialId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Credential",
+      unique: true,
+      index: true,
     },
     lastName: {
       type: String,
       required: true,
       trim: true,
+      index: true,
       validate: {
         validator: function (v) {
           return v.length > 0;
@@ -21,22 +24,12 @@ const WorkerSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      index: true,
       validate: {
         validator: function (v) {
           return v.length > 0;
         },
         message: "First name cannot be empty",
-      },
-    },
-    middleName: {
-      type: String,
-      required: true,
-      trim: true,
-      validate: {
-        validator: function (v) {
-          return v.length > 0;
-        },
-        message: "Middle name cannot be empty",
       },
     },
     contactNumber: {
@@ -51,40 +44,52 @@ const WorkerSchema = new mongoose.Schema(
           "Contact number must be a valid Philippine mobile number starting with 09 or +639",
       },
     },
-    address: {
-      type: [
-        {
-          region: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          city: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          district: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          street: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          unit: {
-            type: String,
-            trim: true,
-          },
-        },
-      ],
+    sex: {
+      type: String,
+      enum: ["Male", "Female", "Other", "Prefer not to say"],
+      required: true,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: true,
       validate: {
         validator: function (v) {
-          return Array.isArray(v) && v.length > 0;
+          return v <= new Date();
         },
-        message: "At least one address is required",
+        message: "Date of birth cannot be in the future",
+      },
+    },
+    maritalStatus: {
+      type: String,
+      enum: ["Single", "Married", "Separated", "Divorced", "Widowed"],
+      required: true,
+    },
+    address: {
+      region: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      city: {
+        type: String,
+        required: true,
+        trim: true,
+        index: true,
+      },
+      district: {
+        type: String,
+        required: true,
+        trim: true,
+        index: true,
+      },
+      street: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      unit: {
+        type: String,
+        trim: true,
       },
     },
     profilePicture: {
@@ -97,6 +102,11 @@ const WorkerSchema = new mongoose.Schema(
         message: "Invalid profile picture URL",
       },
     },
+    biography: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     workerSkills: [
       {
         skillCategory: {
@@ -107,13 +117,6 @@ const WorkerSchema = new mongoose.Schema(
         skills: {
           type: [String],
           required: true,
-          default: [],
-          validate: {
-            validator: function (v) {
-              return Array.isArray(v) && v.length > 0;
-            },
-            message: "At least one skill must be selected",
-          },
         },
       },
     ],
@@ -122,10 +125,12 @@ const WorkerSchema = new mongoose.Schema(
         projectTitle: {
           type: String,
           default: "",
+          trim: true,
         },
         description: {
           type: String,
           default: "",
+          trim: true,
         },
         projectLink: {
           type: String,
@@ -149,17 +154,32 @@ const WorkerSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
-        startDate: {
-          type: Date,
+        startYear: {
+          type: Number,
           required: true,
+          validate: {
+            validator: function (v) {
+              return v >= 1900 && v <= new Date().getFullYear();
+            },
+            message: "Start year must be between 1900 and the current year",
+          },
         },
-        endDate: {
-          type: Date,
-          required: false,
+        endYear: {
+          type: Number,
           default: null,
+          validate: [
+            {
+              validator: function (v) {
+                return v === null || v <= new Date().getFullYear();
+              },
+              message: "End year must not be in the future",
+            },
+          ],
         },
         responsibilities: {
           type: String,
+          default: "",
+          trim: true,
         },
       },
     ],
@@ -179,42 +199,41 @@ const WorkerSchema = new mongoose.Schema(
     ],
     reviews: [
       {
-        reviewerId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Client",
-        },
-        jobId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Job",
-        },
-        comment: {
-          type: String,
-          required: true,
-        },
-        rating: {
-          type: Number,
-          required: true,
-          min: 1,
-          max: 5,
-        },
-        reviewDate: {
-          type: Date,
-          required: true,
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Review",
       },
     ],
     status: {
       type: String,
       enum: ["Available", "Working", "Not Available"],
       default: "Available",
+      index: true,
     },
     currentJob: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
       default: null,
     },
+    blocked: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   { timestamps: true }
 );
+
+WorkerSchema.pre("validate", function (next) {
+  for (const exp of this.experience) {
+    if (exp.endYear !== null && exp.endYear < exp.startYear) {
+      return next(
+        new Error(
+          `In experience at "${exp.companyName}", end year (${exp.endYear}) must be >= start year (${exp.startYear})`
+        )
+      );
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model("Worker", WorkerSchema);

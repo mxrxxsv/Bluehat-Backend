@@ -5,6 +5,7 @@ const ClientSchema = new mongoose.Schema(
     credentialId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Credential",
+      unique: true,
     },
     lastName: {
       type: String,
@@ -28,17 +29,6 @@ const ClientSchema = new mongoose.Schema(
         message: "First name cannot be empty",
       },
     },
-    middleName: {
-      type: String,
-      required: true,
-      trim: true,
-      validate: {
-        validator: function (v) {
-          return v.length > 0;
-        },
-        message: "Middle name cannot be empty",
-      },
-    },
     contactNumber: {
       type: String,
       required: true,
@@ -51,6 +41,52 @@ const ClientSchema = new mongoose.Schema(
           "Contact number must be a valid Philippine mobile number starting with 09 or +639",
       },
     },
+    sex: {
+      type: String,
+      enum: ["Male", "Female", "Other", "Prefer not to say"],
+      required: true,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return v <= new Date();
+        },
+        message: "Date of birth cannot be in the future",
+      },
+    },
+    maritalStatus: {
+      type: String,
+      enum: ["Single", "Married", "Separated", "Divorced", "Widowed"],
+      required: true,
+    },
+    address: {
+      region: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      city: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      district: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      street: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      unit: {
+        type: String,
+        trim: true,
+      },
+    },
     profilePicture: {
       type: String,
       default: null,
@@ -61,45 +97,9 @@ const ClientSchema = new mongoose.Schema(
         message: "Invalid profile picture URL",
       },
     },
-    address: {
-      type: [
-        {
-          region: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          city: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          district: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          street: {
-            type: String,
-            required: true,
-            trim: true,
-          },
-          unit: {
-            type: String,
-            trim: true,
-          },
-        },
-      ],
-      validate: {
-        validator: function (v) {
-          return Array.isArray(v) && v.length > 0;
-        },
-        message: "At least one address is required",
-      },
-    },
   },
   { timestamps: true }
 );
 
-ClientSchema.index({ credentialId: 1 });
+ClientSchema.index({ credentialId: 1, lastName: 1, firstName: 1 });
 module.exports = mongoose.model("Client", ClientSchema);
