@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const ForgetPass = () => {
     const [step, setStep] = useState(1);
@@ -8,15 +8,35 @@ const ForgetPass = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [otpError, setOtpError] = useState("");
     const otpRefs = useRef([]);
+    const VALID_OTP = "123456";
 
-    // const VALID_OTP = "123456"; 
+    const [resendTimer, setResendTimer] = useState(60);
+    const timerRef = useRef(null);
+
+    useEffect(() => {
+        if (step === 2 && resendTimer > 0) {
+            timerRef.current = setTimeout(() => {
+                setResendTimer((prev) => prev - 1);
+            }, 1000);
+        }
+
+        return () => clearTimeout(timerRef.current);
+    }, [resendTimer, step]);
 
     const handleSendOTP = (e) => {
         e.preventDefault();
         if (email) {
             console.log(`OTP sent to ${email}`);
             setStep(2);
+            setResendTimer(60);
         }
+    };
+
+    const handleResendOTP = () => {
+        console.log(`Resent OTP to ${email}`);
+        setOtp(Array(6).fill(""));
+        setOtpError("");
+        setResendTimer(60);
     };
 
     const handleOtpChange = (index, value) => {
@@ -24,7 +44,7 @@ const ForgetPass = () => {
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
-        setOtpError(""); // Clear error as they type
+        setOtpError("");
 
         if (value && index < 5) {
             otpRefs.current[index + 1].focus();
@@ -45,8 +65,7 @@ const ForgetPass = () => {
             return;
         }
 
-        setOtpError(""); 
-
+        setOtpError("");
         console.log(`Password reset for ${email} with OTP: ${enteredOtp}`);
         alert("Password changed successfully!");
         setStep(1);
@@ -99,6 +118,19 @@ const ForgetPass = () => {
                             {otpError && (
                                 <p className="text-sm text-red-500 mt-2 text-center">{otpError}</p>
                             )}
+                            <div className="text-center mt-2">
+                                {resendTimer > 0 ? (
+                                    <p className="text-sm text-gray-500">Resend OTP in {resendTimer} sec</p>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleResendOTP}
+                                        className="text-sm text-blue-500 hover:underline"
+                                    >
+                                        Resend OTP
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div>
