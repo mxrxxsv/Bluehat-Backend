@@ -123,7 +123,7 @@ const ChatPage = () => {
             <aside
                 ref={sidebarRef}
                 id="default-sidebar"
-                className={`absolute top-50 md:top-48 left-0 z-40 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] md:opacity-100 opacity-98 shadow-md ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`absolute top-55 md:top-48 left-0 z-40 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] md:opacity-100 opacity-98 shadow-md ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     } sm:translate-x-0 overflow-clip`}
                 aria-label="Sidebar"
             >
