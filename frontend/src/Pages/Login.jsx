@@ -74,6 +74,7 @@ const Login = () => {
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
                                         placeholder="name@gmail.com"
+                                        required
                                     />
                                 </div>
                                 <div>
@@ -85,6 +86,7 @@ const Login = () => {
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
+                                        required
                                     />
                                 </div>
                                 <div className="flex items-start">
