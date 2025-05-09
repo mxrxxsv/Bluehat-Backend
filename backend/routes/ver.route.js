@@ -16,24 +16,22 @@ const router = express.Router();
 
 const multer = require("multer");
 const cloudinary = require("../db/cloudinary");
-const fs = require("fs");
+const streamifier = require("streamifier");
 
-const ALLOWED_EMAIL_DOMAINS = ["@gmail.com"];
+const storage = multer.memoryStorage();
 
-const isPasswordStrong = (password) =>
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
-const validatePhoneNumber = (contactNumber) =>
-  /^[+]?[0-9]{10,15}$/.test(contactNumber);
-
-const safeParseArray = (input) => {
-  if (Array.isArray(input)) return input;
-  try {
-    return JSON.parse(input);
-  } catch {
-    return [];
-  }
-};
+const multiUpload = upload.fields([
+  { name: "profilePicture", maxCount: 1 },
+  { name: "portfolio", maxCount: 5 },
+  { name: "certificates", maxCount: 5 },
+  { name: "idPicture", maxCount: 1 },
+  { name: "selfiePicture", maxCount: 1 },
+]);
 
 const createClientProfile = async (pending, credentialId, session) => {
   try {
@@ -52,7 +50,11 @@ const createClientProfile = async (pending, credentialId, session) => {
         street: pending.address?.street || "",
         unit: pending.address?.unit || null,
       },
-      profilePicture: pending.profilePicture || null,
+      profilePicture: {
+        url: "",
+        public_id: "",
+      },
+      blocked: false,
     });
 
     await clientProfile.save({ session });
@@ -76,18 +78,21 @@ const createWorkerProfile = async (pending, credentialId, session) => {
         city: pending.address?.city || "",
         district: pending.address?.district || "",
         street: pending.address?.street || "",
-        unit: pending.address?.unit || null,
+        unit: pending.address?.unit || "",
       },
-      profilePicture: pending.profilePicture || null,
+      profilePicture: {
+        url: "",
+        public_id: "",
+      },
       biography: pending.biography || "",
-      workerSkills: pending.workerSkills || [],
-      experience: Array.isArray(pending.experience) ? pending.experience : [],
-      portfolio: Array.isArray(pending.portfolio) ? pending.portfolio : [],
-      certificates: Array.isArray(pending.certificates)
-        ? pending.certificates
-        : [],
-      current_status: "available",
-      current_job_id: null,
+      workerSkills: [],
+      portfolio: [],
+      experience: [],
+      certificates: [],
+      reviews: [],
+      status: "Available",
+      currentJob: null,
+      blocked: false,
     });
 
     await workerProfile.save({ session });
@@ -96,213 +101,103 @@ const createWorkerProfile = async (pending, credentialId, session) => {
   }
 };
 
-const upload = multer({
-  dest: "uploads/",
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-});
+//Signup
+router.post("/signup", authLimiter, verifyCaptcha, async (req, res) => {
+  try {
+    const {
+      userType,
+      email,
+      password,
+      lastName,
+      firstName,
+      contactNumber,
+      sex,
+      dateOfBirth,
+      maritalStatus,
+      address,
+    } = req.body;
 
-const multiUpload = upload.fields([
-  { name: "profilePicture", maxCount: 1 },
-  { name: "portfolio", maxCount: 10 },
-  { name: "certificates", maxCount: 10 },
-]);
+    const [existingCredential, existingPending] = await Promise.all([
+      Credential.findOne({ email }),
+      PendingSignup.findOne({ email }),
+    ]);
 
-router.post(
-  "/signup",
-  authLimiter,
-  verifyCaptcha,
-  multiUpload,
-  async (req, res) => {
-    try {
-      const {
-        userType,
-        email,
-        password,
-        lastName,
-        firstName,
-        contactNumber,
-        sex,
-        dateOfBirth,
-        maritalStatus,
-        address,
-        biography,
-        workerSkills,
-        experience,
-      } = req.body;
-
-      // Sanitize inputs
-      const trimmedEmail = email?.trim().toLowerCase();
-      const trimmedContactNumber = contactNumber?.trim();
-      const safeFirstName = firstName?.trim();
-      const safeLastName = lastName?.trim();
-
-      if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
-        throw new Error("Invalid email format.");
-      }
-
-      const emailDomain = trimmedEmail.split("@")[1]?.toLowerCase();
-      if (!ALLOWED_EMAIL_DOMAINS.includes(`@${emailDomain}`)) {
-        throw new Error("Only emails from trusted providers are allowed.");
-      }
-
-      if (!isPasswordStrong(password)) {
-        throw new Error(
-          "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character."
-        );
-      }
-
-      if (!validatePhoneNumber(trimmedContactNumber)) {
-        throw new Error("Invalid contact number format. Must be 10-15 digits.");
-      }
-
-      const requiredFields = ["region", "city", "district", "street"];
-      for (const field of requiredFields) {
-        if (!address?.[field]?.trim())
-          throw new Error(`${field} in address is required.`);
-      }
-
-      const parsedDateOfBirth = new Date(dateOfBirth);
-      if (!dateOfBirth || isNaN(parsedDateOfBirth)) {
-        throw new Error("Invalid date of birth.");
-      }
-
-      const [existingCredential, existingPending] = await Promise.all([
-        Credential.findOne({ email: trimmedEmail }),
-        PendingSignup.findOne({ email: trimmedEmail }),
-      ]);
-
-      if (existingCredential) throw new Error("Email already registered.");
-      if (existingPending)
-        throw new Error(
-          "A verification process is already pending for this email."
-        );
-
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const authCode = Math.floor(100000 + Math.random() * 900000).toString(); // simple code
-      const files = req.files || {};
-
-      // Handle profile picture upload
-      let profileResult = null;
-      const profilePicFile = files["profilePicture"]?.[0];
-      if (profilePicFile) {
-        profileResult = await cloudinary.uploader.upload(profilePicFile.path, {
-          folder: "profile_pictures",
-        });
-        await fs.promises.unlink(profilePicFile.path);
-      }
-
-      // Handle portfolio upload
-      const portfolioResults = [];
-      if (files["portfolio"]) {
-        for (const file of files["portfolio"]) {
-          try {
-            const result = await cloudinary.uploader.upload(file.path, {
-              folder: "portfolio",
-            });
-            portfolioResults.push({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          } catch (err) {
-            console.error("Portfolio upload failed:", err);
-          } finally {
-            await fs.promises.unlink(file.path);
-          }
-        }
-      }
-
-      // Handle certificate upload
-      const certificateResults = [];
-      if (files["certificates"]) {
-        for (const file of files["certificates"]) {
-          try {
-            const result = await cloudinary.uploader.upload(file.path, {
-              folder: "certificates",
-            });
-            certificateResults.push({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          } catch (err) {
-            console.error("Certificates upload failed:", err);
-          } finally {
-            await fs.promises.unlink(file.path);
-          }
-        }
-      }
-
-      if (!["client", "worker"].includes(userType)) {
-        throw new Error("Invalid user type.");
-      }
-
-      const pendingData = {
-        email: trimmedEmail,
-        password: hashedPassword,
-        userType,
-        firstName: safeFirstName,
-        lastName: safeLastName,
-        contactNumber: trimmedContactNumber,
-        sex,
-        dateOfBirth: parsedDateOfBirth,
-        maritalStatus,
-        address: {
-          region: address.region.trim(),
-          city: address.city.trim(),
-          district: address.district.trim(),
-          street: address.street.trim(),
-          unit: address.unit?.trim() || null,
-        },
-        profilePicture: profileResult
-          ? {
-              url: profileResult.secure_url,
-              public_id: profileResult.public_id,
-            }
-          : null,
-        authenticationCode: authCode,
-        authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000, // 10 mins
-      };
-
-      if (userType === "worker") {
-        Object.assign(pendingData, {
-          biography: biography?.trim() || "",
-          workerSkills: safeParseArray(workerSkills),
-          experience: safeParseArray(experience),
-          portfolio: portfolioResults,
-          certificates: certificateResults,
-        });
-      }
-
-      await PendingSignup.create(pendingData);
-
-      const sent = await emailVerification(
-        authCode,
-        trimmedEmail,
-        `${safeFirstName} ${safeLastName}`
+    if (existingCredential) throw new Error("Email already registered.");
+    if (existingPending)
+      throw new Error(
+        "A verification process is already pending for this email."
       );
 
-      if (!sent.success) {
-        throw new Error(sent.reason || "Failed to send verification email.");
-      }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const authCode = generateAuthenticationCode();
 
-      res.status(200).json({
-        success: true,
-        message: `${userType} verification email sent successfully.`,
-      });
-    } catch (err) {
-      res.status(400).json({ success: false, message: err.message });
+    if (!["client", "worker"].includes(userType)) {
+      throw new Error("Invalid user type.");
     }
+
+    if (
+      ![
+        "Single",
+        "Married",
+        "Separated",
+        "Divorced",
+        "Widowed",
+        "Prefer not to say",
+      ].includes(maritalStatus)
+    ) {
+      throw new Error("Invalid marital status");
+    }
+
+    const pendingData = {
+      email,
+      password: hashedPassword,
+      userType,
+      lastName,
+      firstName,
+      contactNumber,
+      sex,
+      dateOfBirth,
+      maritalStatus,
+      address: {
+        region: address.region,
+        city: address.city,
+        district: address.district,
+        street: address.street,
+        unit: address.unit || null,
+      },
+      authenticationCode: authCode,
+      authenticationCodeExpiresAt: Date.now() + 10 * 60 * 1000, // 10 mins
+    };
+
+    await PendingSignup.create(pendingData);
+
+    let fullName = `${firstName} ${lastName}`;
+
+    const sent = await emailVerification(authCode, email, fullName);
+
+    if (!sent.success) {
+      throw new Error(sent.reason || "Failed to send verification email.");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${userType} verification email sent successfully.`,
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
-);
+});
 
 //verify
 router.post("/verify", authLimiter, async (req, res) => {
   const session = await mongoose.startSession();
+
   session.startTransaction();
 
   try {
     const { email, code } = req.body;
-    const trimmedEmail = email?.trim().toLowerCase();
-    const pending = await PendingSignup.findOne({ email: trimmedEmail })
+
+    const pending = await PendingSignup.findOne({ email })
       .select("+password")
       .session(session);
 
@@ -352,7 +247,7 @@ router.post("/verify", authLimiter, async (req, res) => {
       await createWorkerProfile(pending, credential._id, session);
     }
 
-    await PendingSignup.deleteOne({ email: trimmedEmail }, { session });
+    await PendingSignup.deleteOne({ email: email }, { session });
 
     await session.commitTransaction();
     session.endSession();
@@ -367,6 +262,318 @@ router.post("/verify", authLimiter, async (req, res) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 });
+
+// Profile upload route using chunked upload
+router.post(
+  "/upload",
+  authLimiter,
+  verifyToken,
+  multiUpload,
+  async (req, res) => {
+    try {
+      const user = req.user;
+      const userId = user.id;
+      const userType = user.userType;
+
+      // Check for files uploaded
+      if (!req.files?.profilePicture) {
+        return res.status(400).json({
+          success: false,
+          message: "No profile picture uploaded.",
+        });
+      }
+
+      const file = req.files.profilePicture[0]; // Get the profile picture file
+
+      // Start chunked upload to Cloudinary
+      const options = {
+        folder: "fixit/profilePictures", // Specify the folder on Cloudinary
+        chunk_size: 5 * 1024 * 1024, // 5MB chunk size (can be adjusted)
+      };
+
+      const upload_stream = cloudinary.uploader.upload_stream(
+        options,
+        async (error, result) => {
+          if (error) {
+            return res.status(500).json({
+              success: false,
+              message: "Error uploading to Cloudinary.",
+              error: error.message,
+            });
+          }
+
+          // Handle success: image is uploaded successfully
+          const updateData = {
+            profilePicture: {
+              url: result.secure_url,
+              public_id: result.public_id,
+            },
+          };
+
+          // Update user profile in DB based on user type (client or worker)
+          let updatedProfile;
+          if (userType === "client") {
+            updatedProfile = await Client.findOneAndUpdate(
+              { credentialId: userId },
+              updateData,
+              { new: true }
+            );
+          } else if (userType === "worker") {
+            updatedProfile = await Worker.findOneAndUpdate(
+              { credentialId: userId },
+              updateData,
+              { new: true }
+            );
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: "Unknown user type.",
+            });
+          }
+
+          res.status(200).json({
+            success: true,
+            message: "Profile picture updated successfully.",
+            data: updatedProfile.profilePicture,
+          });
+        }
+      );
+
+      // Stream the image chunks to Cloudinary
+      streamifier.createReadStream(file.buffer).pipe(upload_stream);
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+);
+
+//Verify id and selfie route
+router.post(
+  "/verify-id",
+  authLimiter,
+  verifyToken,
+  multiUpload,
+  async (req, res) => {
+    try {
+      const user = req.user; // Get user from the token
+      const userId = user.id;
+      const userType = user.userType;
+
+      // Check if idPicture and selfiePicture are provided
+      if (!req.files?.idPicture || !req.files?.selfiePicture) {
+        return res.status(400).json({
+          success: false,
+          message: "Both ID picture and selfie picture are required.",
+        });
+      }
+
+      const idPictureFile = req.files.idPicture[0]; // Get the ID picture file
+      const selfiePictureFile = req.files.selfiePicture[0]; // Get the selfie picture file
+
+      // Function to upload file to Cloudinary
+      const uploadToCloudinary = (file, folder) => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          streamifier.createReadStream(file.buffer).pipe(uploadStream);
+        });
+      };
+
+      // Upload both images sequentially
+      const [idPictureResult, selfiePictureResult] = await Promise.all([
+        uploadToCloudinary(idPictureFile, "fixit/idPictures"),
+        uploadToCloudinary(selfiePictureFile, "fixit/selfiePictures"),
+      ]);
+
+      // Prepare update data
+      const updateData = {
+        idPicture: {
+          url: idPictureResult.secure_url,
+          public_id: idPictureResult.public_id,
+        },
+        selfiePicture: {
+          url: selfiePictureResult.secure_url,
+          public_id: selfiePictureResult.public_id,
+        },
+      };
+
+      // Update user's credential data
+      const updatedCredential = await Credential.findOneAndUpdate(
+        { _id: userId, userType: userType },
+        updateData,
+        { new: true }
+      );
+
+      // Respond with success message
+      res.status(200).json({
+        success: true,
+        message:
+          "ID and selfie pictures uploaded successfully for verification.",
+        data: updatedCredential,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+);
+
+// Create portfolio route for workers
+router.post(
+  "/create-portfolio",
+  authLimiter,
+  verifyToken,
+  multiUpload,
+  async (req, res) => {
+    try {
+      const user = req.user; // Get user from token
+      const userId = user.id;
+      const userType = user.userType;
+
+      // Check if user is a worker
+      if (userType !== "worker") {
+        return res.status(400).json({
+          success: false,
+          message: "Only workers can create portfolios.",
+        });
+      }
+
+      // Get the data from the request body
+      const { biography, workerSkills, experience, portfolio, certificates } =
+        req.body;
+
+      // Ensure workerSkills is provided and has at least one skill
+      if (!workerSkills || workerSkills.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "At least one skill must be provided.",
+        });
+      }
+
+      // Initialize arrays for portfolio and certificates
+      const portfolioItems = [];
+      const certificateItems = [];
+
+      // Handle portfolio image uploads to Cloudinary
+      if (req.files?.portfolio) {
+        const uploadPromises = portfolio.map((item, index) => {
+          return new Promise((resolve, reject) => {
+            const { projectTitle, description } = item;
+            const file = req.files.portfolio[index];
+
+            // Upload portfolio image to Cloudinary
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "fixit/portfolios" },
+              (error, result) => {
+                if (error) {
+                  return reject({
+                    message: `Error uploading portfolio image for item #${
+                      index + 1
+                    }.`,
+                    error: error.message,
+                  });
+                }
+
+                // Add portfolio item with image data
+                portfolioItems.push({
+                  projectTitle: projectTitle || "", // Allow empty projectTitle
+                  description: description || "", // Allow empty description
+                  image: {
+                    url: result.secure_url,
+                    public_id: result.public_id,
+                  },
+                });
+                resolve();
+              }
+            );
+
+            // Pipe the file to the upload stream
+            file.stream.pipe(uploadStream);
+          });
+        });
+
+        // Wait for all portfolio items to be uploaded
+        await Promise.all(uploadPromises);
+      }
+
+      // Handle certificates image uploads to Cloudinary
+      if (req.files?.certificates) {
+        const uploadCertPromises = req.files.certificates.map((file) => {
+          return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "fixit/certificates" },
+              (error, result) => {
+                if (error) {
+                  return reject({
+                    message: "Error uploading certificate to Cloudinary.",
+                    error: error.message,
+                  });
+                }
+
+                certificateItems.push({
+                  url: result.secure_url,
+                  public_id: result.public_id,
+                });
+                resolve();
+              }
+            );
+
+            // Pipe the certificate file to the upload stream
+            streamifier.createReadStream(file.buffer).pipe(uploadStream);
+          });
+        });
+
+        // Wait for all certificate items to be uploaded
+        await Promise.all(uploadCertPromises);
+      }
+
+      // Create or update the worker's portfolio
+      const workerPortfolioData = {
+        biography: biography || "",
+        workerSkills,
+        portfolio: portfolioItems,
+        experience: experience || [],
+        certificates: certificateItems,
+      };
+
+      // Find worker by userId and update portfolio
+      const updatedWorker = await Worker.findOneAndUpdate(
+        { credentialId: userId },
+        { $set: workerPortfolioData },
+        { new: true }
+      );
+
+      if (!updatedWorker) {
+        return res.status(404).json({
+          success: false,
+          message: "Worker not found.",
+        });
+      }
+
+      // Respond with success
+      res.status(200).json({
+        success: true,
+        message: "Portfolio created/updated successfully.",
+        data: updatedWorker,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  }
+);
 
 // Resend code
 router.post("/resend-code", verifyCaptcha, async (req, res) => {
@@ -440,7 +647,7 @@ router.post("/login", authLimiter, verifyCaptcha, async (req, res) => {
         .json({ success: false, message: "Wrong password" });
     }
 
-    generateTokenandSetCookie(res, user._id);
+    generateTokenandSetCookie(res, user);
     user.lastLogin = new Date();
     await user.save();
 
@@ -453,10 +660,10 @@ router.post("/login", authLimiter, verifyCaptcha, async (req, res) => {
 // Check auth
 router.get("/check-auth", verifyToken, async (req, res) => {
   try {
-    const { userId } = req.user;
+    const { id, userType } = req.user;
 
     // Fetch credentials without password
-    const credential = await Credential.findById(userId).select("-password");
+    const credential = await Credential.findById(id).select("-password");
     if (!credential) {
       return res
         .status(404)
@@ -465,15 +672,15 @@ router.get("/check-auth", verifyToken, async (req, res) => {
 
     let user;
 
-    if (credential.userType === "client") {
-      user = await Client.findOne({ credentialId: userId });
+    if (userType === "client") {
+      user = await Client.findOne({ credentialId: id });
       if (!user) {
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
       }
-    } else if (credential.userType === "worker") {
-      user = await Worker.findOne({ credentialId: userId });
+    } else if (userType === "worker") {
+      user = await Worker.findOne({ credentialId: id });
       if (!user) {
         return res
           .status(404)
@@ -494,7 +701,7 @@ router.get("/check-auth", verifyToken, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error in /check-auth-try:", err);
+    console.error("Error in /check-auth-try", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
