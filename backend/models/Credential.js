@@ -30,6 +30,10 @@ const CredentialSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
+      hash: {
+        type: String,
+        required: true,
+      },
     },
     selfiePicture: {
       url: {
@@ -37,6 +41,10 @@ const CredentialSchema = new mongoose.Schema(
         required: true,
       },
       public_id: {
+        type: String,
+        required: true,
+      },
+      hash: {
         type: String,
         required: true,
       },

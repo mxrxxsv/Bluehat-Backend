@@ -71,14 +71,27 @@ const WorkerSchema = new mongoose.Schema(
         required: true,
       },
     },
+    profilePictureHash: {
+      type: String,
+      required: true,
+    },
     biography: {
       type: String,
       default: "",
     },
-    workerSkills: {
-      type: [String],
-      default: [],
-    },
+    workerSkills: [
+      {
+        skillCategory: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "SkillCategory",
+          required: true,
+        },
+        skills: {
+          type: [String],
+          required: true,
+        },
+      },
+    ],
     portfolio: [
       {
         projectTitle: {

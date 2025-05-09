@@ -71,6 +71,10 @@ const ClientSchema = new mongoose.Schema(
         required: true,
       },
     },
+    profilePictureHash: {
+      type: String,
+      required: true,
+    },
     blocked: {
       type: Boolean,
       default: false,
