@@ -6,9 +6,9 @@ const CredentialSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      select: false, // Don't return the encrypted email by default
+      index: true,
       unique: true,
-      lowercase: true,
-      trim: true,
     },
     password: {
       type: String,
@@ -24,29 +24,21 @@ const CredentialSchema = new mongoose.Schema(
     idPicture: {
       url: {
         type: String,
-        required: true,
+        required: false,
       },
       public_id: {
         type: String,
-        required: true,
-      },
-      hash: {
-        type: String,
-        required: true,
+        required: false,
       },
     },
     selfiePicture: {
       url: {
         type: String,
-        required: true,
+        required: false,
       },
       public_id: {
         type: String,
-        required: true,
-      },
-      hash: {
-        type: String,
-        required: true,
+        required: false,
       },
     },
     lastLogin: {

@@ -3,7 +3,7 @@ const router = express.Router();
 const Advertisement = require("../models/Advertisement");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const { body, validationResult } = require("express-validator");
-const rateLimiter = require("../utils/rateLimit");
+const { authLimiter } = require("../utils/rateLimit");
 
 // Input validation for advertisement fields
 const validateAd = [
@@ -54,7 +54,7 @@ router.post("/", verifyAdmin, validateAd, async (req, res) => {
 });
 
 // GET All Advertisements (with filters, pagination, and rate limiting)
-router.get("/", rateLimiter, async (req, res) => {
+router.get("/", authLimiter, async (req, res) => {
   try {
     const {
       companyName,

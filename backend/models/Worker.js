@@ -21,7 +21,7 @@ const WorkerSchema = new mongoose.Schema(
     },
     sex: {
       type: String,
-      enum: ["Male", "Female", "Other", "Prefer not to say"],
+      enum: ["male", "female", "other", "prefer not to say"],
       required: true,
     },
     dateOfBirth: {
@@ -31,12 +31,12 @@ const WorkerSchema = new mongoose.Schema(
     maritalStatus: {
       type: String,
       enum: [
-        "Single",
-        "Married",
-        "Separated",
-        "Divorced",
-        "Widowed",
-        "Prefer not to say",
+        "single",
+        "married",
+        "separated",
+        "divorced",
+        "widowed",
+        "prefer not to say",
       ],
       required: true,
     },
@@ -64,16 +64,12 @@ const WorkerSchema = new mongoose.Schema(
     profilePicture: {
       url: {
         type: String,
-        required: true,
+        required: false,
       },
       public_id: {
         type: String,
-        required: true,
+        required: false,
       },
-    },
-    profilePictureHash: {
-      type: String,
-      required: true,
     },
     biography: {
       type: String,
@@ -158,8 +154,8 @@ const WorkerSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["Available", "Working", "Not Available"],
-      default: "Available",
+      enum: ["available", "aorking", "not available"],
+      default: "available",
     },
     currentJob: {
       type: mongoose.Schema.Types.ObjectId,

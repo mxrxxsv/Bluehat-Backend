@@ -6,7 +6,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
 const connectDb = require("./db/connectDb");
-const rateLimiter = require("./utils/rateLimit");
+const { authLimiter, verifyLimiter } = require("./utils/rateLimit");
 
 const verRoute = require("./routes/ver.route");
 const uploadRoute = require("./routes/upload.route");
@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 
 // 2) CORS — only allow your front-end origins
-app.use(cors());
+app.use(cors({ credentials: true }));
 
 // 3) Request parsing
 app.use(express.json());
@@ -31,7 +31,7 @@ app.use(cookieParser());
 app.use(morgan("combined"));
 
 // 5) Rate limiting (apply globally)
-app.use(rateLimiter);
+app.use(authLimiter);
 
 // 6) Health check
 app.get("/healthz", (req, res) => res.sendStatus(200));

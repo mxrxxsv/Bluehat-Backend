@@ -6,7 +6,7 @@ const crypto = require("crypto");
 
 const cloudinary = require("../db/cloudinary");
 const verifyToken = require("../middleware/verifyToken");
-const authLimiter = require("../utils/rateLimit");
+const { authLimiter } = require("../utils/rateLimit");
 
 const Credential = require("../models/Credential");
 const Client = require("../models/Client");
