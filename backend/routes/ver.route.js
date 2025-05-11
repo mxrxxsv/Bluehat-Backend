@@ -569,31 +569,24 @@ router.post(
 
       const sanitizedPassword = mongoSanitize(password);
 
-      const allUsers = await Credential.find({}).select("+password +email");
+      const allUsers = await Credential.find({}).select("+email +password");
 
-      let foundUser = null;
-
-      for (const u of allUsers) {
+      const matchingUser = allUsers.find((user) => {
         try {
-          if (!u.emailIV || !u.encryptedEmail) continue;
-
-          const decryptedEmail = decryptAES128(u.encryptedEmail, u.emailIV);
-          if (decryptedEmail === normalizedEmail) {
-            foundUser = u;
-            break;
-          }
-        } catch (e) {
-          // Skip corrupted user record
-          continue;
+          return decryptAES128(user.email) === normalizedEmail;
+        } catch {
+          return false;
         }
-      }
+      });
 
-      if (!foundUser) {
-        return res.status(400).json({
+      if (!matchingUser) {
+        return res.status(404).json({
           success: false,
-          message: "Invalid email or password",
+          message: "No pending signup found for this email.",
         });
       }
+
+      const foundUser = matchingUser;
 
       const isPasswordCorrect = await bcrypt.compare(
         sanitizedPassword,

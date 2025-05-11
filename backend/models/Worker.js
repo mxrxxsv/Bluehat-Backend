@@ -75,17 +75,19 @@ const WorkerSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    workerSkills: [
+    skillsByCategory: [
       {
-        skillCategory: {
+        skillCategoryId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "SkillCategory",
           required: true,
         },
-        skills: {
-          type: [String],
-          required: true,
-        },
+        selectedSkills: [
+          {
+            type: String,
+            required: true,
+          },
+        ],
       },
     ],
     portfolio: [
@@ -154,7 +156,7 @@ const WorkerSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["available", "aorking", "not available"],
+      enum: ["available", "working", "not available"],
       default: "available",
     },
     currentJob: {

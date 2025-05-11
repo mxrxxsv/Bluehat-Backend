@@ -31,7 +31,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Profile upload route using chunked upload
 router.post(
-  "/upload",
+  "/upload-profile",
   authLimiter,
   verifyToken,
   multiUpload,
@@ -321,7 +321,7 @@ router.post(
   multiUpload,
   async (req, res) => {
     try {
-      const user = req.user; // Get user from the token
+      const user = req.user;
       const userId = user.id;
       const userType = user.userType;
 
@@ -332,16 +332,44 @@ router.post(
         });
       }
 
-      const { biography, workerSkills, experience, portfolio, certificates } =
-        req.body;
+      const {
+        biography,
+        skillsByCategory,
+        experience,
+        portfolio,
+        certificates,
+      } = req.body;
 
-      if (!workerSkills || workerSkills.length === 0) {
+      if (!skillsByCategory || skillsByCategory.length === 0) {
         return res.status(400).json({
           success: false,
           message: "At least one skill must be provided.",
         });
       }
+      let parsedSkillsByCategory = [];
+      try {
+        parsedSkillsByCategory =
+          typeof skillsByCategory === "string"
+            ? JSON.parse(skillsByCategory)
+            : skillsByCategory;
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid JSON format for skillsByCategory.",
+        });
+      }
 
+      if (
+        !Array.isArray(parsedSkillsByCategory) ||
+        parsedSkillsByCategory.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "At least one skill category with skills must be provided.",
+        });
+      }
+
+      // Fetch current worker data
       const worker = await Worker.findOne({ credentialId: userId });
       if (!worker) {
         return res.status(404).json({
@@ -350,23 +378,17 @@ router.post(
         });
       }
 
-      // Delete old Cloudinary files
-      for (const item of worker.portfolio || []) {
-        await deleteFromCloudinary(item.image?.public_id);
-      }
+      const existingPortfolio = worker.portfolio || [];
+      const existingCertificates = worker.certificates || [];
 
-      for (const cert of worker.certificates || []) {
-        await deleteFromCloudinary(cert.public_id);
-      }
-
-      const portfolioItems = [];
+      // Handle portfolio uploads
+      const portfolioItems = [...existingPortfolio];
       if (req.files?.portfolio) {
         const portfolioUploadPromises = req.files.portfolio.map(
           (file, index) => {
             const { projectTitle = "", description = "" } =
-              portfolio[index] || {};
+              portfolio?.[index] || {};
 
-            // Validate type & size
             if (!allowedMimeTypes.includes(file.mimetype)) {
               throw new Error(
                 `Invalid file type for portfolio image #${index + 1}`
@@ -395,8 +417,18 @@ router.post(
         await Promise.all(portfolioUploadPromises);
       }
 
-      const certificateItems = [];
+      // Handle certificate uploads (limit to 5 total)
+      const certificateItems = [...existingCertificates];
       if (req.files?.certificates) {
+        const totalCertificates =
+          certificateItems.length + req.files.certificates.length;
+        if (totalCertificates > 5) {
+          return res.status(400).json({
+            success: false,
+            message: `You can only have a maximum of 5 certificates. You currently have ${certificateItems.length}.`,
+          });
+        }
+
         const certUploadPromises = req.files.certificates.map((file, index) => {
           if (!allowedMimeTypes.includes(file.mimetype)) {
             throw new Error(
@@ -423,7 +455,7 @@ router.post(
 
       const update = {
         biography: biography || "",
-        workerSkills,
+        workerSkills: parsedSkillsByCategory,
         experience: experience || [],
         portfolio: portfolioItems,
         certificates: certificateItems,
@@ -435,9 +467,16 @@ router.post(
         { new: true }
       );
 
+      if (!updatedWorker) {
+        return res.status(404).json({
+          success: false,
+          message: "Worker profile not found.",
+        });
+      }
+
       return res.status(200).json({
         success: true,
-        message: "Portfolio created/updated successfully.",
+        message: "Portfolio updated successfully.",
         data: updatedWorker,
       });
     } catch (err) {
@@ -447,6 +486,95 @@ router.post(
         message:
           err.message || "Internal server error. Please try again later.",
       });
+    }
+  }
+);
+
+//delete-portfolio
+router.delete(
+  "/delete-portfolio-item/:itemId",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const { itemId } = req.params;
+      const userId = req.user.id;
+
+      const worker = await Worker.findOne({ credentialId: userId });
+      if (!worker) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Worker not found." });
+      }
+
+      const itemToDelete = worker.portfolio.find(
+        (item) => item.image.public_id === itemId
+      );
+
+      if (!itemToDelete) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Portfolio item not found." });
+      }
+
+      // Remove from Cloudinary
+      await deleteFromCloudinary(itemToDelete.image.public_id);
+
+      // Remove from DB
+      worker.portfolio = worker.portfolio.filter(
+        (item) => item.image.public_id !== itemId
+      );
+      await worker.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Portfolio item deleted successfully.",
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
+);
+
+//delete-certificate
+router.delete(
+  "/delete-certificate/:certificateId",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const { certificateId } = req.params;
+      const userId = req.user.id;
+
+      const worker = await Worker.findOne({ credentialId: userId });
+      if (!worker) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Worker not found." });
+      }
+
+      const certToDelete = worker.certificates.find(
+        (cert) => cert.public_id === certificateId
+      );
+
+      if (!certToDelete) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Certificate not found." });
+      }
+
+      // Remove from Cloudinary
+      await deleteFromCloudinary(certToDelete.public_id);
+
+      // Remove from DB
+      worker.certificates = worker.certificates.filter(
+        (cert) => cert.public_id !== certificateId
+      );
+      await worker.save();
+
+      res
+        .status(200)
+        .json({ success: true, message: "Certificate deleted successfully." });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
     }
   }
 );
@@ -465,13 +593,13 @@ const uploadToCloudinary = (file, folder) => {
   });
 };
 
-const deleteFromCloudinary = (publicId) => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader.destroy(publicId, (error, result) => {
-      if (error) reject(error);
-      else resolve(result);
-    });
-  });
+const deleteFromCloudinary = async (public_id) => {
+  try {
+    await cloudinary.uploader.destroy(public_id);
+  } catch (err) {
+    console.error("Cloudinary deletion error:", err.message);
+    throw err;
+  }
 };
 
 module.exports = router;
