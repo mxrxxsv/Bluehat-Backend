@@ -23,6 +23,8 @@ const createClientProfile = async (pending, credentialId, session) => {
       credentialId,
       firstName: pending.firstName,
       lastName: pending.lastName,
+      middleName: pending.middleName,
+      suffixName: pending.suffixName,
       contactNumber: pending.contactNumber,
       sex: pending.sex,
       dateOfBirth: pending.dateOfBirth,
@@ -53,6 +55,8 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       credentialId,
       firstName: pending.firstName,
       lastName: pending.lastName,
+      middleName: pending.middleName,
+      suffixName: pending.suffixName,
       contactNumber: pending.contactNumber,
       sex: pending.sex,
       dateOfBirth: pending.dateOfBirth,
@@ -99,6 +103,8 @@ router.post(
         password,
         lastName,
         firstName,
+        middleName,
+        suffixName,
         contactNumber,
         sex,
         dateOfBirth,
@@ -134,7 +140,12 @@ router.post(
       }
 
       // Validate firstName and lastName length (max 50 characters)
-      if (firstName.length > 50 || lastName.length > 50) {
+      if (
+        firstName.length > 50 ||
+        lastName.length > 50 ||
+        middleName.length > 50 ||
+        suffixName > 10
+      ) {
         throw new Error(
           "First name or last name is too long. Maximum length is 50 characters."
         );
@@ -153,6 +164,12 @@ router.post(
         throw new Error("Invalid characters in last name.");
       }
 
+      if (!validator.isAlpha(middleName.trim(), "en-US", { ignore: " -'" })) {
+        throw new Error("Invalid characters in middle name.");
+      }
+      if (!validator.isAlpha(suffixName.trim(), "en-US", { ignore: " -'" })) {
+        throw new Error("Invalid characters in suffix name.");
+      }
       if (!validator.isDate(dateOfBirth)) {
         throw new Error("Invalid date of birth.");
       }
@@ -180,6 +197,8 @@ router.post(
       // Sanitize
       const sanitizedFirstName = mongoSanitize(firstName);
       const sanitizedLastName = mongoSanitize(lastName);
+      const sanitizedMiddleName = mongoSanitize(middleName);
+      const sanitizedSuffixName = mongoSanitize(suffixName);
       const sanitizedContactNumber = mongoSanitize(contactNumber);
       const sanitizedAddress = {
         region: mongoSanitize(address.region),
@@ -193,6 +212,8 @@ router.post(
       const encryptedEmail = encryptAES128(normalizedEmail);
       const encryptedFirstName = encryptAES128(sanitizedFirstName);
       const encryptedLastName = encryptAES128(sanitizedLastName);
+      const encryptedMiddleName = encryptAES128(sanitizedMiddleName);
+      const encryptedSuffixName = encryptAES128(sanitizedSuffixName);
       const encryptedContact = encryptAES128(sanitizedContactNumber);
       const encryptedRegion = encryptAES128(sanitizedAddress.region);
       const encryptedDistrict = encryptAES128(sanitizedAddress.district);
@@ -263,6 +284,8 @@ router.post(
         userType,
         lastName: encryptedLastName,
         firstName: encryptedFirstName,
+        middleName: encryptedMiddleName,
+        suffixName: encryptedSuffixName,
         contactNumber: encryptedContact,
         sex,
         dateOfBirth,
