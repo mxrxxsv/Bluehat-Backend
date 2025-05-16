@@ -6,7 +6,7 @@ const mongoSanitize = require("mongo-sanitize");
 const { authLimiter } = require("../utils/rateLimit");
 
 // CREATE Advertisement (Admin only)
-router.post("/", authLimiter, verifyAdmin, validateAd, async (req, res) => {
+router.post("/", authLimiter, verifyAdmin, async (req, res) => {
   try {
     // Sanitize input
     const title = mongoSanitize(req.body.title);
@@ -27,9 +27,10 @@ router.post("/", authLimiter, verifyAdmin, validateAd, async (req, res) => {
     const savedAd = await newAd.save();
     res.status(201).json(savedAd);
   } catch (err) {
-    res
-      .status(400)
-      .json({ message: "Failed to create advertisement", error: err.message });
+    res.status(400).json({
+      message: "Failed to create advertisement",
+      error: err.message,
+    });
   }
 });
 
@@ -103,7 +104,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // UPDATE Advertisement (Admin only)
-router.put("/:id", authLimiter, verifyAdmin, validateAd, async (req, res) => {
+router.put("/:id", authLimiter, verifyAdmin, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "Invalid advertisement ID" });

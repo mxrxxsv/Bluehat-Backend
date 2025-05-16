@@ -15,7 +15,7 @@ const {
   logout,
   forgotPassword,
   resetPassword,
-} = require("../controllers/worker.controller");
+} = require("../controllers/ver.controller");
 const router = express.Router();
 
 router.post("/signup", authLimiter, signup);
