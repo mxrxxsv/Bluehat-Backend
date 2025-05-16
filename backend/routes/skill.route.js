@@ -1,15 +1,38 @@
 const express = require("express");
 const router = express.Router();
+const mongoSanitize = require("mongo-sanitize");
 const SkillCategory = require("../models/SkillCategory");
 const Worker = require("../models/Worker");
-const verifyToken = require("../middleware/verifyToken");
 const verifyAdmin = require("../middleware/verifyAdmin");
 
 // CREATE
-router.post("/", verifyToken, verifyAdmin, async (req, res) => {
+router.post("/", verifyAdmin, async (req, res) => {
   try {
-    const { categoryName, skills } = req.body;
-    const newCategory = new SkillCategory({ categoryName, skills });
+    let { categoryName, skills } = req.body;
+    categoryName = mongoSanitize(categoryName);
+
+    // Sanitize and deduplicate skills
+    const sanitizedSkills = Array.isArray(skills)
+      ? Array.from(
+          new Set(
+            skills
+              .map((s) => mongoSanitize(s.skillName).trim().toLowerCase())
+              .filter((name) => name.length >= 2 && name.length <= 50)
+          )
+        ).map((skillName) => ({ skillName }))
+      : [];
+
+    if (!categoryName || sanitizedSkills.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Category name and at least one valid skill are required.",
+      });
+    }
+
+    const newCategory = new SkillCategory({
+      categoryName,
+      skills: sanitizedSkills,
+    });
     await newCategory.save();
     res.status(201).json({ success: true, data: newCategory });
   } catch (err) {
@@ -28,9 +51,29 @@ router.get("/", async (req, res) => {
 });
 
 // UPDATE
-router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
+router.put("/:id", verifyAdmin, async (req, res) => {
   try {
-    const { categoryName, skills } = req.body;
+    let { categoryName, skills } = req.body;
+    categoryName = mongoSanitize(categoryName);
+
+    // Sanitize and deduplicate skills
+    const sanitizedSkills = Array.isArray(skills)
+      ? Array.from(
+          new Set(
+            skills
+              .map((s) => mongoSanitize(s.skillName).trim().toLowerCase())
+              .filter((name) => name.length >= 2 && name.length <= 50)
+          )
+        ).map((skillName) => ({ skillName }))
+      : [];
+
+    if (!categoryName || sanitizedSkills.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Category name and at least one valid skill are required.",
+      });
+    }
+
     const category = await SkillCategory.findById(req.params.id);
     if (!category) {
       return res
@@ -39,11 +82,11 @@ router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
     }
 
     const oldSkills = category.skills.map((s) => s.skillName);
-    const newSkills = skills.map((s) => s.skillName);
+    const newSkills = sanitizedSkills.map((s) => s.skillName);
 
     // Update the category
     category.categoryName = categoryName;
-    category.skills = skills;
+    category.skills = sanitizedSkills;
     await category.save();
 
     // Remove deleted skills from workers
@@ -69,7 +112,7 @@ router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // DELETE
-router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
+router.delete("/:id", verifyAdmin, async (req, res) => {
   try {
     const category = await SkillCategory.findById(req.params.id);
     if (!category) {
@@ -79,7 +122,6 @@ router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
     }
 
     const categoryId = category._id;
-    const skillsToRemove = category.skills.map((s) => s.skillName);
 
     // Remove from workers first
     await Worker.updateMany(

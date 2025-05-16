@@ -6,7 +6,7 @@ const mongoSanitize = require("mongo-sanitize");
 const { authLimiter } = require("../utils/rateLimit");
 
 // CREATE Advertisement (Admin only)
-router.post("/", verifyAdmin, validateAd, async (req, res) => {
+router.post("/", authLimiter, verifyAdmin, validateAd, async (req, res) => {
   try {
     // Sanitize input
     const title = mongoSanitize(req.body.title);
@@ -34,7 +34,7 @@ router.post("/", verifyAdmin, validateAd, async (req, res) => {
 });
 
 // GET All Advertisements (with filters, pagination, and rate limiting)
-router.get("/", authLimiter, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     // Sanitize query parameters
     const companyName = mongoSanitize(req.query.companyName);
@@ -83,6 +83,9 @@ router.get("/", authLimiter, async (req, res) => {
 // GET Advertisement by ID
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid advertisement ID" });
+    }
     const ad = await Advertisement.findOne({
       _id: mongoSanitize(req.params.id),
       isDeleted: false,
@@ -100,8 +103,11 @@ router.get("/:id", async (req, res) => {
 });
 
 // UPDATE Advertisement (Admin only)
-router.put("/:id", verifyAdmin, validateAd, async (req, res) => {
+router.put("/:id", authLimiter, verifyAdmin, validateAd, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid advertisement ID" });
+    }
     // Sanitize input
     const title = mongoSanitize(req.body.title);
     const companyName = mongoSanitize(req.body.companyName);
@@ -127,8 +133,11 @@ router.put("/:id", verifyAdmin, validateAd, async (req, res) => {
 });
 
 // SOFT DELETE Advertisement (Admin only)
-router.delete("/:id", verifyAdmin, async (req, res) => {
+router.delete("/:id", authLimiter, verifyAdmin, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid advertisement ID" });
+    }
     const deletedAd = await Advertisement.findByIdAndUpdate(
       mongoSanitize(req.params.id),
       { isDeleted: true },
