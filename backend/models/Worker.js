@@ -21,7 +21,7 @@ const WorkerSchema = new mongoose.Schema(
     },
     suffixName: {
       type: String,
-      required: true,
+      default: null,
     },
     contactNumber: {
       type: String,

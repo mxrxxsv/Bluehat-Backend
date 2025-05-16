@@ -11,6 +11,12 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
+    const email = req.body?.email?.toLowerCase()?.trim();
+    console.warn(
+      `[RateLimit][authLimiter] Limit hit for ${
+        email || req.ip
+      } at ${new Date().toISOString()}`
+    );
     return res.status(429).json({
       success: false,
       message: "Too many requests. Try again later.",
@@ -29,6 +35,12 @@ const verifyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
+    const email = req.body?.email?.toLowerCase()?.trim();
+    console.warn(
+      `[RateLimit][verifyLimiter] Limit hit for ${
+        email || req.ip
+      } at ${new Date().toISOString()}`
+    );
     return res.status(429).json({
       success: false,
       message: "Too many verification attempts. Please try again later.",

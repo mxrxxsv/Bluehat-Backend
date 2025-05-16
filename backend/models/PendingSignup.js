@@ -33,7 +33,7 @@ const pendingSignupSchema = new mongoose.Schema({
   },
   suffixName: {
     type: String,
-    required: true,
+    default: null,
   },
   contactNumber: {
     type: String,
@@ -81,10 +81,10 @@ const pendingSignupSchema = new mongoose.Schema({
       type: String,
     },
   },
-  authenticationCode: { type: String, required: true },
-  authenticationCodeExpiresAt: { type: Date, required: true },
+  totpSecret: { type: String, select: false },
+  totpCreatedAt: { type: Date },
   verifyAttempts: { type: Number, default: 0 },
-  blockedUntil: { type: Date, default: null },
+  blockedUntil: { type: Date },
   lastResendAt: Date,
   createdAt: { type: Date, default: Date.now, expires: 86400 }, // 1 day TTL
 });
