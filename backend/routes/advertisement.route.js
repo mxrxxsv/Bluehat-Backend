@@ -2,38 +2,18 @@ const express = require("express");
 const router = express.Router();
 const Advertisement = require("../models/Advertisement");
 const verifyAdmin = require("../middleware/verifyAdmin");
-const { body, validationResult } = require("express-validator");
+const mongoSanitize = require("mongo-sanitize");
 const { authLimiter } = require("../utils/rateLimit");
-
-// Input validation for advertisement fields
-const validateAd = [
-  body("title")
-    .isString()
-    .isLength({ max: 100 })
-    .withMessage("Title is required and must be less than 100 chars"),
-  body("companyName")
-    .isString()
-    .isLength({ max: 100 })
-    .withMessage("Company Name is required and must be valid"),
-  body("description")
-    .isString()
-    .isLength({ max: 1000 })
-    .withMessage("Description is required and max 1000 chars"),
-  body("imageUrl").isURL().withMessage("Invalid image URL"),
-  body("link").isURL().withMessage("Invalid link"),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
-    }
-    next();
-  },
-];
 
 // CREATE Advertisement (Admin only)
 router.post("/", verifyAdmin, validateAd, async (req, res) => {
   try {
-    const { title, companyName, description, imageUrl, link } = req.body;
+    // Sanitize input
+    const title = mongoSanitize(req.body.title);
+    const companyName = mongoSanitize(req.body.companyName);
+    const description = mongoSanitize(req.body.description);
+    const imageUrl = mongoSanitize(req.body.imageUrl);
+    const link = mongoSanitize(req.body.link);
 
     const newAd = new Advertisement({
       title,
@@ -56,24 +36,30 @@ router.post("/", verifyAdmin, validateAd, async (req, res) => {
 // GET All Advertisements (with filters, pagination, and rate limiting)
 router.get("/", authLimiter, async (req, res) => {
   try {
-    const {
-      companyName,
-      sortBy = "createdAt",
-      order = "desc",
-      page = 1,
-      limit = 10,
-    } = req.query;
+    // Sanitize query parameters
+    const companyName = mongoSanitize(req.query.companyName);
+    const sortBy = mongoSanitize(req.query.sortBy || "createdAt");
+    const order = mongoSanitize(req.query.order || "desc");
+    const page = parseInt(mongoSanitize(req.query.page || "1"));
+    const limit = parseInt(mongoSanitize(req.query.limit || "10"));
+
+    // Escape regex special characters for companyName search
+    function escapeRegex(str) {
+      return str ? str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+    }
 
     const filter = {
       isDeleted: false,
-      ...(companyName && { companyName: new RegExp(companyName, "i") }),
+      ...(companyName && {
+        companyName: new RegExp(escapeRegex(companyName), "i"),
+      }),
     };
 
     const ads = await Advertisement.find(filter)
       .populate("uploadedBy", "userName")
       .sort({ [sortBy]: order === "asc" ? 1 : -1 })
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .limit(parseInt(limit));
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     const total = await Advertisement.countDocuments(filter);
 
@@ -98,7 +84,7 @@ router.get("/", authLimiter, async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const ad = await Advertisement.findOne({
-      _id: req.params.id,
+      _id: mongoSanitize(req.params.id),
       isDeleted: false,
     }).populate("uploadedBy", "userName");
 
@@ -116,10 +102,15 @@ router.get("/:id", async (req, res) => {
 // UPDATE Advertisement (Admin only)
 router.put("/:id", verifyAdmin, validateAd, async (req, res) => {
   try {
-    const { title, companyName, description, imageUrl, link } = req.body;
+    // Sanitize input
+    const title = mongoSanitize(req.body.title);
+    const companyName = mongoSanitize(req.body.companyName);
+    const description = mongoSanitize(req.body.description);
+    const imageUrl = mongoSanitize(req.body.imageUrl);
+    const link = mongoSanitize(req.body.link);
 
     const updatedAd = await Advertisement.findByIdAndUpdate(
-      req.params.id,
+      mongoSanitize(req.params.id),
       { $set: { title, companyName, description, imageUrl, link } },
       { new: true, runValidators: true }
     );
@@ -139,7 +130,7 @@ router.put("/:id", verifyAdmin, validateAd, async (req, res) => {
 router.delete("/:id", verifyAdmin, async (req, res) => {
   try {
     const deletedAd = await Advertisement.findByIdAndUpdate(
-      req.params.id,
+      mongoSanitize(req.params.id),
       { isDeleted: true },
       { new: true }
     );
