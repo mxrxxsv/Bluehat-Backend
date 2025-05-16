@@ -10,19 +10,22 @@ const jobSchema = new mongoose.Schema(
     jobTitle: {
       type: String,
       required: true,
-      minlength: 3,
-      maxlength: 100,
+      trim: true,
+      minlength: [5, "Job title too short"],
+      maxlength: [100, "Job title too long"],
     },
     description: {
       type: String,
       required: true,
-      minlength: 10,
-      maxlength: 1000,
+      trim: true,
+      minlength: [20, "Description too short"],
+      maxlength: [2000, "Description too long"],
     },
     price: {
       type: Number,
       required: true,
-      min: 0,
+      min: [0, "Price must be positive"],
+      max: [1000000, "Price is too high"],
     },
     location: {
       type: String,
@@ -30,15 +33,26 @@ const jobSchema = new mongoose.Schema(
       maxlength: 200,
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SkillCategory",
       required: true,
-      maxlength: 50,
-      lowercase: true,
-      trim: true,
     },
     tags: {
       type: [String],
-      default: [],
+      validate: [
+        {
+          validator: function (arr) {
+            return arr.length <= 10;
+          },
+          message: "No more than 10 tags allowed.",
+        },
+        {
+          validator: function (arr) {
+            return arr.every((tag) => tag.length <= 30);
+          },
+          message: "Each tag must be 30 characters or less.",
+        },
+      ],
     },
     status: {
       type: String,

@@ -1,20 +1,60 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const mongoSanitize = require("mongo-sanitize");
 
 const Job = require("../models/Job");
+const SkillCategory = require("../models/SkillCategory");
 const verifyToken = require("../middleware/verifyToken");
 
+const { authLimiter } = require("../utils/rateLimit");
 // Create a job (only authenticated clients)
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", authLimiter, verifyToken, async (req, res) => {
   try {
-    const { clientId, jobTitle, description, price, location, category, tags } =
-      req.body;
+    // Sanitize input
+    const clientId = mongoSanitize(req.body.clientId);
+    const jobTitle = mongoSanitize(req.body.jobTitle);
+    const description = mongoSanitize(req.body.description);
+    const price = Number(req.body.price);
+    const location = mongoSanitize(req.body.location);
+    const category = mongoSanitize(req.body.category);
+    const tags = Array.isArray(req.body.tags)
+      ? [...new Set(req.body.tags.map(mongoSanitize))]
+      : [];
 
     if (req.user.userId.toString() !== clientId.toString()) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
+    // Validate category as ObjectId and existence
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid category." });
+    }
+    const categoryExists = await SkillCategory.findById(category);
+    if (!categoryExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Category does not exist." });
+    }
+
+    if (isNaN(price) || price < 0 || price > 1000000) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid price." });
+    }
+    if (tags.length > 10) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No more than 10 tags allowed." });
+    }
+    if (tags.some((tag) => tag.length > 30)) {
+      return res.status(400).json({
+        success: false,
+        message: "Each tag must be 30 characters or less.",
+      });
+    }
     const job = new Job({
       clientId,
       jobTitle,
@@ -35,13 +75,21 @@ router.post("/", verifyToken, async (req, res) => {
 // Get all jobs (public, only verified/not deleted) with pagination & filtering
 router.get("/", async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, tag } = req.query;
-    const filter = { isVerified: true, isDeleted: false };
+    const page = Math.max(1, parseInt(mongoSanitize(req.query.page) || 1));
+    const limit = Math.max(
+      1,
+      Math.min(100, parseInt(mongoSanitize(req.query.limit) || 10))
+    );
+    const category = mongoSanitize(req.query.category);
+    const tag = mongoSanitize(req.query.tag);
 
-    if (category) filter.category = category;
+    const filter = { isVerified: true, isDeleted: false };
+    if (category && mongoose.Types.ObjectId.isValid(category))
+      filter.category = category;
     if (tag) filter.tags = tag;
 
     const jobs = await Job.find(filter)
+      .populate("category", "categoryName")
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
@@ -64,7 +112,7 @@ router.get("/:id", async (req, res) => {
       { _id: req.params.id, isDeleted: false },
       { $inc: { views: 1 } },
       { new: true }
-    );
+    ).populate("category", "categoryName");
 
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
@@ -77,11 +125,24 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update a job (only owner or admin)
-router.put("/:id", verifyToken, async (req, res) => {
+router.put("/:id", authLimiter, verifyToken, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid job ID" });
+    }
+
     const job = await Job.findById(req.params.id);
     if (!job || job.isDeleted) {
       return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    if (job.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot edit a job that has already been verified by admin.",
+      });
     }
 
     if (
@@ -99,11 +160,33 @@ router.put("/:id", verifyToken, async (req, res) => {
       "category",
       "tags",
     ];
-    allowedFields.forEach((field) => {
+    for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
-        job[field] = req.body[field];
+        if (field === "tags" && Array.isArray(req.body.tags)) {
+          job.tags = [
+            ...new Set(req.body.tags.map((tag) => mongoSanitize(tag).trim())),
+          ];
+        } else if (field === "price") {
+          job.price = Number(req.body.price);
+        } else if (field === "category") {
+          const newCategory = mongoSanitize(req.body.category);
+          if (!mongoose.Types.ObjectId.isValid(newCategory)) {
+            return res
+              .status(400)
+              .json({ success: false, message: "Invalid category." });
+          }
+          const categoryExists = await SkillCategory.findById(newCategory);
+          if (!categoryExists) {
+            return res
+              .status(400)
+              .json({ success: false, message: "Category does not exist." });
+          }
+          job.category = newCategory;
+        } else {
+          job[field] = mongoSanitize(req.body[field]);
+        }
       }
-    });
+    }
 
     const updated = await job.save();
     res.status(200).json({ success: true, data: updated });
@@ -113,8 +196,14 @@ router.put("/:id", verifyToken, async (req, res) => {
 });
 
 // Soft delete a job (only owner or admin)
-router.delete("/:id", verifyToken, async (req, res) => {
+router.delete("/:id", authLimiter, verifyToken, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid job ID" });
+    }
+
     const job = await Job.findById(req.params.id);
     if (!job || job.isDeleted) {
       return res.status(404).json({ success: false, message: "Job not found" });
@@ -139,10 +228,16 @@ router.delete("/:id", verifyToken, async (req, res) => {
 });
 
 // Admin: verify a job
-router.patch("/:id/verify", verifyToken, async (req, res) => {
+router.patch("/:id/verify", authLimiter, verifyToken, async (req, res) => {
   try {
     if (req.user.role !== "admin") {
       return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid job ID" });
     }
 
     const job = await Job.findById(req.params.id);

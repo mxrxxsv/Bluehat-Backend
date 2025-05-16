@@ -3,6 +3,8 @@ const router = express.Router();
 const multer = require("multer");
 const streamifier = require("streamifier");
 const crypto = require("crypto");
+const mongoSanitize = require("mongo-sanitize");
+const { escape } = require("validator");
 
 const cloudinary = require("../db/cloudinary");
 const verifyToken = require("../middleware/verifyToken");
@@ -386,9 +388,11 @@ router.post(
       if (req.files?.portfolio) {
         const portfolioUploadPromises = req.files.portfolio.map(
           (file, index) => {
+            // Sanitize user-provided metadata
             const { projectTitle = "", description = "" } =
               portfolio?.[index] || {};
-
+            const projectTitleSanitized = escape(mongoSanitize(projectTitle));
+            const descriptionSanitized = escape(mongoSanitize(description));
             if (!allowedMimeTypes.includes(file.mimetype)) {
               throw new Error(
                 `Invalid file type for portfolio image #${index + 1}`
@@ -403,8 +407,8 @@ router.post(
             return uploadToCloudinary(file, "fixit/portfolios").then(
               (result) => {
                 portfolioItems.push({
-                  projectTitle,
-                  description,
+                  projectTitle: projectTitleSanitized,
+                  description: descriptionSanitized,
                   image: {
                     url: result.secure_url,
                     public_id: result.public_id,
