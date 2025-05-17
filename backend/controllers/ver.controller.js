@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const validator = require("validator");
@@ -14,6 +15,7 @@ const Client = require("../models/Client");
 const Worker = require("../models/Worker");
 
 //mailer
+const sendVerificationEmail = require("../mailer/sendVerificationEmail");
 const forgotPasswordMailer = require("../mailer/resetPassword");
 
 //utils
@@ -116,6 +118,7 @@ const signup = async (req, res) => {
 
     const normalizedEmail = mongoSanitize(email.trim().toLowerCase());
     const domain = normalizedEmail.split("@")[1];
+
     if (!VALID_DOMAINS.includes(domain)) {
       throw new Error("Please use an email from gmail, lookup, or yahoo.");
     }
@@ -201,7 +204,9 @@ const signup = async (req, res) => {
     const encryptedFirstName = encryptAES128(sanitizedFirstName);
     const encryptedLastName = encryptAES128(sanitizedLastName);
     const encryptedMiddleName = encryptAES128(sanitizedMiddleName);
-    const encryptedSuffixName = encryptAES128(sanitizedSuffixName);
+    const encryptedSuffixName = sanitizedSuffixName
+      ? encryptAES128(sanitizedSuffixName)
+      : null;
     const encryptedContact = encryptAES128(sanitizedContactNumber);
     const encryptedRegion = encryptAES128(sanitizedAddress.region);
     const encryptedDistrict = encryptAES128(sanitizedAddress.district);
@@ -231,6 +236,10 @@ const signup = async (req, res) => {
       name: `FixIt (${normalizedEmail})`,
     });
 
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    const emailVerificationExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
     // 🧾 Store user pending signup
     await PendingSignup.create({
       email: normalizedEmail,
@@ -252,23 +261,21 @@ const signup = async (req, res) => {
         street: encryptedStreet,
         unit: encryptedUnit || null,
       },
+      emailVerificationToken,
+      emailVerificationExpires,
+      emailVerified: false,
       verifyAttempts: 0,
     });
 
-    generateVerifyToken(res, normalizedEmail, userType);
-    // Generate QR code for authenticator apps (optional)
-    const qr = await qrcode.toDataURL(secret.otpauth_url);
+    // Send verification email
+    const verifyUrl = `http://localhost:5000/ver/verify-email?token=${emailVerificationToken}`;
+    await sendVerificationEmail(normalizedEmail, verifyUrl);
 
-    // Generate QR code for authenticator apps as text in console
-    qrcodeTerminal.generate(secret.otpauth_url, { small: true }, (qrcode) => {
-      console.log("Scan this QR code with your authenticator app:");
-      console.log(qrcode); // This prints the QR code in the terminal
-    });
+    console.log(verifyUrl);
     res.status(200).json({
       success: true,
-      message: `${userType} signup initiated.`,
-      qrCodeURL: qr,
-      manualEntryKey: secret.base32,
+      message:
+        "Signup initiated. Please check your email to verify your account.",
     });
   } catch (err) {
     console.error("Signup error:", err);
@@ -282,6 +289,66 @@ const signup = async (req, res) => {
   }
 };
 
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token)
+      return res
+        .status(400)
+        .json({ success: false, message: "Verification token is required." });
+
+    const pending = await PendingSignup.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: Date.now() },
+    }).select("+totpSecret +email");
+
+    if (!pending) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification link.",
+      });
+    }
+
+    pending.emailVerified = true;
+    pending.emailVerificationToken = undefined;
+    pending.emailVerificationExpires = undefined;
+    await pending.save();
+
+    // Generate QR code for authenticator apps
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: pending.totpSecret,
+      label: `FixIt (${pending.email})`,
+      encoding: "base32",
+    });
+
+    //log qr for now
+    qrcodeTerminal.generate(otpauthUrl, { small: true });
+
+    const qr = await qrcode.toDataURL(otpauthUrl);
+
+    generateVerifyToken(res, pending.email, pending.userType);
+
+    // You can redirect to frontend or just send QR and manual key
+    res.status(200).json({
+      success: true,
+      message:
+        "Email verified. Please scan the QR code and enter your OTP to complete registration.",
+      qrCodeURL: qr,
+      manualEntryKey: pending.totpSecret,
+      email: pending.email,
+      userType: pending.userType,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Verification failed."
+          : err.message,
+    });
+  }
+};
+
 const verify = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -289,42 +356,34 @@ const verify = async (req, res) => {
   try {
     const { email, userType } = req.code;
     const { token } = req.body;
+    if (!token) throw new Error("TOTP token is required.");
+    if (!email || !userType)
+      throw new Error("Email and userType are required.");
 
-    if (!token) {
-      throw new Error("TOTP token is required.");
-    }
     const ATTEMPT_LIMIT = 5;
 
     const pending = await PendingSignup.findOne({ email, userType }).select(
-      "+email +totpSecret"
+      "+email +password +totpSecret"
     );
-    if (!pending) {
-      throw new Error("No pending signup found.");
-    }
+    if (!pending) throw new Error("No pending signup found.");
+    if (!pending.emailVerified)
+      throw new Error("Please verify your email first.");
 
     if (pending.blockedUntil && pending.blockedUntil > Date.now()) {
       const secs = Math.ceil((pending.blockedUntil - Date.now()) / 1000);
       throw new Error(`Too many attempts. Try again in ${secs}s`);
     }
 
-    // ✅ Verify TOTP
+    // Verify TOTP
     const valid = speakeasy.totp.verify({
       secret: pending.totpSecret,
       encoding: "base32",
       token: token,
-      window: 1, // allow 1 step before/after
+      window: 1,
     });
 
     if (!valid) {
-      console.warn(
-        `Suspicious verification attempt: email=${pending.email}, ip=${
-          req.ip
-        }, time=${new Date().toISOString()}, attempts=${
-          pending.verifyAttempts + 1
-        }`
-      );
       pending.verifyAttempts = (pending.verifyAttempts || 0) + 1;
-
       if (pending.verifyAttempts >= ATTEMPT_LIMIT) {
         const blockMinutes = Math.pow(
           2,
@@ -332,11 +391,9 @@ const verify = async (req, res) => {
         );
         pending.blockedUntil = Date.now() + blockMinutes * 60 * 1000;
       }
-
       await pending.save({ session });
       await session.commitTransaction();
       session.endSession();
-
       return res.status(400).json({
         success: false,
         message: `Invalid code. ${
@@ -372,7 +429,6 @@ const verify = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-
     res.status(400).json({
       success: false,
       message:
@@ -701,6 +757,7 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
   signup,
+  verifyEmail,
   verify,
   resendCode,
   login,
