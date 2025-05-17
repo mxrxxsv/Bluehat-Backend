@@ -8,6 +8,7 @@ const { authLimiter, verifyLimiter } = require("../utils/rateLimit");
 
 const {
   signup,
+  verifyEmail,
   verify,
   resendCode,
   login,
@@ -19,6 +20,8 @@ const {
 const router = express.Router();
 
 router.post("/signup", authLimiter, signup);
+
+router.get("/verify-email", verifyLimiter, verifyEmail);
 
 //verify
 router.post("/verify", verifyLimiter, verifyVerifyToken, verify);

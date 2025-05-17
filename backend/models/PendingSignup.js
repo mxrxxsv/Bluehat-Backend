@@ -4,7 +4,7 @@ const pendingSignupSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    select: false, // Don't return the encrypted email by default
+    select: false,
     index: true,
     unique: true,
   },
@@ -80,6 +80,17 @@ const pendingSignupSchema = new mongoose.Schema({
     unit: {
       type: String,
     },
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false,
+  },
+  emailVerificationExpires: {
+    type: Date,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
   },
   totpSecret: { type: String, select: false },
   totpCreatedAt: { type: Date },
