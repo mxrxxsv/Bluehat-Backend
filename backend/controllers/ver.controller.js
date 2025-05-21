@@ -625,14 +625,15 @@ const checkAuth = async (req, res) => {
           .json({ success: false, message: "User not found" });
       }
     }
-
+    const decryptedFirstName = decryptAES128(user.firstName);
+    const decryptedLastName = decryptAES128(user.lastName);
     // credential.lastLogin = new Date();
     // await credential.save();
     res.status(200).json({
       success: true,
       data: {
         id: credential._id,
-        name: user ? `${user.firstName} ${user.lastName}` : null,
+        name: user ? `${decryptedFirstName} ${decryptedLastName}` : null,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
