@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   MapPin,
@@ -7,11 +7,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import workers from "../Objects/workers";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
 import profile from '../assets/worker.png';
+
 
 const rainbowColors = [
   "#FF595E",

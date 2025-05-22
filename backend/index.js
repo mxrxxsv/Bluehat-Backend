@@ -12,6 +12,7 @@ const verRoute = require("./routes/ver.route");
 const uploadRoute = require("./routes/upload.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
+const allowedOrigins = [process.env.CLIENT_URL];
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,7 +21,18 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 
 // 2) CORS — only allow your front-end origins
-app.use(cors({ credentials: true }));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // 3) Request parsing
 app.use(express.json());

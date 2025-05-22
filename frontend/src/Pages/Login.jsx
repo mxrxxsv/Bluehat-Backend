@@ -1,29 +1,47 @@
 import { useState, useEffect } from "react";
 import cute from "../assets/logi.png";
-import { Link } from "react-router-dom";
+import { login } from "../api/auth";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {
-    const [step, setStep] = useState("login"); 
+    const [form, setForm] = useState({ email: "", password: "" });
+    const [step, setStep] = useState("login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [otp, setOtp] = useState("");
     const [resendTimer, setResendTimer] = useState(60);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        if (email && password) {
-            setStep("otp");
+        setLoading(true);
+        try {
+            const trimmedForm = {
+                email: form.email.trim(),
+                password: form.password.trim(),
+            };
+            await login(trimmedForm); // Use lowercase 'login'
+            setStep("otp"); // Move inside try after successful API call
             setResendTimer(60);
+        } catch (err) {
+            alert(err.response?.data?.message || "Login Failed");
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleOtpSubmit = (e) => {
         e.preventDefault();
         if (otp === "123456") {
-            alert("Login successful!");
+            navigate("/find-work");
         } else {
             alert("Invalid OTP");
         }
+    };
+
+    const handleChange = (e) => {
+        setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
     const handleResend = () => {
@@ -33,8 +51,7 @@ const Login = () => {
 
     const handleBackToLogin = () => {
         setStep("login");
-        setEmail("");
-        setPassword("");
+        setForm({ email: "", password: "" }); // Reset form state
         setOtp("");
         setResendTimer(60);
     };
@@ -68,10 +85,11 @@ const Login = () => {
                                 <div>
                                     <label htmlFor="email" className="block mb-2 text-sm font-medium text-left text-gray-900">Email</label>
                                     <input
+                                        name="email"
                                         type="email"
                                         id="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        value={form.email}
+                                        onChange={handleChange}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
                                         placeholder="name@gmail.com"
                                         required
@@ -80,10 +98,11 @@ const Login = () => {
                                 <div>
                                     <label htmlFor="password" className="block mb-2 text-sm font-medium text-left text-gray-900">Password</label>
                                     <input
+                                        name="password"
                                         type="password"
                                         id="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        value={form.password}
+                                        onChange={handleChange}
                                         placeholder="••••••••"
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
                                         required
@@ -92,7 +111,10 @@ const Login = () => {
                                 <div className="flex items-start">
                                     <Link to="/forgetpass" className="ms-auto text-sm font-medium text-[#55b3f3] hover:underline">Lost Password?</Link>
                                 </div>
-                                <button type="submit" className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300">
+                                <button
+                                    type="submit"
+                                    className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300"
+                                >
                                     Login
                                 </button>
                                 <div className="text-sm font-medium text-gray-900">
