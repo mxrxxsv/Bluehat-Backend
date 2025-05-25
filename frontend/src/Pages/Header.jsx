@@ -1,16 +1,24 @@
 import { Bell, Mail } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import logo from '../assets/BlueHat_logo.png';
 import profile from '../assets/client.png';
+import { checkAuth } from "../api/auth";
 
 const Header = () => {
   
+  const [user, setUser] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
 
   const handleNotificationClick = () => {
     setShowNotifications((prev) => !prev);
   };
+
+  useEffect(() => {
+  checkAuth()
+    .then((res) => setUser(res.data.data)) // Fix here
+    .catch(() => navigate("/login"));
+}, []);
 
   // Sample notifications
   const notifications = [
@@ -96,7 +104,7 @@ const Header = () => {
 
 
                     <span className="pl-4 text-gray-700 text-[16px] font-medium">
-                      User
+                      {user?.name || user?.email || "User"}
                     </span>
                     <img
                       src={profile}

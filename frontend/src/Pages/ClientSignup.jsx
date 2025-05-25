@@ -4,14 +4,27 @@ import React, { useEffect, useState } from "react";
 const ClientSignup = () => {
     const [showOTPModal, setShowOTPModal] = useState(false);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
+    // Updated initial state
     const [formData, setFormData] = useState({
-        first_name: '',
-        last_name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         password: '',
         confirm_password: '',
+        contactNumber: '',
+        sex: '',
+        dateOfBirth: '',
+        maritalStatus: '',
+        address: {
+            region: '',
+            city: '',
+            district: '',
+            street: '',
+            unit: '',
+        },
         agree: false,
     });
+
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [timer, setTimer] = useState(60);
     const [errors, setErrors] = useState({});
@@ -31,12 +44,24 @@ const ClientSignup = () => {
     }, [timer, showOTPModal]);
 
     const handleChange = (e) => {
-        const { id, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [id]: type === 'checkbox' ? checked : value,
-        }));
+        const { id, value, type, checked, dataset } = e.target;
+        if (dataset.address) {
+            const field = dataset.address;
+            setFormData(prev => ({
+                ...prev,
+                address: {
+                    ...prev.address,
+                    [field]: value,
+                },
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [id]: type === 'checkbox' ? checked : value,
+            }));
+        }
     };
+
 
     const validate = () => {
         const newErrors = {};
@@ -196,6 +221,88 @@ const ClientSignup = () => {
                     {errors.confirm_password && <p className="text-red-500 text-sm mt-1 text-left">{errors.confirm_password}</p>}
                 </div>
 
+                <div className="grid gap-6 mb-6 md:grid-cols-2">
+                    {/* Contact Number */}
+                    <div>
+                        <label htmlFor="contactNumber" className="block mb-2 text-sm font-medium text-gray-900 text-left">Contact Number</label>
+                        <input
+                            type="tel"
+                            id="contactNumber"
+                            value={formData.contactNumber}
+                            onChange={handleChange}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                            placeholder="+1234567890"
+                        />
+                    </div>
+
+                    {/* Sex */}
+                    <div>
+                        <label htmlFor="sex" className="block mb-2 text-sm font-medium text-gray-900 text-left">Sex</label>
+                        <select
+                            id="sex"
+                            value={formData.sex}
+                            onChange={handleChange}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        >
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                            <option value="prefer not to say">Prefer not to say</option>
+                        </select>
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div>
+                        <label htmlFor="dateOfBirth" className="block mb-2 text-sm font-medium text-gray-900 text-left">Date of Birth</label>
+                        <input
+                            type="date"
+                            id="dateOfBirth"
+                            value={formData.dateOfBirth}
+                            onChange={handleChange}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        />
+                    </div>
+
+                    {/* Marital Status */}
+                    <div>
+                        <label htmlFor="maritalStatus" className="block mb-2 text-sm font-medium text-gray-900 text-left">Marital Status</label>
+                        <select
+                            id="maritalStatus"
+                            value={formData.maritalStatus}
+                            onChange={handleChange}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                        >
+                            <option value="">Select</option>
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="divorced">Divorced</option>
+                            <option value="widowed">Widowed</option>
+                            <option value="prefer not to say">prefer not to say</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Address Fields */}
+                <div className="grid gap-6 mb-6 md:grid-cols-2">
+                    {["region", "city", "district", "street", "unit"].map((field) => (
+                        <div key={field}>
+                            <label htmlFor={field} className="block mb-2 text-sm font-medium text-gray-900 text-left">
+                                {field.charAt(0).toUpperCase() + field.slice(1)}
+                            </label>
+                            <input
+                                type="text"
+                                id={field}
+                                data-address={field}
+                                value={formData.address[field]}
+                                onChange={handleChange}
+                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                                placeholder={`Enter ${field}`}
+                            />
+                        </div>
+                    ))}
+                </div>
+
                 <div className="flex items-center mb-6">
                     <input
                         id="agree"
@@ -209,6 +316,7 @@ const ClientSignup = () => {
                     </label>
                 </div>
                 {errors.agree && <p className="text-red-500 text-sm mb-4 text-left">{errors.agree}</p>}
+
 
                 <button
                     type="submit"

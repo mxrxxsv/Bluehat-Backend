@@ -18,6 +18,7 @@ import ClientSignup from "./Pages/ClientSignup";
 import ForgetPass from "./Pages/ForgetPass";
 import WorkerQuestion from "./Pages/WorkerQuestion";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoutes";
 
 function App() {
   return (
@@ -27,10 +28,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
-        <Route path="/find-work" element={<FindWork />} />
         <Route path="/job/:id" element={<JobDetail />} />
-        <Route path="/find-workers" element={<FindWorker />} />
-        <Route path="/ads" element={<AdsPage />} />
         <Route path="/worker/:id" element={<WorkerPortfolio />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/signup" element={<Signup />} />
@@ -39,6 +37,35 @@ function App() {
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />}/>
+
+        <Route 
+          path="/find-workers" 
+          element={
+            <ProtectedRoute>
+              <FindWorker />
+            </ProtectedRoute>
+          
+          } />
+
+        <Route 
+          path="/find-work" 
+          element={
+            <ProtectedRoute>
+              <FindWork />
+            </ProtectedRoute>
+
+          } />
+          
+          <Route 
+            path="/ads" 
+            element={
+              <ProtectedRoute>
+                  <AdsPage />
+              </ProtectedRoute>
+              
+              } />
+
+          
       </Routes>
 
       <Footer />
