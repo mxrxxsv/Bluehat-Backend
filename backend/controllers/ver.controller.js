@@ -667,16 +667,13 @@ const checkAuth = async (req, res) => {
       }
     }
 
-    // Decrypt firstName and lastName here:
-    const decryptedFirstName = decryptAES128(user.firstName);
-    const decryptedLastName = decryptAES128(user.lastName);
-
+    // credential.lastLogin = new Date();
+    // await credential.save();
     res.status(200).json({
       success: true,
       data: {
         id: credential._id,
-        // name: `${decryptedFirstName} ${decryptedLastName}`,
-        name: `${decryptedFirstName}`, 
+        name: user ? `${user.firstName} ${user.lastName}` : null,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
