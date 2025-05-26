@@ -4,6 +4,10 @@ const mongoSanitize = require("mongo-sanitize");
 const SkillCategory = require("../models/SkillCategory");
 const Worker = require("../models/Worker");
 const verifyAdmin = require("../middleware/verifyAdmin");
+const { readSkill } = require("../controllers/skill.controller");
+
+// READ ALL
+router.get("/", readSkill);
 
 // CREATE
 router.post("/", verifyAdmin, async (req, res) => {
@@ -37,16 +41,6 @@ router.post("/", verifyAdmin, async (req, res) => {
     res.status(201).json({ success: true, data: newCategory });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
-  }
-});
-
-// READ ALL
-router.get("/", async (req, res) => {
-  try {
-    const categories = await SkillCategory.find();
-    res.status(200).json({ success: true, data: categories });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 });
 
