@@ -12,6 +12,7 @@ const verRoute = require("./routes/ver.route");
 const uploadRoute = require("./routes/upload.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
+const skillRoute = require("./routes/skill.route");
 const allowedOrigins = [process.env.CLIENT_URL];
 
 const app = express();
@@ -52,7 +53,8 @@ app.get("/healthz", (req, res) => res.sendStatus(200));
 app.use("/ver", verRoute);
 app.use("/upload", uploadRoute);
 app.use("/advertisement", adsRoute);
-app.use("/jobs", jobRoute);
+app.use("/job", jobRoute);
+app.use("/skill", skillRoute);
 
 // 8) 404 handler
 app.use((req, res) => {

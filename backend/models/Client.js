@@ -82,6 +82,7 @@ const ClientSchema = new mongoose.Schema(
     blocked: {
       type: Boolean,
       default: false,
+      select: false,
     },
   },
   { timestamps: true }

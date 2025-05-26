@@ -596,61 +596,15 @@ const login = async (req, res) => {
   }
 };
 
-// const checkAuth = async (req, res) => {
-//   try {
-//     const { id, userType } = req.user;
-
-//     // Fetch credentials without password
-//     const credential = await Credential.findById(id).select("-password");
-//     if (!credential) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "User not found" });
-//     }
-
-//     let user;
-
-//     if (userType === "client") {
-//       user = await Client.findOne({ credentialId: id });
-//       if (!user) {
-//         return res
-//           .status(404)
-//           .json({ success: false, message: "User not found" });
-//       }
-//     } else if (userType === "worker") {
-//       user = await Worker.findOne({ credentialId: id });
-//       if (!user) {
-//         return res
-//           .status(404)
-//           .json({ success: false, message: "User not found" });
-//       }
-//     }
-
-//     // credential.lastLogin = new Date();
-//     // await credential.save();
-//     res.status(200).json({
-//       success: true,
-//       data: {
-//         id: credential._id,
-//         name: user ? `${user.firstName} ${user.lastName}` : null,
-//         userType: credential.userType,
-//         isAuthenticated: credential.isAuthenticated,
-//         isVerified: credential.isVerified,
-//       },
-//     });
-//   } catch (err) {
-//     console.error("Error in /check-auth-try", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
-
 const checkAuth = async (req, res) => {
   try {
     const { id, userType } = req.user;
 
     const credential = await Credential.findById(id).select("-password");
     if (!credential) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     let user;
@@ -658,12 +612,16 @@ const checkAuth = async (req, res) => {
     if (userType === "client") {
       user = await Client.findOne({ credentialId: id });
       if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
     } else if (userType === "worker") {
       user = await Worker.findOne({ credentialId: id });
       if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
     }
 
@@ -673,7 +631,9 @@ const checkAuth = async (req, res) => {
       success: true,
       data: {
         id: credential._id,
-        name: user ? `${user.firstName} ${user.lastName}` : null,
+        name: user
+          ? `${decryptAES128(user.firstName)} ${decryptAES128(user.lastName)}`
+          : null,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
@@ -684,7 +644,6 @@ const checkAuth = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 
 const logout = (req, res) => {
   console.log(`User ${req.user.email} logged out.`);
