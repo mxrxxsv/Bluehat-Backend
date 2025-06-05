@@ -9,11 +9,12 @@ const { authLimiter } = require("../utils/rateLimit");
 router.post("/", authLimiter, verifyAdmin, async (req, res) => {
   try {
     // Sanitize input
-    const title = mongoSanitize(req.body.title);
-    const companyName = mongoSanitize(req.body.companyName);
-    const description = mongoSanitize(req.body.description);
-    const imageUrl = mongoSanitize(req.body.imageUrl);
-    const link = mongoSanitize(req.body.link);
+    const { title, companyName, description, imageUrl, link } = mongoSanitize(
+      req.body
+    );
+    if (!title || !companyName || !description || !imageUrl || !link) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
 
     const newAd = new Advertisement({
       title,
@@ -25,7 +26,10 @@ router.post("/", authLimiter, verifyAdmin, async (req, res) => {
     });
 
     const savedAd = await newAd.save();
-    res.status(201).json(savedAd);
+    res.status(201).json({
+      message: "Advertisement created successfully",
+      advertisement: savedAd,
+    });
   } catch (err) {
     res.status(400).json({
       message: "Failed to create advertisement",
