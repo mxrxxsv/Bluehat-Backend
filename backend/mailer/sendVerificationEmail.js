@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 const sendVerificationEmail = async (email, verifyUrl) => {
   try {
     let mailOptions = {
-      from: `"BlueHat" <${process.env.EMAIL}>`,
+      from: `"FixIT" <${process.env.EMAIL}>`,
       to: email,
       subject: "Verify Your Email",
       html: VERIFY_EMAIL_TEMPLATE.replace("{verifyURL}", verifyUrl),
