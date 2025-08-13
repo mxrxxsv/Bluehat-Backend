@@ -62,6 +62,4 @@ AdminSchema.pre("save", async function (next) {
   }
 });
 
-AdminSchema.index({ userName: 1 });
-
 module.exports = mongoose.model("Admin", AdminSchema);

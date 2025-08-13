@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 // 1) Security headers
 app.use(helmet());
 
-// 2) CORS — only allow your front-end origins
+// 2) CORS — only allow front-end origins
 app.use(
   cors({
     origin: function (origin, callback) {

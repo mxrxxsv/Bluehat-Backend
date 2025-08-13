@@ -1,4 +1,4 @@
-const SkillCategory = require("../models/skillCategory.model");
+const SkillCategory = require("../models/SkillCategory");
 
 const readSkill = async (req, res) => {
   try {
