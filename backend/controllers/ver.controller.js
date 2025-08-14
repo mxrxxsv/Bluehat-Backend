@@ -129,8 +129,8 @@ const signup = async (req, res) => {
     }
 
     const isPasswordStrong = (password) => {
-      const passwordRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
+
       return passwordRegex.test(password);
     };
     if (!isPasswordStrong(password)) {

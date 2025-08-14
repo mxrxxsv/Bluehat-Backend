@@ -2,7 +2,9 @@ const nodemailer = require("nodemailer");
 const { VERIFY_EMAIL_TEMPLATE } = require("./mailerTemplate");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL,
     pass: process.env.PASSWORD,
@@ -16,7 +18,6 @@ const sendVerificationEmail = async (email, verifyUrl) => {
       to: email,
       subject: "Verify Your Email",
       html: VERIFY_EMAIL_TEMPLATE.replace("{verifyURL}", verifyUrl),
-      category: "Email Verification",
     };
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Email sent:", info.response);
