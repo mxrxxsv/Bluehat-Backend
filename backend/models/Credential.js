@@ -1,3 +1,4 @@
+// models/Credential.js - FIXED VERSION
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 
@@ -6,7 +7,7 @@ const CredentialSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      select: false, // Don't return the encrypted email by default
+      select: false,
       index: true,
       unique: true,
     },
@@ -21,52 +22,39 @@ const CredentialSchema = new mongoose.Schema(
       enum: ["client", "worker"],
       required: true,
     },
+
+    // TOTP fields
+    totpSecret: { type: String, required: true, select: false },
+    totpAttempts: { type: Number, default: 0, select: false },
+    totpBlockedUntil: { type: Date, select: false },
+    lastTotpAttempt: { type: Date, select: false },
+
+    // Login attempt tracking
+    loginAttempts: { type: Number, default: 0, select: false },
+    lockUntil: { type: Date, select: false },
+
+    // Profile pictures
     idPicture: {
-      url: {
-        type: String,
-        required: false,
-      },
-      public_id: {
-        type: String,
-        required: false,
-      },
+      url: { type: String, required: false },
+      public_id: { type: String, required: false },
     },
     selfiePicture: {
-      url: {
-        type: String,
-        required: false,
-      },
-      public_id: {
-        type: String,
-        required: false,
-      },
-    },
-    lastLogin: {
-      type: Date,
-      default: Date.now,
-    },
-    isAuthenticated: {
-      type: Boolean,
-      default: false,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-    resetPasswordToken: {
-      type: String,
-    },
-    resetPasswordExpiresAt: Date,
-    authenticationCode: {
-      type: String,
-    },
-    authenticationCodeExpiresAt: Date,
-    loginAttempts: {
-      type: Number,
-      default: 0,
+      url: { type: String, required: false },
+      public_id: { type: String, required: false },
     },
 
-    lockUntil: Date,
+    // Status fields
+    lastLogin: { type: Date },
+    isAuthenticated: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
+
+    // Password reset
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpiresAt: { type: Date, select: false },
+
+    // Authentication code
+    authenticationCode: { type: String, select: false },
+    authenticationCodeExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }
 );
@@ -78,19 +66,16 @@ CredentialSchema.virtual("isLocked").get(function () {
 
 // Method to handle failed login attempt
 CredentialSchema.methods.incLoginAttempts = function () {
-  // Increment the failed login attempts
-  this.loginAttempts += 1;
+  this.loginAttempts = (this.loginAttempts || 0) + 1;
 
-  // If the account has exceeded the maximum login attempts (e.g., 5), lock it
   if (this.loginAttempts >= 5 && !this.isLocked) {
-    // Lock the account for 15 minutes
-    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes from now
+    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes
   }
 
-  // Save the updates
   return this.save();
 };
 
+// Pre-hook for cascade delete
 CredentialSchema.pre("findOneAndDelete", async function (next) {
   const cred = await this.model.findOne(this.getFilter());
   if (!cred) return next();

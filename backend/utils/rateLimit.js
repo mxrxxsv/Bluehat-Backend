@@ -27,7 +27,7 @@ const authLimiter = rateLimit({
 // Stricter limiter for /verify
 const verifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10,
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase()?.trim();
     return email || req.ip;

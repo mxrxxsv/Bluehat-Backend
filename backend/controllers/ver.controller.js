@@ -1,12 +1,14 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const validator = require("validator");
-const escape = require("validator").escape;
-const mongoSanitize = require("mongo-sanitize");
 const speakeasy = require("speakeasy");
 const qrcode = require("qrcode");
 const qrcodeTerminal = require("qrcode-terminal");
+
+//validator
+const validator = require("validator");
+const escape = require("validator").escape;
+const mongoSanitize = require("mongo-sanitize");
 
 //models
 const PendingSignup = require("../models/PendingSignup");
@@ -17,6 +19,7 @@ const Worker = require("../models/Worker");
 //mailer
 const sendVerificationEmail = require("../mailer/sendVerificationEmail");
 const forgotPasswordMailer = require("../mailer/resetPassword");
+const qrTemplate = require("../mailer/qrTemplate");
 
 //utils
 const generateTokenandSetCookie = require("../utils/generateTokenandCookie");
@@ -140,16 +143,35 @@ const signup = async (req, res) => {
     }
 
     if (
-      firstName.length > 50 ||
-      lastName.length > 50 ||
-      middleName.length > 50 ||
+      firstName.length > 35 ||
+      lastName.length > 35 ||
+      middleName.length > 35 ||
       suffixName.length > 10
     ) {
       throw new Error("Name fields exceed max allowed length.");
     }
 
-    const phoneRegex = /^(?:\+639|09)\d{9}$/;
-    if (!phoneRegex.test(contactNumber)) {
+    if (
+      !firstName ||
+      typeof firstName !== "string" ||
+      !lastName ||
+      typeof lastName !== "string" ||
+      !middleName ||
+      typeof middleName !== "string"
+    ) {
+      throw new Error("All name fields are required.");
+    }
+
+    if (!contactNumber || typeof contactNumber !== "string") {
+      throw new Error("Invalid contact number.");
+    }
+
+    const normalizedContactNumber = mongoSanitize(
+      contactNumber.replace(/[\s-()]/g, "")
+    );
+    const phoneregex = /^(09\d{9}|\+639\d{9})$/;
+
+    if (!phoneregex.test(normalizedContactNumber)) {
       throw new Error("Invalid Philippine contact number format.");
     }
 
@@ -186,19 +208,17 @@ const signup = async (req, res) => {
       throw new Error("Street is too long.");
     }
 
-    const sanitizedFirstName = escape(mongoSanitize(firstName));
-    const sanitizedLastName = escape(mongoSanitize(lastName));
-    const sanitizedMiddleName = escape(mongoSanitize(middleName));
-    const sanitizedSuffixName = suffixName
-      ? escape(mongoSanitize(suffixName))
-      : null;
-    const sanitizedContactNumber = escape(mongoSanitize(contactNumber));
+    const sanitizedFirstName = mongoSanitize(firstName);
+    const sanitizedLastName = mongoSanitize(lastName);
+    const sanitizedMiddleName = mongoSanitize(middleName);
+    const sanitizedSuffixName = suffixName ? mongoSanitize(suffixName) : null;
+    const sanitizedContactNumber = mongoSanitize(contactNumber);
     const sanitizedAddress = {
-      region: escape(mongoSanitize(address.region)),
-      district: escape(mongoSanitize(address.district)),
-      city: escape(mongoSanitize(address.city)),
-      street: escape(mongoSanitize(address.street)),
-      unit: address.unit ? escape(mongoSanitize(address.unit)) : null,
+      region: mongoSanitize(address.region),
+      district: mongoSanitize(address.district),
+      city: mongoSanitize(address.city),
+      street: mongoSanitize(address.street),
+      unit: address.unit ? mongoSanitize(address.unit) : null,
     };
 
     const encryptedFirstName = encryptAES128(sanitizedFirstName);
@@ -318,27 +338,24 @@ const verifyEmail = async (req, res) => {
     const otpauthUrl = speakeasy.otpauthURL({
       secret: pending.totpSecret,
       label: `FixIt (${pending.email})`,
+      issuer: "FixIt",
       encoding: "base32",
     });
 
-    //log qr for now
-    qrcodeTerminal.generate(otpauthUrl, { small: true });
+    // Log QR for development
+    if (process.env.NODE_ENV === "development") {
+      qrcodeTerminal.generate(otpauthUrl, { small: true });
+    }
 
     const qr = await qrcode.toDataURL(otpauthUrl);
-
     generateVerifyToken(res, pending.email, pending.userType);
 
-    // You can redirect to frontend or just send QR and manual key
-    res.status(200).json({
-      success: true,
-      message:
-        "Email verified. Please scan the QR code and enter your OTP to complete registration.",
-      qrCodeURL: qr,
-      manualEntryKey: pending.totpSecret,
-      email: pending.email,
-      userType: pending.userType,
-    });
+    // QR template
+    const html = qrTemplate(otpauthUrl, qr, pending.email, pending.totpSecret);
+
+    res.send(html);
   } catch (err) {
+    console.error("Verify email error:", err);
     res.status(400).json({
       success: false,
       message:
@@ -407,6 +424,7 @@ const verify = async (req, res) => {
       email: pending.email,
       password: pending.password,
       userType: pending.userType,
+      totpSecret: pending.totpSecret,
       isAuthenticated: true,
     });
     await credential.save({ session });
@@ -523,18 +541,17 @@ const resendCode = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, totpCode } = req.body;
 
   try {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: "Email and password are required",
       });
     }
 
     const normalizedEmail = mongoSanitize(email.trim().toLowerCase());
-
     const domain = normalizedEmail.split("@")[1];
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -550,14 +567,32 @@ const login = async (req, res) => {
 
     const sanitizedPassword = mongoSanitize(password);
 
+    // ✅ Select all needed fields including lockout fields
     const matchingUser = await Credential.findOne({
       email: normalizedEmail,
-    }).select("+email +password");
+    }).select(
+      "+email +password +totpSecret +totpAttempts +totpBlockedUntil +lastTotpAttempt +loginAttempts +lockUntil"
+    );
 
     if (!matchingUser) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: "Please register your account first",
+        message: "Invalid email or password",
+      });
+    }
+
+    // ✅ Check if account is locked FIRST
+    if (matchingUser.isLocked) {
+      const lockTimeRemaining = Math.ceil(
+        (matchingUser.lockUntil - Date.now()) / (1000 * 60)
+      );
+      console.warn(
+        `Account locked: email=${normalizedEmail}, remaining=${lockTimeRemaining}min`
+      );
+
+      return res.status(423).json({
+        success: false,
+        message: `Account temporarily locked due to too many failed attempts. Try again in ${lockTimeRemaining} minutes.`,
       });
     }
 
@@ -567,25 +602,111 @@ const login = async (req, res) => {
     );
 
     if (!isPasswordCorrect) {
+      // ✅ Increment login attempts on failed password
+      await matchingUser.incLoginAttempts();
+
       console.warn(
-        `Suspicious login attempt: email=${normalizedEmail}, ip=${
-          req.ip
-        }, time=${new Date().toISOString()}`
+        `Failed login attempt: email=${normalizedEmail}, attempts=${
+          matchingUser.loginAttempts + 1
+        }, ip=${req.ip}`
       );
-      return res.status(400).json({
+
+      return res.status(401).json({
         success: false,
         message: "Invalid email or password",
       });
     }
 
-    // Successful login
-    generateTokenandSetCookie(res, matchingUser);
+    // ✅ Reset login attempts on successful password
+    if (matchingUser.loginAttempts > 0) {
+      matchingUser.loginAttempts = 0;
+      matchingUser.lockUntil = undefined;
+      await matchingUser.save();
+    }
+
+    // Check if TOTP code is provided
+    if (!totpCode) {
+      return res.status(200).json({
+        success: false,
+        requiresTOTP: true,
+        message: "Please enter your authenticator code to complete login",
+        email: normalizedEmail,
+      });
+    }
+
+    // Validate TOTP code
+    if (!matchingUser.totpSecret) {
+      return res.status(400).json({
+        success: false,
+        message: "Two-factor authentication is not set up for this account",
+      });
+    }
+
+    // Check TOTP rate limiting
+    if (
+      matchingUser.totpBlockedUntil &&
+      matchingUser.totpBlockedUntil > Date.now()
+    ) {
+      const secs = Math.ceil(
+        (matchingUser.totpBlockedUntil - Date.now()) / 1000
+      );
+      return res.status(429).json({
+        success: false,
+        message: `Too many TOTP attempts. Try again in ${secs} seconds.`,
+        requiresTOTP: true,
+        email: normalizedEmail,
+      });
+    }
+
+    const totpValid = speakeasy.totp.verify({
+      secret: matchingUser.totpSecret,
+      encoding: "base32",
+      token: totpCode.toString(),
+      window: 2,
+    });
+
+    if (!totpValid) {
+      matchingUser.totpAttempts = (matchingUser.totpAttempts || 0) + 1;
+      matchingUser.lastTotpAttempt = new Date();
+
+      if (matchingUser.totpAttempts >= 5) {
+        const blockMinutes = Math.pow(2, matchingUser.totpAttempts - 4);
+        matchingUser.totpBlockedUntil = Date.now() + blockMinutes * 60 * 1000;
+      }
+
+      await matchingUser.save();
+
+      console.warn(
+        `Invalid TOTP attempt: email=${normalizedEmail}, ip=${req.ip}, attempts=${matchingUser.totpAttempts}`
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: `Invalid authenticator code. ${Math.max(
+          0,
+          5 - matchingUser.totpAttempts
+        )} attempt(s) left.`,
+        requiresTOTP: true,
+        email: normalizedEmail,
+      });
+    }
+
+    // ✅ Successful login - reset all attempts
+    matchingUser.totpAttempts = 0;
+    matchingUser.totpBlockedUntil = undefined;
+    matchingUser.lastTotpAttempt = undefined;
+    matchingUser.loginAttempts = 0;
+    matchingUser.lockUntil = undefined;
     matchingUser.lastLogin = new Date();
+
     await matchingUser.save();
+    generateTokenandSetCookie(res, matchingUser);
+
+    console.log(`Successful login: email=${normalizedEmail}, ip=${req.ip}`);
 
     return res.status(200).json({
       success: true,
-      message: "Login successfully",
+      message: "Login successful",
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -686,7 +807,11 @@ const forgotPassword = async (req, res) => {
     const decryptedFirstName = decryptAES128(user.firstName);
     // Build reset URL and send email
     const resetUrl = `https://yourdomain.com/reset-password?token=${token}`;
-    await forgotPasswordMailer(normalizedEmail, decryptedFirstName, resetUrl);
+    const mailSent = await forgotPasswordMailer(
+      normalizedEmail,
+      decryptedFirstName,
+      resetUrl
+    );
 
     if (!mailSent) {
       console.error(
