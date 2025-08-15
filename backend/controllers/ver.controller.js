@@ -91,7 +91,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       experience: [],
       certificates: [],
       reviews: [],
-      status: "Available",
+      status: "available",
       currentJob: null,
       blocked: false,
     });
@@ -443,7 +443,7 @@ const verify = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Account verified successfully!" });
+      .json({ success: true, message: "Account successfully created!" });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

@@ -29,7 +29,7 @@ const WorkerSchema = new mongoose.Schema(
     },
     sex: {
       type: String,
-      enum: ["male", "female", "other", "prefer not to say"],
+      enum: ["male", "female"],
       required: true,
     },
     dateOfBirth: {
