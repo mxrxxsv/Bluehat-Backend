@@ -65,20 +65,21 @@ const pendingSignupSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
+    province: {
+      type: String,
+      required: true,
+    },
     city: {
       type: String,
       required: true,
     },
-    district: {
+    barangay: {
       type: String,
       required: true,
     },
     street: {
       type: String,
       required: true,
-    },
-    unit: {
-      type: String,
     },
   },
   emailVerificationToken: {

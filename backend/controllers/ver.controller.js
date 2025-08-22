@@ -44,10 +44,10 @@ const createClientProfile = async (pending, credentialId, session) => {
       maritalStatus: pending.maritalStatus,
       address: {
         region: pending.address?.region || "",
+        province: pending.address?.province || "",
         city: pending.address?.city || "",
-        district: pending.address?.district || "",
+        barangay: pending.address?.barangay || "",
         street: pending.address?.street || "",
-        unit: pending.address?.unit || null,
       },
       profilePicture: {
         url: "",
@@ -76,10 +76,10 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       maritalStatus: pending.maritalStatus,
       address: {
         region: pending.address?.region || "",
+        province: pending.address?.province || "",
         city: pending.address?.city || "",
-        district: pending.address?.district || "",
+        barangay: pending.address?.barangay || "",
         street: pending.address?.street || "",
-        unit: pending.address?.unit || null,
       },
       profilePicture: {
         url: "",
@@ -198,11 +198,14 @@ const signup = async (req, res) => {
     if (!validator.isLength(address.region, { max: 100 })) {
       throw new Error("Region is too long.");
     }
-    if (!validator.isLength(address.district, { max: 100 })) {
-      throw new Error("District is too long.");
+    if (!validator.isLength(address.province, { max: 100 })) {
+      throw new Error("Province is too long.");
     }
     if (!validator.isLength(address.city, { max: 100 })) {
       throw new Error("City is too long.");
+    }
+    if (!validator.isLength(address.barangay, { max: 100 })) {
+      throw new Error("Barangay is too long.");
     }
     if (!validator.isLength(address.street, { max: 200 })) {
       throw new Error("Street is too long.");
@@ -215,10 +218,10 @@ const signup = async (req, res) => {
     const sanitizedContactNumber = mongoSanitize(contactNumber);
     const sanitizedAddress = {
       region: mongoSanitize(address.region),
-      district: mongoSanitize(address.district),
+      province: mongoSanitize(address.province),
       city: mongoSanitize(address.city),
+      barangay: mongoSanitize(address.barangay),
       street: mongoSanitize(address.street),
-      unit: address.unit ? mongoSanitize(address.unit) : null,
     };
 
     const encryptedFirstName = encryptAES128(sanitizedFirstName);
@@ -229,12 +232,10 @@ const signup = async (req, res) => {
       : null;
     const encryptedContact = encryptAES128(sanitizedContactNumber);
     const encryptedRegion = encryptAES128(sanitizedAddress.region);
-    const encryptedDistrict = encryptAES128(sanitizedAddress.district);
+    const encryptedProvince = encryptAES128(sanitizedAddress.province);
     const encryptedCity = encryptAES128(sanitizedAddress.city);
+    const encryptedBarangay = encryptAES128(sanitizedAddress.barangay);
     const encryptedStreet = encryptAES128(sanitizedAddress.street);
-    const encryptedUnit = sanitizedAddress.unit
-      ? encryptAES128(sanitizedAddress.unit)
-      : null;
 
     const matchingCredential = await Credential.findOne({
       email: normalizedEmail,
@@ -276,10 +277,10 @@ const signup = async (req, res) => {
       totpSecret: secret.base32,
       address: {
         region: encryptedRegion,
+        province: encryptedProvince,
         city: encryptedCity,
-        district: encryptedDistrict,
+        barangay: encryptedBarangay,
         street: encryptedStreet,
-        unit: encryptedUnit || null,
       },
       emailVerificationToken,
       emailVerificationExpires,
@@ -790,7 +791,6 @@ const forgotPassword = async (req, res) => {
     const normalizedEmail = mongoSanitize(email.trim().toLowerCase());
     const user = await Credential.findOne({ email: normalizedEmail });
     if (!user) {
-      // Don't reveal if user exists
       return res.status(200).json({
         success: true,
         message: "If the email exists, a reset link has been sent.",
