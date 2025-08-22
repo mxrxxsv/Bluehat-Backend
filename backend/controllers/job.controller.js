@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const SkillCategory = require("../models/SkillCategory");
 const Job = require("../models/Job");
 const Client = require("../models/Client");
+const JobApplication = require("../models/JobApplication");
 
 // Get all jobs (public, only verified/not deleted) with pagination & filtering
 const getAllJobs = async (req, res) => {
@@ -159,12 +160,10 @@ const updateJob = async (req, res) => {
     }
 
     if (req.user.id.toString() !== job.clientId.toString()) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Only the job owner can update this job.",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Only the job owner can update this job.",
+      });
     }
 
     const allowedFields = [
@@ -242,4 +241,202 @@ const deleteJob = async (req, res) => {
   }
 };
 
-module.exports = { getAllJobs, getJobById, postJob, updateJob, deleteJob };
+// Get applications for a specific job (Client only)
+const getJobApplications = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const {
+      status,
+      page = 1,
+      limit = 10,
+      sortBy = "appliedAt",
+      order = "desc",
+    } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
+
+    if (!req.user || req.user.userType !== "client") {
+      return res.status(401).json({
+        success: false,
+        message: "Only clients can view job applications",
+      });
+    }
+
+    // Verify job ownership
+    const job = await Job.findOne({
+      _id: jobId,
+      clientId: req.user.id,
+      isDeleted: false,
+    });
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found or access denied",
+      });
+    }
+
+    // Build filter
+    const filter = {
+      jobId,
+      isDeleted: false,
+    };
+
+    if (status && ["pending", "accepted", "rejected"].includes(status)) {
+      filter.status = status;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    const applications = await JobApplication.find(filter)
+      .populate({
+        path: "workerId",
+        select:
+          "firstName lastName profilePicture skills rating totalRatings portfolio",
+      })
+      .sort({ [mongoSanitize(sortBy)]: sortOrder })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await JobApplication.countDocuments(filter);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    // Get application statistics for this job
+    const jobStats = await JobApplication.getJobStats(jobId);
+
+    res.status(200).json({
+      success: true,
+      message: "Job applications retrieved successfully",
+      data: {
+        job: {
+          id: job._id,
+          title: job.jobTitle,
+          price: job.price,
+        },
+        applications,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+          hasNextPage: parseInt(page) < totalPages,
+          hasPrevPage: parseInt(page) > 1,
+        },
+        statistics: jobStats[0] || {
+          totalApplications: 0,
+          pendingApplications: 0,
+          acceptedApplications: 0,
+          rejectedApplications: 0,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get job applications error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve job applications",
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
+    });
+  }
+};
+
+// Respond to job application (Accept/Reject)
+const respondToApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { action, message = "" } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+      });
+    }
+
+    if (!req.user || req.user.userType !== "client") {
+      return res.status(401).json({
+        success: false,
+        message: "Only clients can respond to applications",
+      });
+    }
+
+    if (!["accept", "reject"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Action must be 'accept' or 'reject'",
+      });
+    }
+
+    const application = await JobApplication.findById(applicationId)
+      .populate("jobId")
+      .populate("workerId");
+
+    if (!application || application.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // Verify job ownership
+    if (application.jobId.clientId.toString() !== req.user.id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    if (application.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This application has already been responded to",
+      });
+    }
+
+    // Update application status
+    application.status = action === "accept" ? "accepted" : "rejected";
+    application.clientResponse = {
+      message: escape(message.trim()),
+      respondedAt: new Date(),
+      respondedBy: req.user.id,
+    };
+
+    await application.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Application ${
+        action === "accept" ? "accepted" : "rejected"
+      } successfully`,
+      data: {
+        applicationId: application._id,
+        status: application.status,
+        workerName: `${application.workerId.firstName} ${application.workerId.lastName}`,
+        respondedAt: application.clientResponse.respondedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Respond to application error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to respond to application",
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
+    });
+  }
+};
+
+module.exports = {
+  getAllJobs,
+  getJobById,
+  postJob,
+  updateJob,
+  deleteJob,
+  getJobApplications,
+  respondToApplication,
+};

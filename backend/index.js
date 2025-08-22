@@ -15,6 +15,7 @@ const jobRoute = require("./routes/job.route");
 const skillRoute = require("./routes/skill.route");
 const adminRoute = require("./routes/admin.route");
 const adminTaskRoute = require("./routes/adminTask.route");
+const jobApplicationRoute = require("./routes/jobApplication.route");
 const allowedOrigins = [process.env.CLIENT_URL];
 
 const app = express();
@@ -59,6 +60,7 @@ app.use("/job", jobRoute);
 app.use("/skill", skillRoute);
 app.use("/admin", adminRoute);
 app.use("/adminTask", adminTaskRoute);
+app.use("/job-applications", jobApplicationRoute);
 // 8) 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Not Found" });

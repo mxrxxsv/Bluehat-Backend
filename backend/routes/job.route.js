@@ -12,6 +12,8 @@ const {
   postJob,
   updateJob,
   deleteJob,
+  getJobApplications,
+  respondToApplication,
 } = require("../controllers/job.controller");
 
 const { authLimiter } = require("../utils/rateLimit");
@@ -30,6 +32,17 @@ router.put("/:id", authLimiter, verifyToken, updateJob);
 
 // Soft delete a job (only owner or admin)
 router.delete("/:id", authLimiter, verifyToken, deleteJob);
+
+// Get applications for a specific job (Client only)
+router.get("/:jobId/applications", verifyToken, getJobApplications);
+
+// Respond to job application (Accept/Reject)
+router.patch(
+  "/applications/:applicationId/respond",
+  authLimiter,
+  verifyToken,
+  respondToApplication
+);
 
 // Admin: verify a job
 router.patch("/:id/verify", authLimiter, verifyToken, async (req, res) => {

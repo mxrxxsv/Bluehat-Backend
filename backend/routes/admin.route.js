@@ -56,7 +56,7 @@ router.post("/signup", async (req, res) => {
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
-        message: "Username already exists",
+        message: "Your username is not valid. Please choose a different one.",
       });
     }
 
@@ -85,7 +85,6 @@ router.post("/signup", async (req, res) => {
         id: newAdmin._id,
         firstName: newAdmin.firstName,
         lastName: newAdmin.lastName,
-        userName: newAdmin.userName,
         role: "admin",
       },
     });
@@ -144,9 +143,7 @@ router.post("/login", async (req, res) => {
         id: admin._id,
         firstName: admin.firstName,
         lastName: admin.lastName,
-        userName: admin.userName,
         role: "admin",
-        lastLogin: admin.lastLogin,
       },
     });
   } catch (error) {
@@ -167,10 +164,7 @@ router.get("/profile", verifyAdmin, async (req, res) => {
         id: req.admin._id,
         firstName: req.admin.firstName,
         lastName: req.admin.lastName,
-        userName: req.admin.userName,
         role: "admin",
-        createdAt: req.admin.createdAt,
-        lastLogin: req.admin.lastLogin,
       },
     });
   } catch (error) {
@@ -209,7 +203,6 @@ router.get("/check-auth", verifyAdmin, async (req, res) => {
         id: req.admin._id,
         firstName: req.admin.firstName,
         lastName: req.admin.lastName,
-        userName: req.admin.userName,
         role: "admin",
       },
     });
