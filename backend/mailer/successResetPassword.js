@@ -2,19 +2,16 @@ const nodemailer = require("nodemailer");
 const { PASSWORD_RESET_SUCCESS_TEMPLATE } = require("./mailerTemplate");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL,
     pass: process.env.PASSWORD,
   },
 });
-
 const successResetPassword = async (email, userName) => {
   try {
     let mailOptions = {
-      from: `"FixIT" <${process.env.EMAIL}>`,
+      from: `"BlueHat" <${process.env.EMAIL}>`,
       to: email,
       subject: "Reset your password",
       html: PASSWORD_RESET_SUCCESS_TEMPLATE.replace("{userName}", userName),

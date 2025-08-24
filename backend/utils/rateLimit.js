@@ -3,7 +3,7 @@ const rateLimit = require("express-rate-limit");
 // General purpose (e.g., for login/signup)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 100,
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase()?.trim();
     return email || req.ip;

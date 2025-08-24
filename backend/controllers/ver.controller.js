@@ -198,14 +198,15 @@ const signup = async (req, res) => {
     if (!validator.isLength(address.region, { max: 100 })) {
       throw new Error("Region is too long.");
     }
+
     if (!validator.isLength(address.province, { max: 100 })) {
       throw new Error("Province is too long.");
     }
-    if (!validator.isLength(address.city, { max: 100 })) {
-      throw new Error("City is too long.");
-    }
     if (!validator.isLength(address.barangay, { max: 100 })) {
       throw new Error("Barangay is too long.");
+    }
+    if (!validator.isLength(address.city, { max: 100 })) {
+      throw new Error("City is too long.");
     }
     if (!validator.isLength(address.street, { max: 200 })) {
       throw new Error("Street is too long.");
@@ -219,8 +220,8 @@ const signup = async (req, res) => {
     const sanitizedAddress = {
       region: mongoSanitize(address.region),
       province: mongoSanitize(address.province),
-      city: mongoSanitize(address.city),
       barangay: mongoSanitize(address.barangay),
+      city: mongoSanitize(address.city),
       street: mongoSanitize(address.street),
     };
 
@@ -233,8 +234,8 @@ const signup = async (req, res) => {
     const encryptedContact = encryptAES128(sanitizedContactNumber);
     const encryptedRegion = encryptAES128(sanitizedAddress.region);
     const encryptedProvince = encryptAES128(sanitizedAddress.province);
-    const encryptedCity = encryptAES128(sanitizedAddress.city);
     const encryptedBarangay = encryptAES128(sanitizedAddress.barangay);
+    const encryptedCity = encryptAES128(sanitizedAddress.city);
     const encryptedStreet = encryptAES128(sanitizedAddress.street);
 
     const matchingCredential = await Credential.findOne({
@@ -444,7 +445,7 @@ const verify = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Account successfully created!" });
+      .json({ success: true, message: "Account verified successfully!" });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -724,46 +725,58 @@ const checkAuth = async (req, res) => {
 
     const credential = await Credential.findById(id).select("-password");
     if (!credential) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     let user;
-
     if (userType === "client") {
       user = await Client.findOne({ credentialId: id });
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      }
     } else if (userType === "worker") {
       user = await Worker.findOne({ credentialId: id });
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      }
     }
 
-    // credential.lastLogin = new Date();
-    // await credential.save();
-    res.status(200).json({
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Decrypt user name
+    const decryptedFirstName = decryptAES128(user.firstName);
+    const decryptedLastName = decryptAES128(user.lastName);
+
+    // Decrypt address with fallback
+    let decryptedAddress = null;
+    if (user.address && typeof user.address === "object") {
+      decryptedAddress = {
+        region: user.address.region ? decryptAES128(user.address.region) : "",
+        province: user.address.province ? decryptAES128(user.address.province) : "",
+        city: user.address.city ? decryptAES128(user.address.city) : "",
+        barangay: user.address.barangay ? decryptAES128(user.address.barangay) : "",
+        street: user.address.street ? decryptAES128(user.address.street) : "",
+        
+        
+      };
+    }
+
+    // Debug logs (optional)
+    console.log("✅ Decrypted Address:", decryptedAddress);
+
+    return res.status(200).json({
       success: true,
       data: {
         id: credential._id,
-        name: user
-          ? `${decryptAES128(user.firstName)} ${decryptAES128(user.lastName)}`
-          : null,
+        fname: decryptedFirstName,
+        fullName: `${decryptedFirstName} ${decryptedLastName}`,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
+        address: decryptedAddress, 
+        image: user.image || null,
+        ...(userType === "worker" && { portfolio: user.portfolio || [] }),
       },
     });
   } catch (err) {
-    console.error("Error in /check-auth", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ Error in /check-auth:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -791,6 +804,7 @@ const forgotPassword = async (req, res) => {
     const normalizedEmail = mongoSanitize(email.trim().toLowerCase());
     const user = await Credential.findOne({ email: normalizedEmail });
     if (!user) {
+      // Don't reveal if user exists
       return res.status(200).json({
         success: true,
         message: "If the email exists, a reset link has been sent.",

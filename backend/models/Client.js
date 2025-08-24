@@ -29,7 +29,7 @@ const ClientSchema = new mongoose.Schema(
     },
     sex: {
       type: String,
-      enum: ["male", "female"],
+      enum: ["male", "female", "other", "prefer not to say"],
       required: true,
     },
     dateOfBirth: {
@@ -53,20 +53,21 @@ const ClientSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
+      province: {
+        type: String,
+        required: true,
+      },
       city: {
         type: String,
         required: true,
       },
-      district: {
+      barangay: {
         type: String,
         required: true,
       },
       street: {
         type: String,
         required: true,
-      },
-      unit: {
-        type: String,
       },
     },
     profilePicture: {
@@ -82,7 +83,6 @@ const ClientSchema = new mongoose.Schema(
     blocked: {
       type: Boolean,
       default: false,
-      select: false,
     },
   },
   { timestamps: true }
