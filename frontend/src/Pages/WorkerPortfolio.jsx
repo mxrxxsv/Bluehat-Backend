@@ -1,11 +1,13 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import workers from "../Objects/workers";
 import profile from '../assets/worker.png';
-import education from '../Objects/educations'
-import certificates from '../Objects/certificates'
+import education from '../Objects/educations';
+import certificates from '../Objects/certificates';
+import { ArrowLeft } from "lucide-react";
 
 const WorkerPortfolio = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const worker = workers.find((w) => w.id.toString() === id);
 
   if (!worker) return <p>Worker not found.</p>;
@@ -23,8 +25,19 @@ const WorkerPortfolio = () => {
       : "No ratings";
 
   return (
-    <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30">
+    <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30 bg-white">
       {/* Top Section: Profile Picture and Basic Info */}
+
+       {/* Back Button */}
+      <div className="mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-[#55b3f3] hover:text-blue-300 font-medium cursor-pointer"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+        </button>
+      </div>
+
       <div className="flex items-start gap-6">
         <img
           // src={worker.profileImage || "/default-profile.png"}
@@ -45,10 +58,10 @@ const WorkerPortfolio = () => {
           </p>
 
           <div className="mt-3 flex gap-2">
-            <button className="p-2 bg-blue-500 text-white shadow-md rounded-[14px] hover:bg-blue-600 hover:shadow-lg cursor-pointer">
+            <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
               Message
             </button>
-            <button className="px-4 py-2 bg-gray-200 text-gray-700 shadow-md rounded-[14px] hover:bg-gray-300 hover:shadow-lg cursor-pointer">
+            <button className="px-4 py-2 bg-gray-500 text-white shadow-md rounded-[14px] hover:bg-gray-400 hover:shadow-lg cursor-pointer">
               Save
             </button>
           </div>

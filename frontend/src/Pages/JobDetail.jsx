@@ -1,110 +1,135 @@
-import { useState } from "react";
-import { MapPin, Briefcase, Clock } from "lucide-react";
-import { Link } from "react-router-dom"; // Import Link from React Router
-import jobPosts from "../Objects/jobPosts"; // this will contain dummy or real data
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import jobPosts from "../Objects/jobPosts";
+import { Clock, MapPin, Briefcase, ArrowLeft } from "lucide-react";
+import { checkAuth } from "../api/auth"; 
 
-const FindWork = () => {
-  const [search, setSearch] = useState("");
-  const [location, setLocation] = useState("");
-  const [skill, setSkill] = useState("");
+const JobDetails = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const job = jobPosts.find((job) => job.id.toString() === id);
 
-  const filteredJobs = jobPosts.filter((job) => {
-    const matchesSearch =
-      job.title.toLowerCase().includes(search.toLowerCase()) ||
-      job.description.toLowerCase().includes(search.toLowerCase());
-    const matchesLocation = location
-      ? job.location.toLowerCase().includes(location.toLowerCase())
-      : true;
-    const matchesSkill = skill
-      ? job.skillsRequired.some((s) =>
-          s.toLowerCase().includes(skill.toLowerCase())
-        )
-      : true;
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-    return matchesSearch && matchesLocation && matchesSkill;
-  });
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await checkAuth(); 
+        if (res.data.success) {
+          setCurrentUser(res.data.data);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching user:", err);
+        setCurrentUser(null); 
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (!job) {
+    return <p className="text-center text-red-500 mt-10">Job not found.</p>;
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Search job titles or description"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-1/2 px-4 py-2 border rounded-md"
-        />
-        <input
-          type="text"
-          placeholder="Filter by location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="w-full md:w-1/4 px-4 py-2 border rounded-md"
-        />
-        <input
-          type="text"
-          placeholder="Filter by skill"
-          value={skill}
-          onChange={(e) => setSkill(e.target.value)}
-          className="w-full md:w-1/4 px-4 py-2 border rounded-md"
-        />
+    <div className="max-w-5xl p-4 md:mx-auto pt-35 md:pt-45">
+      {/* Back Button */}
+      <div className="mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-[#55b3f3] hover:text-blue-300 font-medium cursor-pointer"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+        </button>
       </div>
 
-      {/* Job Posts */}
-      {filteredJobs.length > 0 ? (
-        <div className="space-y-4">
-          {filteredJobs.map((job) => (
-            <Link
-              key={job.id}
-              to={`/job/${job.id}`} // Use the job ID for routing
-              className="border rounded-xl p-4 bg-white shadow hover:shadow-lg transition-all block"
-            >
-              {/* Header: Client Name and Date */}
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Posted by: {job.clientName}
-                </span>
-                <span className="flex items-center gap-1 text-sm text-gray-500">
-                  <Clock size={16} />
-                  {job.datePosted}
-                </span>
+      <article className="md:gap-2 md:grid md:grid-cols-2 p-8 bg-white shadow-sm rounded-[20px]">
+        {/* LEFT: Profile Info */}
+        <div>
+          <div className="flex items-center mb-6">
+            <img
+              className="w-10 h-10 rounded-full"
+              src={
+                job.clientImage ||
+                "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0="
+              }
+              alt={job.clientName}
+            />
+            <div className="ms-4 font-medium">
+              <p>{job.clientName}</p>
+              <div className="flex items-center text-sm text-gray-500">
+                <Clock size={13} className="mr-0.5" />
+                {job.datePosted}
               </div>
-
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Briefcase size={20} className="text-blue-600" />
-                {job.title}
-              </h2>
-
-              <p className="text-gray-700 mt-1 text-left">{job.description}</p>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                {job.skillsRequired.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                <span className="flex items-center gap-1">
-                  <MapPin size={16} /> {job.location}
-                </span>
-                <span className="font-bold text-green-600">
-                  ₱{job.priceOffer.toLocaleString()}
-                </span>
-              </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
-      ) : (
-        <p className="text-gray-500 text-center mt-10">No job posts found.</p>
-      )}
+
+        {/* RIGHT: Job Description */}
+        <div className="col-span-2 mt-6 md:mt-0">
+          <div className="flex items-start mb-5 justify-between">
+            <div className="pe-4">
+              <div className="flex flex-row gap-2">
+                <Briefcase size={26} className="text-blue-400" />
+                <h4 className="text-xl font-bold text-gray-900 text-left">
+                  {job.title}
+                </h4>
+              </div>
+              <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                <MapPin size={15} className="mr-0.5" />
+                {job.location}
+              </p>
+            </div>
+            <span className="text-green-400 text-sm font-semibold px-3 py-1 rounded">
+              ₱{job.priceOffer.toLocaleString()}
+            </span>
+          </div>
+
+          <p className="mb-2 text-gray-500 text-left">{job.description}</p>
+
+          <div className="mt-4">
+            <h5 className="font-semibold mb-2 text-gray-700 text-left">
+              Skills Required:
+            </h5>
+            <div className="flex flex-wrap gap-2">
+              {job.skillsRequired.map((skill, index) => (
+                <span
+                  key={index}
+                  className="bg-[#55b3f3] text-white px-3 py-1 rounded-full text-xs shadow-md"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </article>
+
+      {/* Bottom Action Button */}
+      <div className="flex justify-end mt-10">
+        {loadingUser ? (
+          <p className="text-gray-500">Checking user...</p>
+        ) : currentUser ? (
+          currentUser.userType === "worker" ? (
+            <button className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer">
+              Apply
+            </button>
+          ) : (
+            <button className="bg-green-500 hover:bg-green-400 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer">
+              View Applicants
+            </button>
+          )
+        ) : (
+          <p className="text-red-500 font-medium">
+            Please log in to apply or edit jobs.
+          </p>
+        )}
+      </div>
     </div>
   );
 };
 
-export default FindWork;
+export default JobDetails;

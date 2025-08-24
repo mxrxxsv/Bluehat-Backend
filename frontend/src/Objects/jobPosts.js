@@ -21,6 +21,18 @@ const jobPosts = [
     priceOffer: 5000,
     datePosted: "April 12, 2025",
   },
+  {
+    id: 3,
+    clientName: "San Miguel",
+    title: "Carpenter Needed",
+    description:
+      "I need to fix my window in our room.",
+    location: "Cabiao",
+    skillsRequired: ["Carpentry", "Furniture Assembly"],
+    priceOffer: 1500,
+    datePosted: "June 29, 2025",
+  },
+
 ];
 
 export default jobPosts;

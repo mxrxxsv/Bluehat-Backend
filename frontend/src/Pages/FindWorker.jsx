@@ -246,7 +246,7 @@ const FindWorker = () => {
                     className="w-full py-4"
                   >
                     <div
-                      className="relative bg-white rounded-2xl shadow-md p-4 flex items-center w-full"
+                      className="relative bg-white rounded-2xl shadow-md p-4 flex items-center w-full pb-15 md:pb-4"
                       onMouseOver={isMouseOver}
                       onMouseOut={isMouseOut}
                     >
@@ -255,10 +255,10 @@ const FindWorker = () => {
                         <img
                           src={profile}
                           alt={worker.name}
-                          className="w-24 h-24 rounded-full object-cover border pt-3"
+                          className="w-20 h-20 md:w-22 md:h-22 rounded-full object-cover border pt-3"
                         />
                         <div className="flex flex-col justify-between h-full">
-                          <h2 className="text-xl font-semibold text-left">
+                          <h2 className="text-[14px] md:text-xl font-semibold text-left">
                             {worker.name}
                           </h2>
                           <p className="text-sm text-gray-700 mt-1 text-left">
@@ -298,7 +298,7 @@ const FindWorker = () => {
                           e.preventDefault();
                           handleBookmarkClick(worker.id);
                         }}
-                        className="flex items-center gap-1 absolute bottom-2 md:bottom-4 right-1.5 bg-blue-500 text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-600 shadow-md cursor-pointer"
+                        className="flex items-center text-[14px] md:text-sm gap-1 absolute bottom-2 md:bottom-4 right-1.5 bg-[#55b3f3] text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-400 shadow-md cursor-pointer"
                       >
                         {isBookmark[worker.id] ? (
                           <BookmarkCheck size={16} />

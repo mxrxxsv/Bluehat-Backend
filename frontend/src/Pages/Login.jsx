@@ -2,17 +2,25 @@ import { useState, useEffect } from "react";
 import cute from "../assets/logi.png";
 import { login } from "../api/auth";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
     const [form, setForm] = useState({ email: "", password: "" });
     const [step, setStep] = useState("login");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [otp, setOtp] = useState("");
+    const [loginData, setLoginData] = useState(null); // Store credentials for OTP step
     const [resendTimer, setResendTimer] = useState(60);
     const [loading, setLoading] = useState(false);
+
+    const [showModal, setShowModal] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const [showPassword, setShowPassword] = useState(false);
+
     const navigate = useNavigate();
 
+    // First step: email + password
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -21,22 +29,53 @@ const Login = () => {
                 email: form.email.trim(),
                 password: form.password.trim(),
             };
-            await login(trimmedForm); // Use lowercase 'login'
-            setStep("otp"); // Move inside try after successful API call
-            setResendTimer(60);
+            const res = await login(trimmedForm);
+
+            if (res.data.requiresTOTP) {
+                setLoginData(trimmedForm); // Save creds for OTP
+                setStep("otp");
+                setResendTimer(60);
+            } else if (res.data.success) {
+                setShowModal(true);
+                setTimeout(() => {
+                    setShowModal(false);
+                    navigate("/find-work");
+                }, 2000);
+            }
         } catch (err) {
-            alert(err.response?.data?.message || "Login Failed");
+            setErrorMessage(err.response?.data?.message || "Invalid username or password");
+            setShowErrorModal(true);
+            setTimeout(() => setShowErrorModal(false), 2000);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleOtpSubmit = (e) => {
+    // Second step: OTP verification
+    const handleOtpSubmit = async (e) => {
         e.preventDefault();
-        if (otp === "123456") {
-            navigate("/find-work");
-        } else {
-            alert("Invalid OTP");
+        if (!loginData) return;
+
+        setLoading(true);
+        try {
+            const res = await login({
+                ...loginData,
+                totpCode: otp.trim(),
+            });
+
+            if (res.data.success) {
+                setShowModal(true);
+                setTimeout(() => {
+                    setShowModal(false);
+                    navigate("/find-work");
+                }, 2000);
+            }
+        } catch (err) {
+            setErrorMessage(err.response?.data?.message || "Invalid OTP");
+            setShowErrorModal(true);
+            setTimeout(() => setShowErrorModal(false), 2000);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -51,9 +90,10 @@ const Login = () => {
 
     const handleBackToLogin = () => {
         setStep("login");
-        setForm({ email: "", password: "" }); // Reset form state
+        setForm({ email: "", password: "" });
         setOtp("");
         setResendTimer(60);
+        setLoginData(null);
     };
 
     useEffect(() => {
@@ -67,7 +107,39 @@ const Login = () => {
     }, [step, resendTimer]);
 
     return (
-        <div className="mt-35 mx-full md:bg-white h-130 w-full">
+        <div className="mt-35 mx-full md:bg-white h-130 w-full relative">
+            {/* ✅ Success Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-8 w-80 text-center relative">
+                        <div className="checkmark-container mx-auto">
+                            <svg className="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                                <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                                <path className="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-sky-300 mt-4">Login Successful</h3>
+                        <p className="text-gray-600 mt-2">Redirecting to dashboard...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ❌ Error Modal */}
+            {showErrorModal && (
+                <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-8 w-80 text-center relative">
+                        <div className="errormark-container mx-auto">
+                            <svg className="errormark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                                <circle className="errormark-circle" cx="26" cy="26" r="25" fill="none" />
+                                <path className="errormark-cross" fill="none" d="M16 16 36 36 M36 16 16 36" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-red-500 mt-4">Login Failed</h3>
+                        <p className="text-gray-600 mt-2">{errorMessage}</p>
+                    </div>
+                </div>
+            )}
+
             <div className="md:grid md:grid-cols-[750px_750px] h-80 md:w-full gap-2">
                 <div className="mx-20 mt-5 hidden md:block">
                     <img src={cute} className="h-125 w-125" alt="Cute" />
@@ -95,18 +167,27 @@ const Login = () => {
                                         required
                                     />
                                 </div>
-                                <div>
-                                    <label htmlFor="password" className="block mb-2 text-sm font-medium text-left text-gray-900">Password</label>
+                                <div className="relative">
+                                    <label htmlFor="password" className="block mb-2 text-sm font-medium text-left text-gray-900">
+                                        Password
+                                    </label>
                                     <input
                                         name="password"
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         id="password"
                                         value={form.password}
                                         onChange={handleChange}
                                         placeholder="••••••••"
-                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
+                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 pr-10 shadow-sm"
                                         required
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3 top-9.5 text-gray-500 hover:text-gray-700"
+                                    >
+                                        {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                                    </button>
                                 </div>
                                 <div className="flex items-start">
                                     <Link to="/forgetpass" className="ms-auto text-sm font-medium text-[#55b3f3] hover:underline">Lost Password?</Link>
@@ -115,7 +196,7 @@ const Login = () => {
                                     type="submit"
                                     className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300"
                                 >
-                                    Login
+                                    {loading ? "Logging in..." : "Login"}
                                 </button>
                                 <div className="text-sm font-medium text-gray-900">
                                     Not registered yet? <Link to="/signup" className="text-[#55b3f3] hover:underline">Create account</Link>
@@ -135,6 +216,7 @@ const Login = () => {
                                         maxLength="6"
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm text-center tracking-widest"
                                         placeholder="------"
+                                        required
                                     />
                                 </div>
 
@@ -149,7 +231,7 @@ const Login = () => {
                                 </div>
 
                                 <button type="submit" className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300">
-                                    Verify OTP
+                                    {loading ? "Verifying..." : "Verify OTP"}
                                 </button>
                                 <button
                                     type="button"
@@ -163,6 +245,85 @@ const Login = () => {
                     </div>
                 </div>
             </div>
+             {/* ✅ Check Animation Styles */}
+            <style>
+                {`
+                .checkmark-container {
+                    width: 72px;
+                    height: 72px;
+                }
+                .checkmark {
+                    width: 72px;
+                    height: 72px;
+                    border-radius: 50%;
+                    display: block;
+                    stroke-width: 2;
+                    stroke: #55b3f3;
+                    stroke-miterlimit: 10;
+                    box-shadow: inset 0px 0px 0px #d8e4ddff;
+                    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+                }
+                .checkmark-circle {
+                    stroke-dasharray: 166;
+                    stroke-dashoffset: 166;
+                    stroke-width: 2;
+                    stroke-miterlimit: 10;
+                    stroke: #55b3f3;
+                    fill: none;
+                    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+                }
+                .checkmark-check {
+                    transform-origin: 50% 50%;
+                    stroke-dasharray: 48;
+                    stroke-dashoffset: 48;
+                    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+                }
+                /* ❌ Error Animation */
+                .errormark-container {
+                    width: 72px;
+                    height: 72px;
+                }
+                .errormark {
+                    width: 72px;
+                    height: 72px;
+                    border-radius: 50%;
+                    display: block;
+                    stroke-width: 2;
+                    stroke: #ef4444; /* Tailwind red-500 */
+                    stroke-miterlimit: 10;
+                    box-shadow: inset 0px 0px 0px #fce4e4;
+                    animation: fillError .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+                }
+                .errormark-circle {
+                    stroke-dasharray: 166;
+                    stroke-dashoffset: 166;
+                    stroke-width: 2;
+                    stroke-miterlimit: 10;
+                    stroke: #fca5a5;
+                    fill: none;
+                    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+                }
+                .errormark-cross {
+                    transform-origin: 50% 50%;
+                    stroke-dasharray: 48;
+                    stroke-dashoffset: 48;
+                    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+                }
+                @keyframes stroke {
+                    100% { stroke-dashoffset: 0; }
+                }
+                @keyframes scale {
+                    0%, 100% { transform: none; }
+                    50% { transform: scale3d(1.1, 1.1, 1); }
+                }
+                @keyframes fill {
+                    100% { box-shadow: inset 0px 0px 0px 30px #d6e6dcf; }
+                }
+                @keyframes fillError {
+                    100% { box-shadow: inset 0px 0px 0px 30px #ffffffff; }
+                }
+                `}
+            </style>
         </div>
     );
 };
