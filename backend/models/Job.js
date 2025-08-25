@@ -7,13 +7,6 @@ const jobSchema = new mongoose.Schema(
       ref: "Client",
       required: true,
     },
-    jobTitle: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: [5, "Job title too short"],
-      maxlength: [100, "Job title too long"],
-    },
     description: {
       type: String,
       required: true,
@@ -56,7 +49,7 @@ const jobSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open", "in_progress", "hired", "completed", "cancelled"],
+      enum: ["open", "hired", "in_progress", "completed", "cancelled"],
       default: "open",
       required: true,
     },

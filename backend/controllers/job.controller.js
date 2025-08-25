@@ -63,7 +63,6 @@ const postJob = async (req, res) => {
   try {
     // Sanitize input
     const clientId = mongoSanitize(req.body.clientId);
-    const jobTitle = mongoSanitize(req.body.jobTitle);
     const description = mongoSanitize(req.body.description);
     const price = Number(req.body.price);
     const location = mongoSanitize(req.body.location);
@@ -123,7 +122,6 @@ const postJob = async (req, res) => {
     }
     const job = new Job({
       clientId,
-      jobTitle,
       description,
       price,
       location,
@@ -131,8 +129,10 @@ const postJob = async (req, res) => {
       tags,
     });
 
-    const saved = await job.save();
-    res.status(201).json({ success: true, data: saved });
+    await job.save();
+    res
+      .status(201)
+      .json({ success: true, message: "Job created successfully" });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -167,7 +167,6 @@ const updateJob = async (req, res) => {
     }
 
     const allowedFields = [
-      "jobTitle",
       "description",
       "price",
       "location",
