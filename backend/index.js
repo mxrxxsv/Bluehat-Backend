@@ -12,9 +12,6 @@ const verRoute = require("./routes/ver.route");
 const uploadRoute = require("./routes/upload.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
-const skillRoute = require("./routes/skill.route");
-const adminRoute = require("./routes/admin.route");
-const adminTaskRoute = require("./routes/adminTask.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
 const allowedOrigins = [process.env.CLIENT_URL];
 
@@ -24,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 // 1) Security headers
 app.use(helmet());
 
-// 2) CORS — only allow front-end origins
+// 2) CORS — only allow your front-end origins
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -56,11 +53,9 @@ app.get("/healthz", (req, res) => res.sendStatus(200));
 app.use("/ver", verRoute);
 app.use("/upload", uploadRoute);
 app.use("/advertisement", adsRoute);
-app.use("/job", jobRoute);
-app.use("/skill", skillRoute);
-app.use("/admin", adminRoute);
-app.use("/adminTask", adminTaskRoute);
+app.use("/jobs", jobRoute);
 app.use("/job-applications", jobApplicationRoute);
+
 // 8) 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Not Found" });

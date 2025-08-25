@@ -1,15 +1,15 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
+import "./App.css";
 import { Routes, Route } from "react-router-dom";
 import FindWorker from "./Pages/FindWorker";
 import FindWork from "./Pages/FindWork";
 import AdsPage from "./Pages/AdsPage";
 import WorkerPortfolio from "./Pages/WorkerPortfolio";
 import JobDetail from "./Pages/JobDetail";
-import Header from "./Pages/Header";
+import Header from "./components/Header";
 import ChatPage from "./Pages/ChatPage";
-import "./App.css";
 import HomePage from "./Pages/HomePage";
 import Signup from "./Pages/Signup";
 import Login from "./Pages/Login";
@@ -18,6 +18,7 @@ import ClientSignup from "./Pages/ClientSignup";
 import ForgetPass from "./Pages/ForgetPass";
 import WorkerQuestion from "./Pages/WorkerQuestion";
 import Footer from "./components/Footer";
+import ProfilePage from "./Pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoutes";
 
 function App() {
@@ -37,6 +38,13 @@ function App() {
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />}/>
+        <Route path="/profile" element={<ProfilePage />} />
+
+        {/* <Route path="/find-workers" element={<FindWorker />} />
+        <Route path="/find-work" element={<FindWork />} />
+        <Route path="/ads" element={<AdsPage />} /> */}
+        
+        
 
         <Route 
           path="/find-workers" 
@@ -63,7 +71,7 @@ function App() {
                   <AdsPage />
               </ProtectedRoute>
               
-              } />
+              } /> 
 
           
       </Routes>

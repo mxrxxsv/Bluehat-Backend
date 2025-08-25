@@ -1,4 +1,3 @@
-// models/Credential.js - FIXED VERSION
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 

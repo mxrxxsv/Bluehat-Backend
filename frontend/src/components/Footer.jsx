@@ -4,23 +4,7 @@ const Footer = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const authPages = ["/home"];
-    const opPages = [
-        "/signup",
-        "/login",
-        "/workersignup",
-        "/clientsignup",
-        "/forgetpass",
-        "/workerquestion",
-        "/chat",
-        "/find-workers",
-        "/find-work",
-        "/worker/:id",
-        "/ads",
-
-
-    ];
-    if (opPages.includes(currentPath)) return null;
+    if (currentPath !== "/home") return null;
 
     return (
         <footer className="bg-gradient-to-r from-[#f4f6f6] to-[#cfe8f7] text-gray-800 px-4 py-5">
@@ -80,7 +64,7 @@ const Footer = () => {
                             <strong>Location:</strong> Sumacab Este, Cabanatuan City, Nueva Ecija
                         </p>
                         <p className="text-[16px] mb-2">
-                            <strong>Email:</strong> bluehat@gmail.com
+                            <strong>Email:</strong> fixit.app.ph@gmail.com
                         </p>
                         <p className="text-[16px]">
                             <strong>Phone:</strong> +123 456 7890
@@ -89,8 +73,8 @@ const Footer = () => {
                 </div>
             </div>
 
-            <div className="text-center text-sm mt-10 border-t border-[#252525] pt-4 font-bold text-[#252525]">
-                © {new Date().getFullYear()} BlueHat. All rights reserved.
+            <div className="text-center text-sm mt-10 border-t border-[#252525] pt-4 font-bold text-gray-600">
+                © {new Date().getFullYear()} FixIt. All rights reserved.
             </div>
         </footer>
     );
