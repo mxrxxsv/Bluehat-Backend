@@ -64,7 +64,7 @@ const WorkerSchema = new mongoose.Schema(
       barangay: {
         type: String,
         required: true,
-      },  
+      },
       street: {
         type: String,
         required: true,
@@ -91,12 +91,6 @@ const WorkerSchema = new mongoose.Schema(
           ref: "SkillCategory",
           required: true,
         },
-        selectedSkills: [
-          {
-            type: String,
-            required: true,
-          },
-        ],
       },
     ],
     portfolio: [
@@ -176,6 +170,17 @@ const WorkerSchema = new mongoose.Schema(
     blocked: {
       type: Boolean,
       default: false,
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: [0, "Rating cannot be negative"],
+      max: [5, "Rating cannot exceed 5"],
+    },
+    totalRatings: {
+      type: Number,
+      default: 0,
+      min: [0, "Total ratings cannot be negative"],
     },
   },
   { timestamps: true }

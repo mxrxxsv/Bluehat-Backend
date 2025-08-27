@@ -2,6 +2,7 @@ const mongoSanitize = require("mongo-sanitize");
 const mongoose = require("mongoose");
 const { escape } = require("validator");
 
+const Credential = require("../models/Credential");
 const JobApplication = require("../models/JobApplication");
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
@@ -48,10 +49,14 @@ const applyToJob = async (req, res) => {
     }
 
     // Check if worker is verified
-    if (!worker.isVerified) {
+    const credential = await Credential.findById(req.user.id).select(
+      "+isVerified"
+    );
+    if (!credential || !credential.isVerified) {
       return res.status(403).json({
         success: false,
-        message: "Only verified workers can apply to jobs",
+        message:
+          "Only verified workers can apply to jobs. Please complete your verification process.",
       });
     }
 
