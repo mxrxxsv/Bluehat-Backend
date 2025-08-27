@@ -13,6 +13,7 @@ const uploadRoute = require("./routes/upload.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
+const skillsRoute = require("./routes/skill.route");
 const allowedOrigins = [process.env.CLIENT_URL];
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/upload", uploadRoute);
 app.use("/advertisement", adsRoute);
 app.use("/jobs", jobRoute);
 app.use("/job-applications", jobApplicationRoute);
+app.use("/skills", skillsRoute);
 
 // 8) 404 handler
 app.use((req, res) => {
