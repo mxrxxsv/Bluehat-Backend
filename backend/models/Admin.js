@@ -27,18 +27,11 @@ const AdminSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
     code: {
       type: String,
-      required: [true, "4-digit code is required"],
-      validate: {
-        validator: function (v) {
-          return /^\d{4}$/.test(v);
-        },
-        message: "Code must be exactly 4 digits",
-      },
+      required: [true, "Admin code is required"],
       select: false,
     },
   },
@@ -61,7 +54,5 @@ AdminSchema.pre("save", async function (next) {
     next(err);
   }
 });
-
-AdminSchema.index({ userName: 1 });
 
 module.exports = mongoose.model("Admin", AdminSchema);

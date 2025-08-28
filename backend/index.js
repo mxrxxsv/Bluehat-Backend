@@ -10,6 +10,8 @@ const { authLimiter, verifyLimiter } = require("./utils/rateLimit");
 
 const verRoute = require("./routes/ver.route");
 const uploadRoute = require("./routes/upload.route");
+const adminRoute = require("./routes/admin.route");
+const adminTaskRoute = require("./routes/adminTask.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
@@ -52,6 +54,8 @@ app.get("/healthz", (req, res) => res.sendStatus(200));
 
 // 7) Routes
 app.use("/ver", verRoute);
+app.use("/admin", adminRoute);
+app.use("/admin-tasks", adminTaskRoute);
 app.use("/upload", uploadRoute);
 app.use("/advertisement", adsRoute);
 app.use("/jobs", jobRoute);

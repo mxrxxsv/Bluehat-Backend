@@ -5,6 +5,8 @@ const bcrypt = require("bcryptjs");
 const Admin = require("../models/Admin");
 const verifyAdmin = require("../middleware/verifyAdmin");
 
+const SALT_RATE = 10;
+
 // JWT Token Generation Function
 const generateAdminToken = (adminId) => {
   return jwt.sign(
@@ -61,15 +63,15 @@ router.post("/signup", async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
+    const hashedPassword = await bcrypt.hash(password, SALT_RATE);
+    const hashedCode = await bcrypt.hash(code, SALT_RATE);
     // Create admin
     const newAdmin = new Admin({
       firstName,
       lastName,
       userName,
       password: hashedPassword,
-      code,
+      code: hashedCode,
     });
 
     await newAdmin.save();
@@ -100,18 +102,18 @@ router.post("/signup", async (req, res) => {
 // Admin Login
 router.post("/login", async (req, res) => {
   try {
-    const { userName, password } = req.body;
+    const { userName, password, code } = req.body;
 
     // Validation
-    if (!userName || !password) {
+    if (!userName || !password || !code) {
       return res.status(400).json({
         success: false,
-        message: "Username and password are required",
+        message: "Invalid credentials",
       });
     }
 
     // Find admin (include password field)
-    const admin = await Admin.findOne({ userName }).select("+password");
+    const admin = await Admin.findOne({ userName }).select("+password +code");
     if (!admin) {
       return res.status(401).json({
         success: false,
@@ -121,7 +123,8 @@ router.post("/login", async (req, res) => {
 
     // Verify password
     const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
+    const isCodeMatch = await bcrypt.compare(code, admin.code);
+    if (!isMatch || !isCodeMatch) {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",

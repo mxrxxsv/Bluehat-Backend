@@ -7,7 +7,6 @@ const qrcodeTerminal = require("qrcode-terminal");
 
 //validator
 const validator = require("validator");
-const escape = require("validator").escape;
 const mongoSanitize = require("mongo-sanitize");
 
 //models
@@ -54,6 +53,7 @@ const createClientProfile = async (pending, credentialId, session) => {
         public_id: "",
       },
       blocked: false,
+      isVerified: false,
     });
 
     await clientProfile.save({ session });
@@ -86,7 +86,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
         public_id: "",
       },
       biography: pending.biography || "",
-      workerSkills: [],
+      skillsByCategory: [],
       portfolio: [],
       experience: [],
       certificates: [],
@@ -94,6 +94,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       status: "available",
       currentJob: null,
       blocked: false,
+      isVerified: false,
     });
 
     await workerProfile.save({ session });
@@ -443,9 +444,7 @@ const verify = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res
-      .status(200)
-      .json({ success: true, message: "Account verified successfully!" });
+    res.status(200).json({ success: true, message: "Sign up successfully!" });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

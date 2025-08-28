@@ -6,28 +6,22 @@ const Credential = require("../models/Credential");
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
 
-// ==================== PENDING VERIFICATIONS ====================
+// ==================== WORKER VERIFICATION ====================
 
-// Get All Pending Verifications (Workers & Clients)
-router.get("/pending", verifyAdmin, async (req, res) => {
+// Get All Pending Worker Verifications
+router.get("/workers/pending", verifyAdmin, async (req, res) => {
   try {
-    const { type, page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    // Include users who were rejected but can reapply
-    let matchFilter = {
+    const matchFilter = {
       isVerified: false,
       isAuthenticated: true,
-      // Don't show permanently blocked users
+      userType: "worker",
       isBlocked: { $ne: true },
     };
 
-    if (type && ["client", "worker"].includes(type)) {
-      matchFilter.userType = type;
-    }
-
-    // Get pending credentials with populated profile data
-    const pendingUsers = await Credential.aggregate([
+    const pendingWorkers = await Credential.aggregate([
       { $match: matchFilter },
       {
         $lookup: {
@@ -38,35 +32,16 @@ router.get("/pending", verifyAdmin, async (req, res) => {
         },
       },
       {
-        $lookup: {
-          from: "clients",
-          localField: "_id",
-          foreignField: "credentialId",
-          as: "clientProfile",
-        },
-      },
-      {
         $addFields: {
-          profile: {
-            $cond: {
-              if: { $eq: ["$userType", "worker"] },
-              then: { $arrayElemAt: ["$workerProfile", 0] },
-              else: { $arrayElemAt: ["$clientProfile", 0] },
-            },
-          },
-          // Add verification attempt history
+          profile: { $arrayElemAt: ["$workerProfile", 0] },
           verificationAttempts: {
             $size: { $ifNull: ["$verificationHistory", []] },
-          },
-          lastRejectionReason: {
-            $arrayElemAt: ["$verificationHistory.reason", -1],
           },
         },
       },
       {
         $project: {
           workerProfile: 0,
-          clientProfile: 0,
           password: 0,
           totpSecret: 0,
         },
@@ -76,24 +51,23 @@ router.get("/pending", verifyAdmin, async (req, res) => {
       { $limit: parseInt(limit) },
     ]);
 
-    // Get total count for pagination
     const totalCount = await Credential.countDocuments(matchFilter);
 
     res.status(200).json({
       success: true,
-      message: "Pending verifications retrieved successfully",
+      message: "Pending worker verifications retrieved successfully",
       data: {
-        users: pendingUsers,
+        workers: pendingWorkers,
         pagination: {
           currentPage: parseInt(page),
-          totalPages: Math.ceil(totalCount / limit),
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
           totalItems: totalCount,
           itemsPerPage: parseInt(limit),
         },
       },
     });
   } catch (error) {
-    console.error("Get pending verifications error:", error);
+    console.error("Get pending worker verifications error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -101,36 +75,34 @@ router.get("/pending", verifyAdmin, async (req, res) => {
   }
 });
 
-// Get Specific User Details for Verification
-router.get("/user/:id", verifyAdmin, async (req, res) => {
+// Get Specific Worker Details for Verification
+router.get("/workers/:id", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user ID",
+        message: "Invalid worker ID",
       });
     }
 
     const credential = await Credential.findById(id);
-    if (!credential) {
+    if (!credential || credential.userType !== "worker") {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Worker not found",
       });
     }
 
-    let profileData;
-    if (credential.userType === "worker") {
-      profileData = await Worker.findOne({ credentialId: id });
-    } else if (credential.userType === "client") {
-      profileData = await Client.findOne({ credentialId: id });
-    }
+    const workerProfile = await Worker.findOne({ credentialId: id }).populate(
+      "skillsByCategory.skillCategoryId",
+      "categoryName"
+    );
 
     res.status(200).json({
       success: true,
-      message: "User details retrieved successfully",
+      message: "Worker details retrieved successfully",
       data: {
         credential: {
           id: credential._id,
@@ -144,11 +116,11 @@ router.get("/user/:id", verifyAdmin, async (req, res) => {
           verificationHistory: credential.verificationHistory || [],
           verificationAttempts: (credential.verificationHistory || []).length,
         },
-        profile: profileData,
+        profile: workerProfile,
       },
     });
   } catch (error) {
-    console.error("Get user details error:", error);
+    console.error("Get worker details error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -156,10 +128,8 @@ router.get("/user/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// ==================== VERIFICATION ACTIONS ====================
-
-// Approve User Verification
-router.patch("/approve/:id", verifyAdmin, async (req, res) => {
+// Approve Worker Verification
+router.patch("/workers/approve/:id", verifyAdmin, async (req, res) => {
   const session = await mongoose.startSession();
 
   try {
@@ -171,16 +141,16 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user ID",
+        message: "Invalid worker ID",
       });
     }
 
     const credential = await Credential.findById(id).session(session);
-    if (!credential) {
+    if (!credential || credential.userType !== "worker") {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Worker not found",
       });
     }
 
@@ -188,7 +158,7 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "User is already verified",
+        message: "Worker is already verified",
       });
     }
 
@@ -196,7 +166,7 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "Cannot verify a blocked user",
+        message: "Cannot verify a blocked worker",
       });
     }
 
@@ -229,10 +199,7 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `${
-        credential.userType.charAt(0).toUpperCase() +
-        credential.userType.slice(1)
-      } verified successfully`,
+      message: "Worker verified successfully",
       data: {
         userId: credential._id,
         email: credential.email,
@@ -244,7 +211,7 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    console.error("Approve verification error:", error);
+    console.error("Approve worker verification error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -254,8 +221,8 @@ router.patch("/approve/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// Reject User Verification (with reapplication opportunity)
-router.patch("/reject/:id", verifyAdmin, async (req, res) => {
+// Reject Worker Verification
+router.patch("/workers/reject/:id", verifyAdmin, async (req, res) => {
   const session = await mongoose.startSession();
 
   try {
@@ -274,16 +241,16 @@ router.patch("/reject/:id", verifyAdmin, async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user ID",
+        message: "Invalid worker ID",
       });
     }
 
     const credential = await Credential.findById(id).session(session);
-    if (!credential) {
+    if (!credential || credential.userType !== "worker") {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Worker not found",
       });
     }
 
@@ -291,7 +258,7 @@ router.patch("/reject/:id", verifyAdmin, async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "Cannot reject an already verified user",
+        message: "Cannot reject an already verified worker",
       });
     }
 
@@ -331,10 +298,9 @@ router.patch("/reject/:id", verifyAdmin, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `${
-        credential.userType.charAt(0).toUpperCase() +
-        credential.userType.slice(1)
-      } verification rejected${blockUser ? " and account blocked" : ""}`,
+      message: `Worker verification rejected${
+        blockUser ? " and account blocked" : ""
+      }`,
       data: {
         userId: credential._id,
         email: credential.email,
@@ -346,13 +312,13 @@ router.patch("/reject/:id", verifyAdmin, async (req, res) => {
         canReapply: canReapply,
         isBlocked: credential.isBlocked || false,
         message: canReapply
-          ? "User can update their information and reapply for verification"
-          : "User is blocked and cannot reapply",
+          ? "Worker can update their information and reapply for verification"
+          : "Worker is blocked and cannot reapply",
       },
     });
   } catch (error) {
     await session.abortTransaction();
-    console.error("Reject verification error:", error);
+    console.error("Reject worker verification error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -362,9 +328,328 @@ router.patch("/reject/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// ==================== NEW: BLOCK/UNBLOCK USERS ====================
+// ==================== CLIENT VERIFICATION ====================
 
-// Block User (prevents further verification attempts)
+// Get All Pending Client Verifications
+router.get("/clients/pending", verifyAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const matchFilter = {
+      isVerified: false,
+      isAuthenticated: true,
+      userType: "client",
+      isBlocked: { $ne: true },
+    };
+
+    const pendingClients = await Credential.aggregate([
+      { $match: matchFilter },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "_id",
+          foreignField: "credentialId",
+          as: "clientProfile",
+        },
+      },
+      {
+        $addFields: {
+          profile: { $arrayElemAt: ["$clientProfile", 0] },
+          verificationAttempts: {
+            $size: { $ifNull: ["$verificationHistory", []] },
+          },
+        },
+      },
+      {
+        $project: {
+          clientProfile: 0,
+          password: 0,
+          totpSecret: 0,
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ]);
+
+    const totalCount = await Credential.countDocuments(matchFilter);
+
+    res.status(200).json({
+      success: true,
+      message: "Pending client verifications retrieved successfully",
+      data: {
+        clients: pendingClients,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          totalItems: totalCount,
+          itemsPerPage: parseInt(limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get pending client verifications error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Get Specific Client Details for Verification
+router.get("/clients/:id", verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid client ID",
+      });
+    }
+
+    const credential = await Credential.findById(id);
+    if (!credential || credential.userType !== "client") {
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    const clientProfile = await Client.findOne({ credentialId: id });
+
+    res.status(200).json({
+      success: true,
+      message: "Client details retrieved successfully",
+      data: {
+        credential: {
+          id: credential._id,
+          email: credential.email,
+          userType: credential.userType,
+          isVerified: credential.isVerified,
+          isAuthenticated: credential.isAuthenticated,
+          isBlocked: credential.isBlocked,
+          lastLogin: credential.lastLogin,
+          createdAt: credential.createdAt,
+          verificationHistory: credential.verificationHistory || [],
+          verificationAttempts: (credential.verificationHistory || []).length,
+        },
+        profile: clientProfile,
+      },
+    });
+  } catch (error) {
+    console.error("Get client details error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+// Approve Client Verification
+router.patch("/clients/approve/:id", verifyAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid client ID",
+      });
+    }
+
+    const credential = await Credential.findById(id).session(session);
+    if (!credential || credential.userType !== "client") {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    if (credential.isVerified) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Client is already verified",
+      });
+    }
+
+    if (credential.isBlocked) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Cannot verify a blocked client",
+      });
+    }
+
+    // Update credential with approval
+    credential.isVerified = true;
+    credential.verifiedAt = new Date();
+    credential.verifiedBy = req.admin._id;
+    credential.verificationNotes = notes;
+
+    // Add to verification history
+    if (!credential.verificationHistory) {
+      credential.verificationHistory = [];
+    }
+    credential.verificationHistory.push({
+      action: "approved",
+      adminId: req.admin._id,
+      adminName: req.admin.userName,
+      notes: notes,
+      timestamp: new Date(),
+    });
+
+    // Clear any previous rejection flags
+    credential.isRejected = false;
+    credential.rejectedAt = undefined;
+    credential.rejectionReason = undefined;
+
+    await credential.save({ session });
+
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Client verified successfully",
+      data: {
+        userId: credential._id,
+        email: credential.email,
+        userType: credential.userType,
+        verifiedAt: credential.verifiedAt,
+        verifiedBy: req.admin.userName,
+        verificationAttempts: credential.verificationHistory.length,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Approve client verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  } finally {
+    session.endSession();
+  }
+});
+
+// Reject Client Verification
+router.patch("/clients/reject/:id", verifyAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { id } = req.params;
+    const { reason, blockUser = false } = req.body;
+
+    if (!reason || reason.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason must be at least 10 characters long",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid client ID",
+      });
+    }
+
+    const credential = await Credential.findById(id).session(session);
+    if (!credential || credential.userType !== "client") {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    if (credential.isVerified) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Cannot reject an already verified client",
+      });
+    }
+
+    // Initialize verification history if it doesn't exist
+    if (!credential.verificationHistory) {
+      credential.verificationHistory = [];
+    }
+
+    // Add rejection to history
+    credential.verificationHistory.push({
+      action: "rejected",
+      reason: reason.trim(),
+      adminId: req.admin._id,
+      adminName: req.admin.userName,
+      timestamp: new Date(),
+    });
+
+    // Update rejection status (but keep account active for reapplication)
+    credential.isRejected = true;
+    credential.rejectedAt = new Date();
+    credential.rejectedBy = req.admin._id;
+    credential.rejectionReason = reason.trim();
+
+    // Only block if explicitly requested (for severe violations)
+    if (blockUser) {
+      credential.isBlocked = true;
+      credential.blockedAt = new Date();
+      credential.blockedBy = req.admin._id;
+    }
+
+    await credential.save({ session });
+
+    await session.commitTransaction();
+
+    const verificationAttempts = credential.verificationHistory.length;
+    const canReapply = !credential.isBlocked;
+
+    res.status(200).json({
+      success: true,
+      message: `Client verification rejected${
+        blockUser ? " and account blocked" : ""
+      }`,
+      data: {
+        userId: credential._id,
+        email: credential.email,
+        userType: credential.userType,
+        rejectedAt: credential.rejectedAt,
+        rejectionReason: reason,
+        rejectedBy: req.admin.userName,
+        verificationAttempts: verificationAttempts,
+        canReapply: canReapply,
+        isBlocked: credential.isBlocked || false,
+        message: canReapply
+          ? "Client can update their information and reapply for verification"
+          : "Client is blocked and cannot reapply",
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Reject client verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  } finally {
+    session.endSession();
+  }
+});
+
+// ==================== GENERAL OPERATIONS ====================
+
+// Block User (Works for both workers and clients)
 router.patch("/block/:id", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -443,7 +728,7 @@ router.patch("/block/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// Unblock User (allows verification attempts again)
+// Unblock User (Works for both workers and clients)
 router.patch("/unblock/:id", verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -515,240 +800,61 @@ router.patch("/unblock/:id", verifyAdmin, async (req, res) => {
   }
 });
 
-// ==================== BULK OPERATIONS ====================
-
-// Bulk Approve Multiple Users
-router.patch("/bulk-approve", verifyAdmin, async (req, res) => {
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
-
-    const { userIds, notes } = req.body;
-
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "User IDs array is required",
-      });
-    }
-
-    if (userIds.length > 50) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot approve more than 50 users at once",
-      });
-    }
-
-    const validIds = userIds.filter((id) =>
-      mongoose.Types.ObjectId.isValid(id)
-    );
-    if (validIds.length !== userIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Some user IDs are invalid",
-      });
-    }
-
-    // Update credentials (only non-blocked, non-verified users)
-    const credentialResult = await Credential.updateMany(
-      {
-        _id: { $in: validIds },
-        isVerified: false,
-        isAuthenticated: true,
-        isBlocked: { $ne: true },
-      },
-      {
-        $set: {
-          isVerified: true,
-          verifiedAt: new Date(),
-          verifiedBy: req.admin._id,
-          verificationNotes: notes,
-          isRejected: false,
-        },
-        $push: {
-          verificationHistory: {
-            action: "approved",
-            adminId: req.admin._id,
-            adminName: req.admin.userName,
-            notes: notes,
-            timestamp: new Date(),
-          },
-        },
-      },
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    res.status(200).json({
-      success: true,
-      message: `Successfully verified ${credentialResult.modifiedCount} users`,
-      data: {
-        approvedCount: credentialResult.modifiedCount,
-        requestedCount: userIds.length,
-        approvedBy: req.admin.userName,
-        approvedAt: new Date(),
-      },
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    console.error("Bulk approve error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  } finally {
-    session.endSession();
-  }
-});
-
-// ==================== VERIFICATION HISTORY ====================
-
-// Get User Verification History
-router.get("/history/:id", verifyAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID",
-      });
-    }
-
-    const credential = await Credential.findById(id)
-      .select(
-        "email userType verificationHistory isVerified isBlocked createdAt"
-      )
-      .populate("verificationHistory.adminId", "firstName lastName userName");
-
-    if (!credential) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Verification history retrieved successfully",
-      data: {
-        userId: credential._id,
-        email: credential.email,
-        userType: credential.userType,
-        currentStatus: {
-          isVerified: credential.isVerified,
-          isBlocked: credential.isBlocked,
-        },
-        history: credential.verificationHistory || [],
-        totalAttempts: (credential.verificationHistory || []).length,
-        accountCreated: credential.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("Get verification history error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
-
-// ==================== STATISTICS ====================
-
-// Get Verification Statistics (updated to include reapplication stats)
+// Get Verification Statistics
 router.get("/stats", verifyAdmin, async (req, res) => {
   try {
-    const { period = "30" } = req.query; // days
+    const { period = "30" } = req.query;
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - parseInt(period));
 
-    const [
-      pendingStats,
-      verifiedStats,
-      rejectedStats,
-      blockedStats,
-      reapplicationStats,
-      recentActivity,
-    ] = await Promise.all([
-      // Pending verifications count
-      Credential.aggregate([
-        {
-          $match: {
-            isVerified: false,
-            isAuthenticated: true,
-            isBlocked: { $ne: true },
+    const [pendingStats, verifiedStats, rejectedStats, blockedStats] =
+      await Promise.all([
+        // Pending verifications count
+        Credential.aggregate([
+          {
+            $match: {
+              isVerified: false,
+              isAuthenticated: true,
+              isBlocked: { $ne: true },
+            },
           },
-        },
-        { $group: { _id: "$userType", count: { $sum: 1 } } },
-      ]),
+          { $group: { _id: "$userType", count: { $sum: 1 } } },
+        ]),
 
-      // Verified users count (recent)
-      Credential.aggregate([
-        {
-          $match: {
-            isVerified: true,
-            verifiedAt: { $gte: daysAgo },
+        // Verified users count (recent)
+        Credential.aggregate([
+          {
+            $match: {
+              isVerified: true,
+              verifiedAt: { $gte: daysAgo },
+            },
           },
-        },
-        { $group: { _id: "$userType", count: { $sum: 1 } } },
-      ]),
+          { $group: { _id: "$userType", count: { $sum: 1 } } },
+        ]),
 
-      // Rejected users count (recent)
-      Credential.aggregate([
-        {
-          $match: {
-            isRejected: true,
-            rejectedAt: { $gte: daysAgo },
-            isBlocked: { $ne: true },
+        // Rejected users count (recent)
+        Credential.aggregate([
+          {
+            $match: {
+              isRejected: true,
+              rejectedAt: { $gte: daysAgo },
+              isBlocked: { $ne: true },
+            },
           },
-        },
-        { $group: { _id: "$userType", count: { $sum: 1 } } },
-      ]),
+          { $group: { _id: "$userType", count: { $sum: 1 } } },
+        ]),
 
-      // Blocked users count
-      Credential.aggregate([
-        {
-          $match: {
-            isBlocked: true,
-            blockedAt: { $gte: daysAgo },
+        // Blocked users count
+        Credential.aggregate([
+          {
+            $match: {
+              isBlocked: true,
+              blockedAt: { $gte: daysAgo },
+            },
           },
-        },
-        { $group: { _id: "$userType", count: { $sum: 1 } } },
-      ]),
-
-      // Users with multiple verification attempts (reapplications)
-      Credential.aggregate([
-        {
-          $match: {
-            verificationHistory: { $exists: true },
-            "verificationHistory.1": { $exists: true }, // At least 2 attempts
-          },
-        },
-        { $group: { _id: "$userType", count: { $sum: 1 } } },
-      ]),
-
-      // Recent verification activity
-      Credential.find({
-        $or: [
-          { verifiedAt: { $gte: daysAgo } },
-          { rejectedAt: { $gte: daysAgo } },
-          { blockedAt: { $gte: daysAgo } },
-        ],
-      })
-        .select(
-          "email userType isVerified isRejected isBlocked verifiedAt rejectedAt blockedAt verifiedBy rejectedBy blockedBy"
-        )
-        .populate(
-          "verifiedBy rejectedBy blockedBy",
-          "firstName lastName userName"
-        )
-        .sort({
-          $or: [{ verifiedAt: -1 }, { rejectedAt: -1 }, { blockedAt: -1 }],
-        })
-        .limit(10),
-    ]);
+          { $group: { _id: "$userType", count: { $sum: 1 } } },
+        ]),
+      ]);
 
     const formatStats = (statsArray) => {
       const result = { worker: 0, client: 0, total: 0 };
@@ -768,136 +874,10 @@ router.get("/stats", verifyAdmin, async (req, res) => {
         verified: formatStats(verifiedStats),
         rejected: formatStats(rejectedStats),
         blocked: formatStats(blockedStats),
-        reapplications: formatStats(reapplicationStats),
-        recentActivity: recentActivity,
       },
     });
   } catch (error) {
     console.error("Get verification stats error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
-
-// ==================== SEARCH & FILTER ====================
-
-// Search Users (updated to include blocked users)
-router.get("/search", verifyAdmin, async (req, res) => {
-  try {
-    const { query, userType, status, page = 1, limit = 10 } = req.query;
-
-    if (!query || query.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Search query must be at least 2 characters long",
-      });
-    }
-
-    const skip = (page - 1) * limit;
-    const searchRegex = new RegExp(query.trim(), "i");
-
-    // Build match filter
-    let matchFilter = {
-      $or: [{ email: searchRegex }],
-    };
-
-    if (userType && ["client", "worker"].includes(userType)) {
-      matchFilter.userType = userType;
-    }
-
-    if (status) {
-      switch (status) {
-        case "pending":
-          matchFilter.isVerified = false;
-          matchFilter.isAuthenticated = true;
-          matchFilter.isBlocked = { $ne: true };
-          break;
-        case "verified":
-          matchFilter.isVerified = true;
-          break;
-        case "rejected":
-          matchFilter.isRejected = true;
-          matchFilter.isBlocked = { $ne: true };
-          break;
-        case "blocked":
-          matchFilter.isBlocked = true;
-          break;
-      }
-    }
-
-    const users = await Credential.aggregate([
-      { $match: matchFilter },
-      {
-        $lookup: {
-          from: "workers",
-          localField: "_id",
-          foreignField: "credentialId",
-          as: "workerProfile",
-        },
-      },
-      {
-        $lookup: {
-          from: "clients",
-          localField: "_id",
-          foreignField: "credentialId",
-          as: "clientProfile",
-        },
-      },
-      {
-        $addFields: {
-          profile: {
-            $cond: {
-              if: { $eq: ["$userType", "worker"] },
-              then: { $arrayElemAt: ["$workerProfile", 0] },
-              else: { $arrayElemAt: ["$clientProfile", 0] },
-            },
-          },
-          verificationAttempts: {
-            $size: { $ifNull: ["$verificationHistory", []] },
-          },
-        },
-      },
-      {
-        $match: {
-          $or: [
-            { email: searchRegex },
-            { "profile.firstName": searchRegex },
-            { "profile.lastName": searchRegex },
-            { "profile.contactNumber": searchRegex },
-          ],
-        },
-      },
-      {
-        $project: {
-          workerProfile: 0,
-          clientProfile: 0,
-          password: 0,
-          totpSecret: 0,
-        },
-      },
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-    ]);
-
-    res.status(200).json({
-      success: true,
-      message: "Search results retrieved successfully",
-      data: {
-        users: users,
-        searchQuery: query,
-        filters: { userType, status },
-        pagination: {
-          currentPage: parseInt(page),
-          itemsPerPage: parseInt(limit),
-          hasMore: users.length === parseInt(limit),
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Search users error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
