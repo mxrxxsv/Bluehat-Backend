@@ -30,23 +30,6 @@ const jobSchema = new mongoose.Schema(
       ref: "SkillCategory",
       required: true,
     },
-    tags: {
-      type: [String],
-      validate: [
-        {
-          validator: function (arr) {
-            return arr.length <= 10;
-          },
-          message: "No more than 10 tags allowed.",
-        },
-        {
-          validator: function (arr) {
-            return arr.every((tag) => tag.length <= 30);
-          },
-          message: "Each tag must be 30 characters or less.",
-        },
-      ],
-    },
     status: {
       type: String,
       enum: ["open", "hired", "in_progress", "completed", "cancelled"],
@@ -61,17 +44,20 @@ const jobSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    views: {
-      type: Number,
-      default: 0,
-      min: 0,
+    hiredWorker: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Worker",
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
 );
 
 // Indexes for performance
-jobSchema.index({ tags: 1 });
 jobSchema.index({ location: "text", description: "text" });
 jobSchema.index({ category: 1 });
 

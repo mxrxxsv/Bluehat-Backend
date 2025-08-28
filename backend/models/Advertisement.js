@@ -20,13 +20,14 @@ const advertisementSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
-    imageUrl: {
-      type: String,
-      required: [true, "Image URL is required"],
-      trim: true,
-      validate: {
-        validator: (v) => /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(v),
-        message: "Must be a valid image URL",
+    image: {
+      url: {
+        type: String,
+        required: true,
+      },
+      public_id: {
+        type: String,
+        required: true,
       },
     },
     link: {
@@ -50,12 +51,9 @@ const advertisementSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   { timestamps: true }
 );
-
-advertisementSchema.index({ isActive: 1, isDeleted: 1 });
 
 module.exports = mongoose.model("Advertisement", advertisementSchema);

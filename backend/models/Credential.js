@@ -32,20 +32,21 @@ const CredentialSchema = new mongoose.Schema(
     loginAttempts: { type: Number, default: 0, select: false },
     lockUntil: { type: Date, select: false },
 
-    // Profile pictures
-    idPicture: {
-      url: { type: String, required: false },
-      public_id: { type: String, required: false },
+    // Profile
+    idPictureId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "IDPicture",
+      required: false,
     },
-    selfiePicture: {
-      url: { type: String, required: false },
-      public_id: { type: String, required: false },
+    selfiePictureId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Selfie",
+      required: false,
     },
 
     // Status fields
     lastLogin: { type: Date },
     isAuthenticated: { type: Boolean, default: false },
-    isVerified: { type: Boolean, default: false },
 
     // Password reset
     resetPasswordToken: { type: String, select: false },

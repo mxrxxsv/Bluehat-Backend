@@ -725,7 +725,9 @@ const checkAuth = async (req, res) => {
 
     const credential = await Credential.findById(id).select("-password");
     if (!credential) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     let user;
@@ -736,7 +738,9 @@ const checkAuth = async (req, res) => {
     }
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Decrypt user name
@@ -748,12 +752,14 @@ const checkAuth = async (req, res) => {
     if (user.address && typeof user.address === "object") {
       decryptedAddress = {
         region: user.address.region ? decryptAES128(user.address.region) : "",
-        province: user.address.province ? decryptAES128(user.address.province) : "",
+        province: user.address.province
+          ? decryptAES128(user.address.province)
+          : "",
         city: user.address.city ? decryptAES128(user.address.city) : "",
-        barangay: user.address.barangay ? decryptAES128(user.address.barangay) : "",
+        barangay: user.address.barangay
+          ? decryptAES128(user.address.barangay)
+          : "",
         street: user.address.street ? decryptAES128(user.address.street) : "",
-        
-        
       };
     }
 
@@ -769,7 +775,7 @@ const checkAuth = async (req, res) => {
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
-        address: decryptedAddress, 
+        address: decryptedAddress,
         image: user.image || null,
         ...(userType === "worker" && { portfolio: user.portfolio || [] }),
       },

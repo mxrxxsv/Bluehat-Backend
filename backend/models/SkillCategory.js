@@ -6,7 +6,7 @@ const SkillCategorySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      minlength: [2, "Category name too short"],
+      minlength: [4, "Category name too short"],
       maxlength: [50, "Category name too long"],
     },
     createdAt: {
@@ -16,6 +16,10 @@ const SkillCategorySchema = new mongoose.Schema(
     updatedAt: {
       type: Date,
       default: Date.now,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
