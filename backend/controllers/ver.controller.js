@@ -133,15 +133,61 @@ const signup = async (req, res) => {
     }
 
     const isPasswordStrong = (password) => {
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{12,}$/;
+      // Minimum 12 characters for better security
+      if (password.length < 12) return false;
 
-      return passwordRegex.test(password);
-    };
-    if (!isPasswordStrong(password)) {
-      throw new Error(
-        "Password must be at least 12 characters long and include an uppercase letter, a number, and a special character."
+      // Required character types
+      const hasLower = /[a-z]/.test(password);
+      const hasUpper = /[A-Z]/.test(password);
+      const hasDigit = /\d/.test(password);
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(
+        password
       );
-    }
+
+      // Check for common patterns
+      const hasSequential =
+        /012|123|234|345|456|567|678|789|890|abc|bcd|cde/i.test(password);
+      const hasRepeated = /(.)\1{2,}/.test(password);
+
+      // Common password check
+      const commonPasswords = [
+        "password123",
+        "admin123",
+        "qwerty123",
+        "123456789",
+        "password1",
+        "welcome123",
+        "changeme123",
+      ];
+      const isCommon = commonPasswords.some((common) =>
+        password.toLowerCase().includes(common.toLowerCase())
+      );
+
+      return (
+        hasLower &&
+        hasUpper &&
+        hasDigit &&
+        hasSpecial &&
+        !hasSequential &&
+        !hasRepeated &&
+        !isCommon
+      );
+    };
+
+    // Add password strength meter response
+    const getPasswordStrengthFeedback = (password) => {
+      const feedback = [];
+
+      if (password.length < 12) feedback.push("Use at least 12 characters");
+      if (!/[a-z]/.test(password)) feedback.push("Add lowercase letters");
+      if (!/[A-Z]/.test(password)) feedback.push("Add uppercase letters");
+      if (!/\d/.test(password)) feedback.push("Add numbers");
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password)) {
+        feedback.push("Add special characters (!@#$%^&*)");
+      }
+
+      return feedback;
+    };
 
     if (
       firstName.length > 35 ||
@@ -291,7 +337,9 @@ const signup = async (req, res) => {
     });
 
     // Send verification email
-    const verifyUrl = `http://localhost:5000/ver/verify-email?token=${emailVerificationToken}`;
+    const verifyUrl = `${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }/verify-email?token=${emailVerificationToken}`;
     await sendVerificationEmail(normalizedEmail, verifyUrl);
 
     console.log(verifyUrl);
@@ -874,17 +922,61 @@ const resetPassword = async (req, res) => {
 
     // Password strength check (reuse your existing logic)
     const isPasswordStrong = (password) => {
-      const passwordRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
-      return passwordRegex.test(password);
+      // Minimum 12 characters for better security
+      if (password.length < 12) return false;
+
+      // Required character types
+      const hasLower = /[a-z]/.test(password);
+      const hasUpper = /[A-Z]/.test(password);
+      const hasDigit = /\d/.test(password);
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(
+        password
+      );
+
+      // Check for common patterns
+      const hasSequential =
+        /012|123|234|345|456|567|678|789|890|abc|bcd|cde/i.test(password);
+      const hasRepeated = /(.)\1{2,}/.test(password);
+
+      // Common password check
+      const commonPasswords = [
+        "password123",
+        "admin123",
+        "qwerty123",
+        "123456789",
+        "password1",
+        "welcome123",
+        "changeme123",
+      ];
+      const isCommon = commonPasswords.some((common) =>
+        password.toLowerCase().includes(common.toLowerCase())
+      );
+
+      return (
+        hasLower &&
+        hasUpper &&
+        hasDigit &&
+        hasSpecial &&
+        !hasSequential &&
+        !hasRepeated &&
+        !isCommon
+      );
     };
-    if (!isPasswordStrong(password)) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Password must be at least 12 characters long and include an uppercase letter, a number, and a special character.",
-      });
-    }
+
+    // Add password strength meter response
+    const getPasswordStrengthFeedback = (password) => {
+      const feedback = [];
+
+      if (password.length < 12) feedback.push("Use at least 12 characters");
+      if (!/[a-z]/.test(password)) feedback.push("Add lowercase letters");
+      if (!/[A-Z]/.test(password)) feedback.push("Add uppercase letters");
+      if (!/\d/.test(password)) feedback.push("Add numbers");
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password)) {
+        feedback.push("Add special characters (!@#$%^&*)");
+      }
+
+      return feedback;
+    };
 
     user.password = await bcrypt.hash(password, SALT_RATE);
     user.resetPasswordToken = undefined;

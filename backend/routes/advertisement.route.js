@@ -1,159 +1,256 @@
 const express = require("express");
 const router = express.Router();
-const Advertisement = require("../models/Advertisement");
+const helmet = require("helmet");
+
+// Use your existing middleware
+const upload = require("../middleware/upload");
 const verifyAdmin = require("../middleware/verifyAdmin");
-const mongoSanitize = require("mongo-sanitize");
-const { authLimiter } = require("../utils/rateLimit");
+const { authLimiter, verifyLimiter } = require("../utils/rateLimit"); // Your existing rate limiter
+const logger = require("../utils/logger"); // Your existing logger
 
-// CREATE Advertisement (Admin only)
-router.post("/", authLimiter, verifyAdmin, async (req, res) => {
-  try {
-    // Sanitize input
-    const title = mongoSanitize(req.body.title);
-    const companyName = mongoSanitize(req.body.companyName);
-    const description = mongoSanitize(req.body.description);
-    const imageUrl = mongoSanitize(req.body.imageUrl);
-    const link = mongoSanitize(req.body.link);
+// Controller imports
+const {
+  getAds,
+  getAdsByID,
+  addAds,
+  updateAds,
+  deleteAds,
+} = require("../controllers/ads.controller");
 
-    const newAd = new Advertisement({
-      title,
-      companyName,
-      description,
-      imageUrl,
-      link,
-      uploadedBy: req.user._id,
+// ✅ Security headers for advertisement routes
+router.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "https://res.cloudinary.com", "data:", "blob:"],
+        connectSrc: ["'self'", "https://api.cloudinary.com"],
+      },
+    },
+  })
+);
+
+// ✅ Custom request logging using your logger
+const requestLogger = (req, res, next) => {
+  const start = Date.now();
+
+  // Log request
+  logger.info("Advertisement request", {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    userId: req.user?._id,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Override res.send to log response
+  const originalSend = res.send;
+  res.send = function (data) {
+    const duration = Date.now() - start;
+
+    logger.info("Advertisement response", {
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userId: req.user?._id,
     });
 
-    const savedAd = await newAd.save();
-    res.status(201).json(savedAd);
-  } catch (err) {
-    res.status(400).json({
-      message: "Failed to create advertisement",
-      error: err.message,
+    originalSend.call(this, data);
+  };
+
+  next();
+};
+
+router.use(requestLogger);
+
+// ==================== PUBLIC ROUTES ====================
+
+/**
+ * @route   GET /advertisement/health
+ * @desc    Advertisement service health check
+ * @access  Public
+ */
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: "advertisements",
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: "1.0.0",
+  });
+});
+
+/**
+ * @route   GET /advertisement
+ * @desc    Get all active advertisements with filtering and pagination
+ * @access  Public
+ */
+router.get("/", getAds);
+
+/**
+ * @route   GET /advertisement/:id
+ * @desc    Get single advertisement by ID
+ * @access  Public
+ */
+router.get("/:id", getAdsByID);
+
+// ==================== ADMIN ROUTES ====================
+
+/**
+ * @route   POST /advertisement
+ * @desc    Create new advertisement with image upload
+ * @access  Admin only
+ */
+router.post(
+  "/",
+  verifyLimiter, // Use your existing rate limiter for creation
+  verifyAdmin,
+  upload, // Your existing upload middleware
+  addAds
+);
+
+/**
+ * @route   PUT /advertisement/:id
+ * @desc    Update existing advertisement (can include new image)
+ * @access  Admin only
+ */
+router.put(
+  "/:id",
+  authLimiter, // Use your existing auth limiter
+  verifyAdmin,
+  upload, // Optional file upload for updates
+  updateAds
+);
+
+/**
+ * @route   DELETE /advertisement/:id
+ * @desc    Soft delete advertisement and remove image from Cloudinary
+ * @access  Admin only
+ */
+router.delete("/:id", authLimiter, verifyAdmin, deleteAds);
+
+// ==================== ERROR HANDLING ====================
+
+// Handle 404 for undefined advertisement routes
+router.use("*", (req, res) => {
+  logger.warn("Advertisement endpoint not found", {
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+  });
+
+  res.status(404).json({
+    success: false,
+    message: "Advertisement endpoint not found",
+    code: "ENDPOINT_NOT_FOUND",
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      "GET /advertisement - Get all advertisements",
+      "GET /advertisement/:id - Get advertisement by ID",
+      "POST /advertisement - Create advertisement (Admin)",
+      "PUT /advertisement/:id - Update advertisement (Admin)",
+      "DELETE /advertisement/:id - Delete advertisement (Admin)",
+      "GET /advertisement/health - Health check",
+    ],
+  });
+});
+
+// Global error handler for advertisement routes
+router.use((error, req, res, next) => {
+  // Use your existing logger for error logging
+  logger.error("Advertisement route error", {
+    error: error.message,
+    stack: error.stack,
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    userId: req.user?._id,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Multer file upload errors
+  if (error.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      success: false,
+      message: "File too large. Maximum size is 5MB.",
+      code: "FILE_TOO_LARGE",
+      maxSize: "5MB",
     });
   }
-});
 
-// GET All Advertisements (with filters, pagination, and rate limiting)
-router.get("/", async (req, res) => {
-  try {
-    // Sanitize query parameters
-    const companyName = mongoSanitize(req.query.companyName);
-    const sortBy = mongoSanitize(req.query.sortBy || "createdAt");
-    const order = mongoSanitize(req.query.order || "desc");
-    const page = parseInt(mongoSanitize(req.query.page || "1"));
-    const limit = parseInt(mongoSanitize(req.query.limit || "10"));
-
-    // Escape regex special characters for companyName search
-    function escapeRegex(str) {
-      return str ? str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
-    }
-
-    const filter = {
-      isDeleted: false,
-      ...(companyName && {
-        companyName: new RegExp(escapeRegex(companyName), "i"),
-      }),
-    };
-
-    const ads = await Advertisement.find(filter)
-      .populate("uploadedBy", "userName")
-      .sort({ [sortBy]: order === "asc" ? 1 : -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await Advertisement.countDocuments(filter);
-
-    const totalPages = Math.ceil(total / limit);
-    res.status(200).json({
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages,
-      hasNextPage: Number(page) < totalPages,
-      hasPrevPage: Number(page) > 1,
-      results: ads,
+  if (error.code === "LIMIT_UNEXPECTED_FILE") {
+    return res.status(400).json({
+      success: false,
+      message: "Unexpected file field. Use 'image' field name.",
+      code: "UNEXPECTED_FILE_FIELD",
+      expectedField: "image",
     });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch advertisements", error: err.message });
   }
-});
 
-// GET Advertisement by ID
-router.get("/:id", async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid advertisement ID" });
-    }
-    const ad = await Advertisement.findOne({
-      _id: mongoSanitize(req.params.id),
-      isDeleted: false,
-    }).populate("uploadedBy", "userName");
-
-    if (!ad)
-      return res.status(404).json({ message: "Advertisement not found" });
-
-    res.status(200).json(ad);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error retrieving advertisement", error: err.message });
+  if (error.code === "LIMIT_FILE_COUNT") {
+    return res.status(400).json({
+      success: false,
+      message: "Too many files. Only one image allowed.",
+      code: "TOO_MANY_FILES",
+      maxFiles: 1,
+    });
   }
-});
 
-// UPDATE Advertisement (Admin only)
-router.put("/:id", authLimiter, verifyAdmin, async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid advertisement ID" });
-    }
-    // Sanitize input
-    const title = mongoSanitize(req.body.title);
-    const companyName = mongoSanitize(req.body.companyName);
-    const description = mongoSanitize(req.body.description);
-    const imageUrl = mongoSanitize(req.body.imageUrl);
-    const link = mongoSanitize(req.body.link);
-
-    const updatedAd = await Advertisement.findByIdAndUpdate(
-      mongoSanitize(req.params.id),
-      { $set: { title, companyName, description, imageUrl, link } },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedAd)
-      return res.status(404).json({ message: "Advertisement not found" });
-
-    res.status(200).json(updatedAd);
-  } catch (err) {
-    res
-      .status(400)
-      .json({ message: "Failed to update advertisement", error: err.message });
+  // Rate limiting errors
+  if (error.status === 429) {
+    return res.status(429).json({
+      success: false,
+      message: "Too many requests. Please try again later.",
+      code: "RATE_LIMIT_EXCEEDED",
+      retryAfter: error.retryAfter,
+    });
   }
-});
 
-// SOFT DELETE Advertisement (Admin only)
-router.delete("/:id", authLimiter, verifyAdmin, async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid advertisement ID" });
-    }
-    const deletedAd = await Advertisement.findByIdAndUpdate(
-      mongoSanitize(req.params.id),
-      { isDeleted: true },
-      { new: true }
-    );
-
-    if (!deletedAd)
-      return res.status(404).json({ message: "Advertisement not found" });
-
-    res.status(200).json({ message: "Advertisement deleted successfully" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete advertisement", error: err.message });
+  // Cloudinary errors
+  if (error.message && error.message.includes("cloudinary")) {
+    return res.status(500).json({
+      success: false,
+      message: "Image upload service temporarily unavailable",
+      code: "UPLOAD_SERVICE_ERROR",
+    });
   }
+
+  // MongoDB errors
+  if (error.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID format",
+      code: "INVALID_ID",
+    });
+  }
+
+  if (error.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      code: "VALIDATION_ERROR",
+      errors: Object.values(error.errors).map((e) => ({
+        field: e.path,
+        message: e.message,
+      })),
+    });
+  }
+
+  // Default error response
+  res.status(error.status || 500).json({
+    success: false,
+    message: error.message || "Internal server error",
+    code: "INTERNAL_ERROR",
+    error: process.env.NODE_ENV === "production" ? undefined : error.stack,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 module.exports = router;
