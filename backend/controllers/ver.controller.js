@@ -110,7 +110,7 @@ const signupSchema = Joi.object({
     .min(2)
     .max(35)
     .pattern(/^[a-zA-Z\s'-]+$/)
-    .required()
+    .optional()
     .messages({
       "string.min": "Middle name must be at least 2 characters",
       "string.max": "Middle name cannot exceed 35 characters",

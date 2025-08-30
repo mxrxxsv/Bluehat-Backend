@@ -113,7 +113,7 @@ router.get("/health", (req, res) => {
  * @desc    Register new user with email verification
  * @access  Public
  */
-router.post("/signup", authLimiter, verifyCaptcha, signup);
+router.post("/signup", authLimiter, /*verifyCaptcha,*/ signup);
 
 /**
  * @route   GET /auth/verify-email
