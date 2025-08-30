@@ -5,9 +5,6 @@ const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const cors = require("cors");
 const mongoSanitize = require("express-mongo-sanitize");
-const morgan = require("morgan");
-const fs = require("fs");
-const path = require("path");
 const connectDb = require("./db/connectDb");
 const { authLimiter, verifyLimiter } = require("./utils/rateLimit");
 
@@ -20,15 +17,10 @@ const jobRoute = require("./routes/job.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
 const skillsRoute = require("./routes/skill.route");
 const allowedOrigins = [process.env.CLIENT_URL];
-
 const app = express();
 const PORT = process.env.PORT || 5000;
-const logsDir = path.join(__dirname, "logs");
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
-}
+
 // 1) Security headers
-// Replace app.use(helmet()); with:
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -65,8 +57,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(mongoSanitize());
-// 4) Logging
-app.use(morgan("combined"));
 
 // 5) Rate limiting (apply globally)
 app.use(authLimiter);

@@ -1,259 +1,267 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const mongoSanitize = require("mongo-sanitize");
+const helmet = require("helmet");
+
+// Middleware imports
 const verifyAdmin = require("../middleware/verifyAdmin");
-const SkillCategory = require("../models/SkillCategory");
-const Worker = require("../models/Worker");
+const { adminLimiter } = require("../utils/rateLimit");
+const logger = require("../utils/logger");
 
-// CREATE
-router.post("/", verifyAdmin, async (req, res) => {
-  try {
-    let { categoryName } = req.body;
-    categoryName = mongoSanitize(categoryName);
+// Controller imports - MATCHING YOUR ACTUAL CONTROLLER
+const {
+  addSkill,
+  getAllSkills,
+  getSkillByID,
+  updateSkill,
+  deleteSkill,
+} = require("../controllers/skill.controller");
 
-    if (!categoryName || categoryName.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Category name is required.",
-      });
-    }
-
-    // Check for duplicate category names (case-insensitive)
-    const existingCategory = await SkillCategory.findOne({
-      categoryName: { $regex: new RegExp(`^${categoryName.trim()}$`, "i") },
-    });
-
-    if (existingCategory) {
-      return res.status(409).json({
-        success: false,
-        message: "Category name already exists.",
-      });
-    }
-
-    const newCategory = new SkillCategory({
-      categoryName: categoryName.trim(),
-    });
-
-    await newCategory.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Skill category created successfully",
-      data: newCategory,
-    });
-  } catch (err) {
-    console.error("Create skill category error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create skill category",
-    });
-  }
-});
-
-// READ ALL
-router.get("/", async (req, res) => {
-  try {
-    const { page = 1, limit = 50, search } = req.query;
-
-    // Build filter
-    let filter = {};
-    if (search) {
-      filter.categoryName = {
-        $regex: mongoSanitize(search),
-        $options: "i",
-      };
-    }
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const categories = await SkillCategory.find(filter)
-      .sort({ categoryName: 1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await SkillCategory.countDocuments(filter);
-    const totalPages = Math.ceil(total / parseInt(limit));
-
-    res.status(200).json({
-      success: true,
-      message: "Skill categories retrieved successfully",
-      data: {
-        categories,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit),
-          hasNextPage: parseInt(page) < totalPages,
-          hasPrevPage: parseInt(page) > 1,
-        },
+// ✅ Security headers for skill routes
+router.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
       },
+    },
+  })
+);
+
+// ✅ Custom request logging for skill routes
+const requestLogger = (req, res, next) => {
+  const start = Date.now();
+
+  // Log request
+  logger.info("Skill request", {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    adminId: req.admin?._id,
+    hasAuth: !!req.admin,
+    contentLength: req.get("Content-Length"),
+    timestamp: new Date().toISOString(),
+  });
+
+  // Override res.send to log response
+  const originalSend = res.send;
+  res.send = function (data) {
+    const duration = Date.now() - start;
+
+    logger.info("Skill response", {
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      adminId: req.admin?._id,
+      hasAuth: !!req.admin,
+      responseSize: Buffer.byteLength(data, "utf8"),
+      timestamp: new Date().toISOString(),
     });
-  } catch (err) {
-    console.error("Get skill categories error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve skill categories",
-    });
-  }
+
+    originalSend.call(this, data);
+  };
+
+  next();
+};
+
+router.use(requestLogger);
+
+// ==================== PUBLIC ROUTES ====================
+
+/**
+ * @route   GET /skills/health
+ * @desc    Skill service health check
+ * @access  Public
+ */
+router.get("/health", (req, res) => {
+  const uptime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+
+  res.status(200).json({
+    success: true,
+    service: "skills",
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+    memory: {
+      used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+      total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+    },
+    features: {
+      categoryManagement: true,
+      searchAndFilter: true,
+      workerIntegration: true,
+      realTimeUpdates: true,
+    },
+  });
 });
 
-// READ BY ID
-router.get("/:id", async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category ID",
-      });
-    }
+/**
+ * @route   GET /skills
+ * @desc    Get all skill categories with pagination and search
+ * @access  Public
+ * @query   page, limit, search, sortBy, order
+ */
+router.get("/", getAllSkills);
 
-    const category = await SkillCategory.findById(req.params.id);
+/**
+ * @route   GET /skills/:id
+ * @desc    Get skill category by ID with worker count
+ * @access  Public
+ * @params  id - ObjectId of the skill category
+ */
+router.get("/:id", getSkillByID);
 
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-    }
+// ==================== ADMIN ROUTES ====================
 
-    // Count workers using this category (FIXED field name)
-    const workerCount = await Worker.countDocuments({
-      "skillsByCategory.skillCategoryId": category._id,
-    });
+/**
+ * @route   POST /skills
+ * @desc    Create new skill category
+ * @access  Admin only
+ * @body    categoryName
+ */
+router.post("/", adminLimiter, verifyAdmin, addSkill);
 
-    res.status(200).json({
-      success: true,
-      message: "Skill category retrieved successfully",
-      data: {
-        ...category.toObject(),
-        workerCount,
-      },
-    });
-  } catch (err) {
-    console.error("Get skill category by ID error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve skill category",
-    });
-  }
+/**
+ * @route   PUT /skills/:id
+ * @desc    Update skill category
+ * @access  Admin only
+ * @params  id - ObjectId of the skill category
+ * @body    categoryName
+ */
+router.put("/:id", adminLimiter, verifyAdmin, updateSkill);
+
+/**
+ * @route   DELETE /skills/:id
+ * @desc    Delete skill category and remove from workers
+ * @access  Admin only
+ * @params  id - ObjectId of the skill category
+ */
+router.delete("/:id", adminLimiter, verifyAdmin, deleteSkill);
+
+// ==================== ERROR HANDLING ====================
+
+// Handle 404 for undefined skill routes
+router.use("*", (req, res) => {
+  logger.warn("Skill endpoint not found", {
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    timestamp: new Date().toISOString(),
+  });
+
+  res.status(404).json({
+    success: false,
+    message: "Skill endpoint not found",
+    code: "ENDPOINT_NOT_FOUND",
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      "GET /skills - Get all skill categories with filtering",
+      "GET /skills/:id - Get specific skill category with worker count",
+      "POST /skills - Create new skill category (Admin)",
+      "PUT /skills/:id - Update skill category (Admin)",
+      "DELETE /skills/:id - Delete skill category (Admin)",
+      "GET /skills/health - Health check",
+    ],
+    suggestion: "Check the endpoint URL and HTTP method",
+  });
 });
 
-// UPDATE
-router.put("/:id", verifyAdmin, async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category ID",
-      });
-    }
+// Global error handler for skill routes
+router.use((error, req, res, next) => {
+  logger.error("Skill route error", {
+    error: error.message,
+    stack: error.stack,
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+    adminId: req.admin?._id,
+    requestBody: req.method !== "GET" ? req.body : undefined,
+    timestamp: new Date().toISOString(),
+  });
 
-    let { categoryName } = req.body;
-    categoryName = mongoSanitize(categoryName);
-
-    if (!categoryName || categoryName.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Category name is required.",
-      });
-    }
-
-    const category = await SkillCategory.findById(req.params.id);
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-    }
-
-    // Check for duplicate category names (excluding current)
-    const existingCategory = await SkillCategory.findOne({
-      categoryName: { $regex: new RegExp(`^${categoryName.trim()}$`, "i") },
-      _id: { $ne: req.params.id },
-    });
-
-    if (existingCategory) {
-      return res.status(409).json({
-        success: false,
-        message: "Category name already exists.",
-      });
-    }
-
-    // Update the category
-    category.categoryName = categoryName.trim();
-    await category.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Skill category updated successfully",
-      data: category,
-    });
-  } catch (err) {
-    console.error("Update skill category error:", err);
-    res.status(500).json({
+  // Rate limiting errors
+  if (error.status === 429) {
+    return res.status(429).json({
       success: false,
-      message: "Failed to update skill category",
+      message: "Too many requests. Please try again later.",
+      code: "RATE_LIMIT_EXCEEDED",
+      retryAfter: error.retryAfter || "10 minutes",
+      endpoint: req.originalUrl,
     });
   }
-});
 
-// DELETE
-router.delete("/:id", verifyAdmin, async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category ID",
-      });
-    }
-
-    const category = await SkillCategory.findById(req.params.id);
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-    }
-
-    const categoryId = category._id;
-
-    // FIXED: Use correct field name from Worker model
-    const workersWithCategory = await Worker.countDocuments({
-      "skillsByCategory.skillCategoryId": categoryId,
-    });
-
-    if (workersWithCategory > 0) {
-      // Remove from workers first
-      await Worker.updateMany(
-        { "skillsByCategory.skillCategoryId": categoryId },
-        {
-          $pull: {
-            skillsByCategory: { skillCategoryId: categoryId },
-          },
-        }
-      );
-    }
-
-    // Then delete category
-    await SkillCategory.deleteOne({ _id: categoryId });
-
-    res.status(200).json({
-      success: true,
-      message: `Category deleted successfully. Removed from ${workersWithCategory} workers.`,
-      data: {
-        deletedCategory: category.categoryName,
-        affectedWorkers: workersWithCategory,
-      },
-    });
-  } catch (err) {
-    console.error("Delete skill category error:", err);
-    res.status(500).json({
+  // JWT token errors
+  if (error.name === "JsonWebTokenError") {
+    return res.status(401).json({
       success: false,
-      message: "Failed to delete skill category",
+      message: "Invalid admin token",
+      code: "INVALID_TOKEN",
     });
   }
+
+  if (error.name === "TokenExpiredError") {
+    return res.status(401).json({
+      success: false,
+      message: "Admin token expired",
+      code: "TOKEN_EXPIRED",
+    });
+  }
+
+  // MongoDB errors
+  if (error.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid skill category ID format",
+      code: "INVALID_ID",
+      field: error.path,
+    });
+  }
+
+  if (error.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      code: "VALIDATION_ERROR",
+      errors: Object.values(error.errors).map((e) => ({
+        field: e.path,
+        message: e.message,
+        value: e.value,
+      })),
+    });
+  }
+
+  // Duplicate key errors
+  if (error.code === 11000) {
+    const field = Object.keys(error.keyPattern)[0];
+    return res.status(409).json({
+      success: false,
+      message: `Skill category ${field} already exists`,
+      code: "DUPLICATE_KEY_ERROR",
+      field: field,
+    });
+  }
+
+  // Default error response
+  res.status(error.status || 500).json({
+    success: false,
+    message: error.message || "Internal server error",
+    code: "INTERNAL_ERROR",
+    error: process.env.NODE_ENV === "production" ? undefined : error.stack,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 module.exports = router;

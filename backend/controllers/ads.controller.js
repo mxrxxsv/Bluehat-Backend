@@ -109,7 +109,7 @@ const uploadImageToCloudinary = async (file, adminId, retries = 3) => {
     try {
       logger.info("Image upload initiated", {
         uploadId,
-        adminId, // ✅ Changed from userId to adminId
+        adminId,
         attempt,
         filename: file.originalname,
         size: file.size,
@@ -118,7 +118,7 @@ const uploadImageToCloudinary = async (file, adminId, retries = 3) => {
 
       const options = {
         folder: "advertisements",
-        public_id: `ad_${Date.now()}_${adminId}`, // ✅ Changed from userId to adminId
+        public_id: `ad_${Date.now()}_${adminId}`,
         transformation: [
           { width: 1200, height: 800, crop: "limit" },
           { quality: "auto:good" },
@@ -214,10 +214,48 @@ const addAds = async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // ✅ CRITICAL: Check admin authentication FIRST (double-check after middleware)
+    if (!req.admin || !req.admin._id) {
+      // If file was uploaded but auth failed, clean it up
+      if (req.file && req.file.public_id) {
+        setImmediate(async () => {
+          await deleteImageFromCloudinary(req.file.public_id);
+        });
+      }
+
+      logger.warn("Unauthorized advertisement creation attempt", {
+        ip: req.ip,
+        userAgent: req.get("User-Agent"),
+        hasFile: !!req.file,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: "Admin authentication required",
+        code: "ADMIN_AUTH_REQUIRED",
+      });
+    }
+
+    // ✅ Verify admin role (additional security)
+    if (req.admin.role !== "admin") {
+      logger.warn("Non-admin user attempted advertisement creation", {
+        adminId: req.admin._id,
+        role: req.admin.role,
+        ip: req.ip,
+      });
+
+      return res.status(403).json({
+        success: false,
+        message: "Admin privileges required",
+        code: "INSUFFICIENT_PRIVILEGES",
+      });
+    }
+
     // ✅ File validation
     if (!req.file) {
       logger.warn("Advertisement creation attempted without image", {
-        adminId: req.admin?._id, // ✅ Changed from userId to adminId
+        adminId: req.admin._id,
         ip: req.ip,
       });
 
@@ -259,7 +297,7 @@ const addAds = async (req, res) => {
     if (error) {
       logger.warn("Advertisement validation failed", {
         errors: error.details,
-        adminId: req.admin._id, // ✅ Changed from userId to adminId
+        adminId: req.admin._id,
         ip: req.ip,
       });
 
@@ -277,15 +315,6 @@ const addAds = async (req, res) => {
 
     const sanitizedData = sanitizeInput(value);
     const { title, companyName, description, link } = sanitizedData;
-
-    // ✅ Check admin authentication
-    if (!req.admin || !req.admin._id) {
-      return res.status(401).json({
-        success: false,
-        message: "Admin authentication required",
-        code: "ADMIN_AUTH_REQUIRED",
-      });
-    }
 
     // ✅ URL validation
     try {
@@ -325,12 +354,12 @@ const addAds = async (req, res) => {
     logger.info("Starting image upload", {
       filename: req.file.originalname,
       size: req.file.size,
-      adminId: req.admin._id, // ✅ Changed from userId to adminId
+      adminId: req.admin._id,
     });
 
-    const uploadResult = await uploadImageToCloudinary(req.file, req.admin._id); // ✅ Changed from req.user._id to req.admin._id
+    const uploadResult = await uploadImageToCloudinary(req.file, req.admin._id);
 
-    // ✅ Create advertisement (matching your model structure)
+    // ✅ Create advertisement
     const newAd = new Advertisement({
       title,
       companyName,
@@ -340,11 +369,11 @@ const addAds = async (req, res) => {
         public_id: uploadResult.public_id,
       },
       link,
-      uploadedBy: req.admin._id, // ✅ Changed from req.user._id to req.admin._id
+      uploadedBy: req.admin._id,
     });
 
     const savedAd = await newAd.save();
-    await savedAd.populate("uploadedBy", "firstName lastName userName"); // ✅ Changed fields to match Admin model
+    await savedAd.populate("uploadedBy", "firstName lastName userName");
 
     const processingTime = Date.now() - startTime;
 
@@ -352,7 +381,7 @@ const addAds = async (req, res) => {
       adId: savedAd._id,
       title,
       companyName,
-      adminId: req.admin._id, // ✅ Changed from userId to adminId
+      adminId: req.admin._id,
       imageId: uploadResult.public_id,
       processingTime: `${processingTime}ms`,
       ip: req.ip,
@@ -381,7 +410,7 @@ const addAds = async (req, res) => {
     logger.error("Advertisement creation failed", {
       error: err.message,
       stack: err.stack,
-      adminId: req.admin?._id, // ✅ Changed from userId to adminId
+      adminId: req.admin?._id,
       filename: req.file?.originalname,
       processingTime: `${processingTime}ms`,
       ip: req.ip,
@@ -423,6 +452,15 @@ const updateAds = async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // ✅ CRITICAL: Check admin authentication FIRST
+    if (!req.admin || !req.admin._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Admin authentication required",
+        code: "ADMIN_AUTH_REQUIRED",
+      });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
         success: false,
@@ -447,17 +485,13 @@ const updateAds = async (req, res) => {
       });
     }
 
-    // ✅ Authorization check (Admin can update any advertisement)
-    if (existingAd.uploadedBy.toString() !== req.admin._id.toString()) {
-      logger.warn("Unauthorized advertisement update attempt", {
-        adId: sanitizedId,
-        adminId: req.admin._id,
-        ownerId: existingAd.uploadedBy,
-        ip: req.ip,
-      });
-      // Note: Admins can update any advertisement, so we might want to allow this
-      // For now, let's allow any admin to update any advertisement
-    }
+    // ✅ Authorization logging (Admins can update any advertisement)
+    logger.info("Advertisement update attempt", {
+      adId: sanitizedId,
+      adminId: req.admin._id,
+      ownerId: existingAd.uploadedBy,
+      ip: req.ip,
+    });
 
     // ✅ Validate text fields if provided
     let updateData = {};
@@ -516,7 +550,7 @@ const updateAds = async (req, res) => {
         adId: sanitizedId,
         filename: req.file.originalname,
         size: req.file.size,
-        adminId: req.admin._id, // ✅ Changed from userId to adminId
+        adminId: req.admin._id,
         oldImageId: existingAd.image.public_id,
       });
 
@@ -524,7 +558,7 @@ const updateAds = async (req, res) => {
       const uploadResult = await uploadImageToCloudinary(
         req.file,
         req.admin._id
-      ); // ✅ Changed from req.user._id to req.admin._id
+      );
 
       // ✅ Delete old image from Cloudinary
       if (existingAd.image && existingAd.image.public_id) {
@@ -589,13 +623,13 @@ const updateAds = async (req, res) => {
       { _id: sanitizedId, isDeleted: false },
       { $set: allUpdates },
       { new: true, runValidators: true }
-    ).populate("uploadedBy", "firstName lastName userName"); // ✅ Changed fields to match Admin model
+    ).populate("uploadedBy", "firstName lastName userName");
 
     const processingTime = Date.now() - startTime;
 
     logger.info("Advertisement updated successfully", {
       adId: sanitizedId,
-      adminId: req.admin._id, // ✅ Changed from userId to adminId
+      adminId: req.admin._id,
       updatedFields: Object.keys(updateData),
       imageUpdated: !!req.file,
       processingTime: `${processingTime}ms`,
@@ -618,7 +652,7 @@ const updateAds = async (req, res) => {
       error: err.message,
       stack: err.stack,
       adId: req.params.id,
-      adminId: req.admin?._id, // ✅ Changed from userId to adminId
+      adminId: req.admin?._id,
       processingTime: `${processingTime}ms`,
       ip: req.ip,
     });
@@ -651,6 +685,15 @@ const deleteAds = async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // ✅ CRITICAL: Check admin authentication FIRST
+    if (!req.admin || !req.admin._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Admin authentication required",
+        code: "ADMIN_AUTH_REQUIRED",
+      });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
         success: false,
@@ -674,8 +717,7 @@ const deleteAds = async (req, res) => {
       });
     }
 
-    // ✅ Authorization check (Admins can delete any advertisement)
-    // For security logging, let's track who deleted what
+    // ✅ Authorization logging (Admins can delete any advertisement)
     logger.info("Advertisement deletion initiated", {
       adId: sanitizedId,
       adminId: req.admin._id,
@@ -692,7 +734,7 @@ const deleteAds = async (req, res) => {
           isDeleted: true,
           isActive: false,
           deletedAt: new Date(),
-          deletedBy: req.admin._id, // ✅ Track which admin deleted it
+          deletedBy: req.admin._id,
         },
       },
       { new: true }
@@ -710,7 +752,7 @@ const deleteAds = async (req, res) => {
     logger.info("Advertisement deleted successfully", {
       adId: sanitizedId,
       title: deletedAd.title,
-      adminId: req.admin._id, // ✅ Changed from userId to adminId
+      adminId: req.admin._id,
       imageId: deletedAd.image?.public_id,
       processingTime: `${processingTime}ms`,
       ip: req.ip,
@@ -723,7 +765,7 @@ const deleteAds = async (req, res) => {
         id: deletedAd._id,
         title: deletedAd.title,
         deletedAt: deletedAd.deletedAt,
-        deletedBy: req.admin._id, // ✅ Include who deleted it
+        deletedBy: req.admin._id,
       },
     });
   } catch (err) {
@@ -732,7 +774,7 @@ const deleteAds = async (req, res) => {
     logger.error("Advertisement deletion failed", {
       error: err.message,
       adId: req.params.id,
-      adminId: req.admin?._id, // ✅ Changed from userId to adminId
+      adminId: req.admin?._id,
       processingTime: `${processingTime}ms`,
       ip: req.ip,
     });
@@ -783,7 +825,7 @@ const getAds = async (req, res) => {
 
     const [ads, total] = await Promise.all([
       Advertisement.find(filter)
-        .populate("uploadedBy", "firstName lastName userName") // ✅ Changed fields to match Admin model
+        .populate("uploadedBy", "firstName lastName userName")
         .sort({ [sortBy]: order === "asc" ? 1 : -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -861,7 +903,7 @@ const getAdsByID = async (req, res) => {
       isDeleted: false,
       isActive: true,
     })
-      .populate("uploadedBy", "firstName lastName userName") // ✅ Changed fields to match Admin model
+      .populate("uploadedBy", "firstName lastName userName")
       .lean();
 
     if (!ad) {

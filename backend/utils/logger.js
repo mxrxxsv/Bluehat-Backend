@@ -8,7 +8,7 @@ const logger = createLogger({
     format.splat(),
     format.json()
   ),
-  defaultMeta: { service: "fixit-api" }, // change this to your service name
+  defaultMeta: { service: "fixit-api" },
   transports: [
     new transports.File({ filename: "logs/error.log", level: "error" }),
     new transports.File({ filename: "logs/combined.log" }),

@@ -5,8 +5,8 @@ const helmet = require("helmet");
 // Use your existing middleware
 const upload = require("../middleware/upload");
 const verifyAdmin = require("../middleware/verifyAdmin");
-const { authLimiter, verifyLimiter } = require("../utils/rateLimit"); // Your existing rate limiter
-const logger = require("../utils/logger"); // Your existing logger
+const { authLimiter, verifyLimiter } = require("../utils/rateLimit");
+const logger = require("../utils/logger");
 
 // Controller imports
 const {
@@ -31,7 +31,7 @@ router.use(
   })
 );
 
-// ✅ Custom request logging using your logger
+// ✅ Custom request logging using your logger (FIXED to use adminId)
 const requestLogger = (req, res, next) => {
   const start = Date.now();
 
@@ -41,7 +41,8 @@ const requestLogger = (req, res, next) => {
     url: req.originalUrl,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
-    userId: req.user?._id,
+    adminId: req.admin?._id, // ✅ Fixed: Changed from userId to adminId
+    hasAuth: !!req.admin, // ✅ Track if request has auth
     timestamp: new Date().toISOString(),
   });
 
@@ -56,7 +57,8 @@ const requestLogger = (req, res, next) => {
       statusCode: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip,
-      userId: req.user?._id,
+      adminId: req.admin?._id, // ✅ Fixed: Changed from userId to adminId
+      hasAuth: !!req.admin,
     });
 
     originalSend.call(this, data);
@@ -99,7 +101,7 @@ router.get("/", getAds);
  */
 router.get("/:id", getAdsByID);
 
-// ==================== ADMIN ROUTES ====================
+// ==================== ADMIN ROUTES (SECURITY FIXED) ====================
 
 /**
  * @route   POST /advertisement
@@ -108,10 +110,10 @@ router.get("/:id", getAdsByID);
  */
 router.post(
   "/",
-  verifyLimiter, // Use your existing rate limiter for creation
-  verifyAdmin,
-  upload, // Your existing upload middleware
-  addAds
+  verifyLimiter, // ✅ 1. Rate limiting FIRST
+  verifyAdmin, // ✅ 2. Admin auth SECOND (BEFORE file upload!)
+  upload, // ✅ 3. File upload THIRD (after auth verified)
+  addAds // ✅ 4. Controller LAST
 );
 
 /**
@@ -121,10 +123,10 @@ router.post(
  */
 router.put(
   "/:id",
-  authLimiter, // Use your existing auth limiter
-  verifyAdmin,
-  upload, // Optional file upload for updates
-  updateAds
+  authLimiter, // ✅ 1. Rate limiting FIRST
+  verifyAdmin, // ✅ 2. Admin auth SECOND (BEFORE file upload!)
+  upload, // ✅ 3. Optional file upload THIRD
+  updateAds // ✅ 4. Controller LAST
 );
 
 /**
@@ -132,7 +134,12 @@ router.put(
  * @desc    Soft delete advertisement and remove image from Cloudinary
  * @access  Admin only
  */
-router.delete("/:id", authLimiter, verifyAdmin, deleteAds);
+router.delete(
+  "/:id",
+  authLimiter, // ✅ 1. Rate limiting FIRST
+  verifyAdmin, // ✅ 2. Admin auth SECOND (no file upload needed)
+  deleteAds // ✅ 3. Controller LAST
+);
 
 // ==================== ERROR HANDLING ====================
 
@@ -163,7 +170,7 @@ router.use("*", (req, res) => {
 
 // Global error handler for advertisement routes
 router.use((error, req, res, next) => {
-  // Use your existing logger for error logging
+  // ✅ Fixed: Use adminId instead of userId in error logging
   logger.error("Advertisement route error", {
     error: error.message,
     stack: error.stack,
@@ -171,7 +178,7 @@ router.use((error, req, res, next) => {
     method: req.method,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
-    userId: req.user?._id,
+    adminId: req.admin?._id, // ✅ Fixed: Changed from userId to adminId
     timestamp: new Date().toISOString(),
   });
 
