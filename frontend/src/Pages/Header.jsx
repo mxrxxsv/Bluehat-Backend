@@ -1,12 +1,11 @@
 import { Bell, Mail } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useState,useEffect } from "react";
-import logo from '../assets/BlueHat_logo.png';
-import profile from '../assets/client.png';
+import { useState, useEffect } from "react";
+import logo from "../assets/BlueHat_logo.png";
+import profile from "../assets/client.png";
 import { checkAuth } from "../api/auth";
 
 const Header = () => {
-  
   const [user, setUser] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -15,10 +14,23 @@ const Header = () => {
   };
 
   useEffect(() => {
-  checkAuth()
-    .then((res) => setUser(res.data.data)) // Fix here
-    .catch(() => navigate("/login"));
-}, []);
+    const excludeAuthPages = ["/setup-2fa", "/verify-email"];
+
+    if (excludeAuthPages.includes(location.pathname)) {
+      console.log("Skipping auth check for:", location.pathname);
+      return;
+    }
+
+    checkAuth()
+      .then((res) => setUser(res.data.data))
+      .catch(() => {
+        console.log(
+          "Auth failed, redirecting to login from:",
+          location.pathname
+        );
+        navigate("/login");
+      });
+  }, [location.pathname, navigate]);
 
   // Sample notifications
   const notifications = [
@@ -27,41 +39,53 @@ const Header = () => {
     "New update available for your profile.",
   ];
 
-
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isActive = (path) => currentPath === path;
 
-
   const authPages = ["/home", "/"];
-  const opPages = ["/signup", "/login", "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion"];
+  const opPages = [
+    "/signup",
+    "/login",
+    "/workersignup",
+    "/clientsignup",
+    "/forgetpass",
+    "/workerquestion",
+  ];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
   const hideOp = opPages.includes(currentPath);
 
   return (
-  
     <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
-        <Link to="/home" className="flex items-center space-x-3 rtl:space-x-reverse">
-          <img src={logo} className="h-15 w-28 md:h-20 md:w-40" alt="Flowbite Logo" />
+        <Link
+          to="/home"
+          className="flex items-center space-x-3 rtl:space-x-reverse"
+        >
+          <img
+            src={logo}
+            className="h-15 w-28 md:h-20 md:w-40"
+            alt="Flowbite Logo"
+          />
         </Link>
 
         {hideOp ? (
-          <>
-
-          </>
+          <></>
         ) : (
           <>
-
             <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
-
               {showAuthButtons ? (
                 <>
                   <div className="w-20 pt-1 md:pt-0 md:w-43 flex flex-row gap-1 md:gap-1">
-                    <Link to="/login" className='hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex'>Log in</Link>
+                    <Link
+                      to="/login"
+                      className="hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex"
+                    >
+                      Log in
+                    </Link>
                     <Link
                       to="/signup"
                       className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-sm hover:shadow-md"
@@ -72,7 +96,6 @@ const Header = () => {
                 </>
               ) : (
                 <>
-
                   <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
                     <Link to="/chat">
                       <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
@@ -101,8 +124,6 @@ const Header = () => {
                       </div>
                     )}
 
-
-
                     <span className="pl-4 text-gray-700 text-[16px] font-medium">
                       {user?.name || user?.email || "User"}
                     </span>
@@ -111,12 +132,8 @@ const Header = () => {
                       alt="Profile"
                       className="pb-2 h-8 w-8 rounded-full object-cover"
                     />
-
-
                   </div>
-
                 </>
-
               )}
 
               <button
@@ -127,40 +144,70 @@ const Header = () => {
                 onClick={() => setIsOpen(!isOpen)}
               >
                 <span className="sr-only">Open main menu</span>
-                <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1h15M1 7h15M1 13h15" />
+                <svg
+                  className="w-5 h-5"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 17 14"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M1 1h15M1 7h15M1 13h15"
+                  />
                 </svg>
               </button>
             </div>
-            <nav className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${isOpen ? "block" : "hidden"} bg-white`} id="navbar-sticky">
+            <nav
+              className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${
+                isOpen ? "block" : "hidden"
+              } bg-white`}
+              id="navbar-sticky"
+            >
               <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left">
                 <li>
-                  <Link to="/find-work" className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
-                    ? "text-sky-500"
-                    : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"}`}
-                  >Find Work</Link>
+                  <Link
+                    to="/find-work"
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${
+                      isActive("/find-work")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                    }`}
+                  >
+                    Find Work
+                  </Link>
                 </li>
                 <li>
-                  <Link to="/find-workers" className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
-                    ? "text-sky-500"
-                    : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"}`}
-                  >Find Worker</Link>
+                  <Link
+                    to="/find-workers"
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${
+                      isActive("/find-workers")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                    }`}
+                  >
+                    Find Worker
+                  </Link>
                 </li>
                 <li>
-                  <Link to="/ads" className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
-                    ? "text-sky-500"
-                    : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"}`}
-                  >Advertisement</Link>
+                  <Link
+                    to="/ads"
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${
+                      isActive("/ads")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                    }`}
+                  >
+                    Advertisement
+                  </Link>
                 </li>
-
               </ul>
             </nav>
-
           </>
         )}
-
-
-
       </div>
     </header>
   );

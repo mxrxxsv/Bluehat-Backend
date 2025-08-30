@@ -24,6 +24,7 @@ const {
   logout,
   forgotPassword,
   resetPassword,
+  getQRCode,
 } = require("../controllers/ver.controller");
 
 // ✅ Security headers for authentication routes
@@ -177,6 +178,7 @@ router.get("/check", verifyToken, checkAuth);
  */
 router.post("/logout", verifyToken, logout);
 
+router.post("/get-qr", verifyLimiter, getQRCode);
 // ==================== ERROR HANDLING ====================
 
 // Handle 404 for undefined authentication routes

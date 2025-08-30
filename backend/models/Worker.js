@@ -17,7 +17,7 @@ const WorkerSchema = new mongoose.Schema(
     },
     middleName: {
       type: String,
-      required: true,
+      default: null,
     },
     suffixName: {
       type: String,
@@ -33,7 +33,7 @@ const WorkerSchema = new mongoose.Schema(
       required: true,
     },
     dateOfBirth: {
-      type: Date,
+      type: String,
       required: true,
     },
     maritalStatus: {

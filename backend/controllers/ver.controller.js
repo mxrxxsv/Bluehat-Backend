@@ -107,16 +107,15 @@ const signupSchema = Joi.object({
 
   middleName: Joi.string()
     .trim()
-    .min(2)
     .max(35)
-    .pattern(/^[a-zA-Z\s'-]+$/)
+    .pattern(/^[a-zA-Z\s'-]*$/)
+    .allow("")
     .optional()
     .messages({
       "string.min": "Middle name must be at least 2 characters",
       "string.max": "Middle name cannot exceed 35 characters",
       "string.pattern.base":
         "Middle name can only contain letters, spaces, hyphens, and apostrophes",
-      "any.required": "Middle name is required",
     }),
 
   suffixName: Joi.string()
@@ -144,11 +143,14 @@ const signupSchema = Joi.object({
     "any.required": "Sex is required",
   }),
 
-  dateOfBirth: Joi.date().max("now").min("1900-01-01").required().messages({
-    "date.max": "Date of birth cannot be in the future",
-    "date.min": "Please provide a valid date of birth",
+  dateOfBirth: Joi.string().required().messages({
     "any.required": "Date of birth is required",
   }),
+  // dateOfBirth: Joi.date().max("now").min("1900-01-01").required().messages({
+  //   "date.max": "Date of birth cannot be in the future",
+  //   "date.min": "Please provide a valid date of birth",
+  //   "any.required": "Date of birth is required",
+  // }),
 
   maritalStatus: Joi.string()
     .valid("single", "married", "divorced", "widowed")
@@ -591,9 +593,7 @@ const signup = async (req, res) => {
     });
 
     // ✅ Send verification email
-    const verifyUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:3000"
-    }/verify-email?token=${emailVerificationToken}`;
+    const verifyUrl = `http://localhost:5000/ver/verify-email?token=${emailVerificationToken}`;
 
     try {
       await sendVerificationEmail(email, verifyUrl);
@@ -729,8 +729,12 @@ const verifyEmail = async (req, res) => {
     });
 
     // ✅ QR template
-    const html = qrTemplate(otpauthUrl, qr, pending.email, pending.totpSecret);
-    res.send(html);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const redirectUrl = `${frontendUrl}/setup-2fa?email=${encodeURIComponent(
+      pending.email
+    )}&verified=true`;
+
+    res.redirect(redirectUrl);
   } catch (err) {
     const processingTime = Date.now() - startTime;
 
@@ -1765,6 +1769,116 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const getQRCode = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // ✅ Validate email input
+    const { error, value } = emailSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      logger.warn("Get QR code validation failed", {
+        errors: error.details,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { email } = sanitizeInput(value);
+
+    const pending = await PendingSignup.findOne({
+      email: email,
+      emailVerified: true,
+    }).select("+totpSecret");
+
+    if (!pending) {
+      logger.warn("QR code request for non-existent verified signup", {
+        email: email,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(404).json({
+        success: false,
+        message: "No verified pending signup found",
+        code: "PENDING_NOT_FOUND",
+      });
+    }
+
+    // ✅ Generate QR code with enhanced security
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: pending.totpSecret,
+      label: `FixIt (${email})`,
+      issuer: "FixIt",
+      encoding: "base32",
+    });
+
+    const qr = await qrcode.toDataURL(otpauthUrl, {
+      errorCorrectionLevel: "M",
+      type: "image/png",
+      quality: 0.92,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+      width: 256,
+    });
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("QR code generated successfully", {
+      email: email,
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      qrCodeURL: qr,
+      manualEntryKey: pending.totpSecret,
+      otpauthUrl: otpauthUrl,
+      code: "QR_GENERATED",
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+
+    logger.error("QR code generation failed", {
+      error: error.message,
+      stack: error.stack,
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate QR code",
+      code: "QR_GENERATION_FAILED",
+    });
+  }
+};
+
 module.exports = {
   signup,
   verifyEmail,
@@ -1775,4 +1889,5 @@ module.exports = {
   logout,
   forgotPassword,
   resetPassword,
+  getQRCode,
 };

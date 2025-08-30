@@ -29,7 +29,7 @@ const pendingSignupSchema = new mongoose.Schema({
   },
   middleName: {
     type: String,
-    required: true,
+    default: null,
   },
   suffixName: {
     type: String,

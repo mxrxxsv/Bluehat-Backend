@@ -20,12 +20,12 @@ import WorkerQuestion from "./Pages/WorkerQuestion";
 import Footer from "./components/Footer";
 import ProfilePage from "./Pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoutes";
-
+import Setup2FA from "./components/Setup2FA";
 function App() {
   return (
     <>
       <Header />
-      
+
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
@@ -37,47 +37,42 @@ function App() {
         <Route path="/workersignup" element={<WorkerSignup />} />
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
-        <Route path="/workerquestion" element={<WorkerQuestion />}/>
+        <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
 
         {/* <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
         <Route path="/ads" element={<AdsPage />} /> */}
-        
-        
-
-        <Route 
-          path="/find-workers" 
+        <Route path="/setup-2fa" element={<Setup2FA />} />
+        <Route
+          path="/find-workers"
           element={
             <ProtectedRoute>
               <FindWorker />
             </ProtectedRoute>
-          
-          } />
+          }
+        />
 
-        <Route 
-          path="/find-work" 
+        <Route
+          path="/find-work"
           element={
             <ProtectedRoute>
               <FindWork />
             </ProtectedRoute>
+          }
+        />
 
-          } />
-          
-          <Route 
-            path="/ads" 
-            element={
-              <ProtectedRoute>
-                  <AdsPage />
-              </ProtectedRoute>
-              
-              } /> 
-
-          
+        <Route
+          path="/ads"
+          element={
+            <ProtectedRoute>
+              <AdsPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
 
       <Footer />
-
     </>
   );
 }
