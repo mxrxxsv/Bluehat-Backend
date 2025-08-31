@@ -14,7 +14,7 @@ const Header = () => {
   const notificationRef = useRef(null);
   const location = useLocation();
   const currentPath = location.pathname;
-
+  const navigate = useNavigate();
   const handleNotificationClick = () => {
     setShowNotifications((prev) => !prev);
   };
@@ -50,6 +50,12 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const excludeAuthPages = ["/setup-2fa", "/verify-email"];
+
+    if (excludeAuthPages.includes(location.pathname)) {
+      console.log("Skipping auth check for:", location.pathname);
+      return; // Don't check auth on these pages
+    }
     checkAuth()
       .then((res) => setUser(res.data.data))
       .catch(() => {
@@ -67,7 +73,7 @@ const Header = () => {
           navigate("/login");
         }
       });
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   // Sample notifications
   const notifications = [
@@ -77,7 +83,6 @@ const Header = () => {
   ];
 
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
 
   const isActive = (path) => currentPath === path;
 

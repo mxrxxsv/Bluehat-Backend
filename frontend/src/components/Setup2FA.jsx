@@ -18,10 +18,10 @@ const Setup2FA = () => {
     const emailParam = searchParams.get("email");
     const verified = searchParams.get("verified");
 
-    // if (!emailParam || verified !== "true") {
-    //   navigate("/login");
-    //   return;
-    // }
+    if (!emailParam || verified !== "true") {
+      navigate("/login");
+      return;
+    }
 
     setEmail(decodeURIComponent(emailParam));
     fetchQRCode(decodeURIComponent(emailParam));

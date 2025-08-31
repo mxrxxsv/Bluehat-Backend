@@ -560,7 +560,7 @@ const signup = async (req, res) => {
     // ✅ Encrypt sensitive data
     const encryptedFirstName = encryptAES128(firstName);
     const encryptedLastName = encryptAES128(lastName);
-    const encryptedMiddleName = encryptAES128(middleName);
+    const encryptedMiddleName = middleName ? encryptAES128(middleName) : null;
     const encryptedSuffixName = suffixName ? encryptAES128(suffixName) : null;
     const encryptedContact = encryptAES128(contactNumber);
     const encryptedAddress = {
@@ -593,7 +593,8 @@ const signup = async (req, res) => {
     });
 
     // ✅ Send verification email
-    const verifyUrl = `http://localhost:5000/ver/verify-email?token=${emailVerificationToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
 
     try {
       await sendVerificationEmail(email, verifyUrl);
@@ -672,13 +673,12 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize token
     const sanitizedToken = xss(token);
 
     const pending = await PendingSignup.findOne({
       emailVerificationToken: sanitizedToken,
       emailVerificationExpires: { $gt: Date.now() },
-    }).select("+totpSecret +email");
+    }).select("+totpSecret +email +userType");
 
     if (!pending) {
       logger.warn("Invalid email verification attempt", {
@@ -695,26 +695,26 @@ const verifyEmail = async (req, res) => {
       });
     }
 
+    // ✅ Check if already verified
+    if (pending.emailVerified) {
+      return res.status(200).json({
+        success: true,
+        message: "Email already verified",
+        code: "ALREADY_VERIFIED",
+        data: {
+          email: pending.email,
+          userType: pending.userType,
+        },
+      });
+    }
+
     // ✅ Mark email as verified
     pending.emailVerified = true;
     pending.emailVerificationToken = undefined;
     pending.emailVerificationExpires = undefined;
     await pending.save();
 
-    // ✅ Generate QR code for authenticator apps
-    const otpauthUrl = speakeasy.otpauthURL({
-      secret: pending.totpSecret,
-      label: `FixIt (${pending.email})`,
-      issuer: "FixIt",
-      encoding: "base32",
-    });
-
-    // ✅ Log QR for development
-    if (process.env.NODE_ENV === "development") {
-      qrcodeTerminal.generate(otpauthUrl, { small: true });
-    }
-
-    const qr = await qrcode.toDataURL(otpauthUrl);
+    // ✅ Generate verify token for subsequent requests
     generateVerifyToken(res, pending.email, pending.userType);
 
     const processingTime = Date.now() - startTime;
@@ -728,13 +728,20 @@ const verifyEmail = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ QR template
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const redirectUrl = `${frontendUrl}/setup-2fa?email=${encodeURIComponent(
-      pending.email
-    )}&verified=true`;
-
-    res.redirect(redirectUrl);
+    // ✅ Return JSON response instead of redirect
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      code: "EMAIL_VERIFIED",
+      data: {
+        email: pending.email,
+        userType: pending.userType,
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
   } catch (err) {
     const processingTime = Date.now() - startTime;
 

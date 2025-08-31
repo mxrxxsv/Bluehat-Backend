@@ -6,6 +6,7 @@ const helmet = require("helmet");
 const verifyCaptcha = require("../middleware/verifyCaptcha");
 const verifyToken = require("../middleware/verifyToken");
 const verifyAdmin = require("../middleware/verifyAdmin");
+const verifyCode = require("../middleware/verifyVerifyToken");
 const {
   authLimiter,
   verifyLimiter,
@@ -128,7 +129,7 @@ router.get("/verify-email", verifyLimiter, verifyEmail);
  * @desc    Verify TOTP code for account activation
  * @access  Public (requires verify token from verifyEmail)
  */
-router.post("/verify", verifyLimiter, verify);
+router.post("/verify", verifyLimiter, verifyCode, verify);
 
 /**
  * @route   POST /auth/resend-code

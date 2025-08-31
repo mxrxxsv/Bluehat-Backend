@@ -21,6 +21,7 @@ import Footer from "./components/Footer";
 import ProfilePage from "./Pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import Setup2FA from "./components/Setup2FA";
+import VerifyEmail from "./components/VerifyEmail";
 function App() {
   return (
     <>
@@ -43,6 +44,7 @@ function App() {
         {/* <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
         <Route path="/ads" element={<AdsPage />} /> */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/setup-2fa" element={<Setup2FA />} />
         <Route
           path="/find-workers"
