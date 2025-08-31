@@ -909,6 +909,8 @@ const verify = async (req, res) => {
       });
     }
 
+    const isVerified = userType === "client";
+
     // ✅ Move to Credential collection
     const credential = new Credential({
       email: pending.email,
@@ -916,6 +918,7 @@ const verify = async (req, res) => {
       userType: pending.userType,
       totpSecret: pending.totpSecret,
       isAuthenticated: true,
+      isVerified: isVerified,
     });
     await credential.save({ session });
 

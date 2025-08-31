@@ -6,33 +6,39 @@ const API = axios.create({
 });
 
 // Get all jobs (with optional pagination/filter)
-export const getAllJobs = (page = 1, limit = 10, category, tag) => {
+// api/jobs.jsx
+export const getAllJobs = (options = {}) => {
+  const { page = 1, limit = 10, category, tag, status } = options;
   const params = { page, limit };
   if (category) params.category = category;
   if (tag) params.tag = tag;
-  return API.get("/", { params }).then(res => res.data);
+  if (status) params.status = status;
+
+  return API.get("/", { params }).then((res) => {
+    return res.data;
+  });
 };
 
 // Get single job by ID
-export const getJobById = (id) =>
-  API.get(`/${id}`).then(res => res.data);
+export const getJobById = (id) => API.get(`/${id}`).then((res) => res.data);
 
 // Post a new job (auth required — token comes from cookie automatically)
 export const postJob = (jobData) =>
-  API.post("/", jobData).then(res => res.data);
+  API.post("/", jobData).then((res) => res.data);
 
 // Update job
 export const updateJob = (id, jobData) =>
-  API.put(`/${id}`, jobData).then(res => res.data);
+  API.put(`/${id}`, jobData).then((res) => res.data);
 
 // Delete job
-export const deleteJob = (id) =>
-  API.delete(`/${id}`).then(res => res.data);
+export const deleteJob = (id) => API.delete(`/${id}`).then((res) => res.data);
 
 // Get applications for a job
 export const getJobApplications = (jobId) =>
-  API.get(`/${jobId}/applications`).then(res => res.data);
+  API.get(`/${jobId}/applications`).then((res) => res.data);
 
 // Respond to application (accept/reject)
 export const respondToApplication = (applicationId, action, message) =>
-  API.patch(`/applications/${applicationId}/respond`, { action, message }).then(res => res.data);
+  API.patch(`/applications/${applicationId}/respond`, { action, message }).then(
+    (res) => res.data
+  );

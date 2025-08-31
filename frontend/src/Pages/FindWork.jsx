@@ -80,10 +80,8 @@ const FindWork = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await getAllJobs(1, 20);
-        const jobsArray = Array.isArray(res.data?.data?.jobs)
-          ? res.data.data.jobs
-          : [];
+        const res = await getAllJobs({ page: 1, limit: 20, status: "open" });
+        const jobsArray = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
         setJobPosts(jobsArray);
       } catch (err) {
         console.error("Error fetching jobs:", err);
@@ -173,15 +171,21 @@ const FindWork = () => {
                   </div>
                   <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                     <Briefcase size={20} className="text-blue-400" />
-                    {newJob.description || "Job description will appear here..."}
+                    {newJob.description ||
+                      "Job description will appear here..."}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {selectedCategory ? (
                       <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                        {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                        {
+                          categories.find((c) => c._id === selectedCategory)
+                            ?.categoryName
+                        }
                       </span>
                     ) : (
-                      <span className="text-gray-400 text-sm">No category selected</span>
+                      <span className="text-gray-400 text-sm">
+                        No category selected
+                      </span>
                     )}
                   </div>
                   <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
@@ -275,7 +279,8 @@ const FindWork = () => {
                     {job.client?.fullName || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                    <Clock size={16} /> {new Date(job.createdAt).toLocaleDateString()}
+                    <Clock size={16} />{" "}
+                    {new Date(job.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <p className="text-gray-700 mt-1 text-left flex items-center gap-2">

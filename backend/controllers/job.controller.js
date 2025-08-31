@@ -1,7 +1,7 @@
 const Joi = require("joi");
 const xss = require("xss");
 const mongoose = require("mongoose");
-
+const { decryptAES128 } = require("../utils/encipher");
 //models
 const SkillCategory = require("../models/SkillCategory");
 const Job = require("../models/Job");
@@ -280,6 +280,62 @@ const isContentAppropriate = (text) => {
   return { isAppropriate: true };
 };
 
+// Add this helper function after your existing helper functions
+const optimizeJobForResponse = (job) => {
+  let clientName = "Anonymous Client";
+
+  // Handle different job structures (aggregation vs populate)
+  const client = job.client || job.clientId;
+
+  if (client && client.firstName) {
+    try {
+      const decryptedFirstName = decryptAES128(client.firstName);
+      const decryptedLastName = client.lastName
+        ? decryptAES128(client.lastName)
+        : "";
+      clientName = `${decryptedFirstName} ${decryptedLastName}`.trim();
+    } catch (error) {
+      logger.warn("Failed to decrypt client name", {
+        jobId: job._id,
+        clientId: client._id,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+      clientName = "Anonymous Client";
+    }
+  }
+
+  return {
+    id: job._id,
+    description: job.description,
+    price: job.price,
+    location: job.location,
+    status: job.status,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    category: {
+      id: job.category?._id || job.category,
+      name: job.categoryName || job.category?.categoryName,
+    },
+    client: {
+      name: clientName,
+      profilePicture: client?.profilePicture?.url || null,
+    },
+    hiredWorker:
+      job.hiredWorkerProfile || job.hiredWorker
+        ? {
+            id: (job.hiredWorkerProfile || job.hiredWorker)._id,
+            name: `${(job.hiredWorkerProfile || job.hiredWorker).firstName} ${
+              (job.hiredWorkerProfile || job.hiredWorker).lastName
+            }`.trim(),
+            profilePicture:
+              (job.hiredWorkerProfile || job.hiredWorker).profilePicture?.url ||
+              null,
+          }
+        : null,
+  };
+};
+
 const handleJobError = (
   error,
   res,
@@ -485,6 +541,8 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    const optimizedJobs = jobs.map(optimizeJobForResponse);
+
     logger.info("Jobs retrieved successfully", {
       totalJobs: jobs.length,
       totalCount,
@@ -509,7 +567,7 @@ const getAllJobs = async (req, res) => {
       message: "Jobs retrieved successfully",
       code: "JOBS_RETRIEVED",
       data: {
-        jobs,
+        jobs: optimizedJobs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -676,6 +734,8 @@ const getJobsByCategory = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    const optimizedJobs = jobs.map(optimizeJobForResponse);
+
     logger.info("Jobs by category retrieved successfully", {
       categoryId,
       categoryName: category.categoryName,
@@ -698,7 +758,7 @@ const getJobsByCategory = async (req, res) => {
           id: category._id,
           name: category.categoryName,
         },
-        jobs: verifiedJobs,
+        jobs: optimizedJobs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -870,6 +930,8 @@ const getJobsByLocation = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    const optimizedJobs = jobs.map(optimizeJobForResponse);
+
     logger.info("Jobs by location retrieved successfully", {
       location,
       totalJobs: verifiedJobs.length,
@@ -888,7 +950,7 @@ const getJobsByLocation = async (req, res) => {
       code: "JOBS_BY_LOCATION_RETRIEVED",
       data: {
         location: location,
-        jobs: verifiedJobs,
+        jobs: optimizedJobs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -994,6 +1056,8 @@ const getJobById = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    const optimizedJob = optimizeJobForResponse(job);
+
     logger.info("Job retrieved successfully", {
       jobId: id,
       clientId: job.clientId._id,
@@ -1008,7 +1072,7 @@ const getJobById = async (req, res) => {
       success: true,
       message: "Job retrieved successfully",
       code: "JOB_RETRIEVED",
-      data: job,
+      data: optimizedJob,
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
