@@ -192,7 +192,7 @@ const Setup2FA = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f4f6f6] flex items-center justify-center p-4">
       {/* Notification */}
       {notification && (
         <div
@@ -206,9 +206,9 @@ const Setup2FA = () => {
         </div>
       )}
 
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="max-w-md w-full mt-30 bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 text-center">
+        {/* <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 text-center">
           <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🔐</span>
           </div>
@@ -218,7 +218,7 @@ const Setup2FA = () => {
           <p className="opacity-90 text-sm">
             Secure your FixIt account with an authenticator app
           </p>
-        </div>
+        </div> */}
 
         <div className="p-6 space-y-6">
           {/* Error Display */}
@@ -243,10 +243,10 @@ const Setup2FA = () => {
           {/* Mobile Quick Setup */}
           <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-5 rounded-xl shadow-md">
             <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-white bg-opacity-25 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+              <div className="w-10 h-10 bg-white text-[#5669ff] bg-opacity-25 rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 1
               </div>
-              <h3 className="font-semibold text-lg">📱 For Mobile Users</h3>
+              <h3 className="font-semibold text-lg">For Mobile Users</h3>
             </div>
             <p className="text-sm opacity-90 mb-4 leading-relaxed">
               Tap the button below to automatically open your authenticator app:
@@ -255,9 +255,9 @@ const Setup2FA = () => {
               href={`otpauth://totp/FixIt%20(${encodeURIComponent(
                 email
               )})?secret=${totpSecret}&issuer=FixIt`}
-              className="block w-full bg-white bg-opacity-20 text-white text-center py-4 rounded-lg font-semibold border-2 border-white border-opacity-30 hover:bg-opacity-30 transition-all duration-200 backdrop-blur-sm"
+              className="block w-full bg-opacity-20 text-white text-center py-4 rounded-lg font-semibold border-2 border-white border-opacity-30 hover:bg-opacity-30 transition-all duration-200 backdrop-blur-sm"
             >
-              🚀 Open in Authenticator App
+              Open in Authenticator App
             </a>
             <p className="text-xs opacity-80 text-center mt-3 leading-relaxed">
               Compatible with Google Authenticator, Microsoft Authenticator,
@@ -272,7 +272,7 @@ const Setup2FA = () => {
                 2
               </div>
               <h3 className="font-semibold text-lg text-gray-800">
-                🖥️ For Desktop Users
+                For Desktop Users
               </h3>
             </div>
             <p className="text-sm text-gray-600 mb-4 leading-relaxed">
@@ -301,7 +301,7 @@ const Setup2FA = () => {
                 3
               </div>
               <h3 className="font-semibold text-lg text-gray-800">
-                ⚙️ Manual Setup
+                Manual Setup
               </h3>
             </div>
             <p className="text-sm mb-3 text-gray-700 leading-relaxed">
@@ -320,14 +320,14 @@ const Setup2FA = () => {
               disabled={!totpSecret}
               className="mt-3 text-amber-600 text-sm hover:text-amber-700 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              📋 Copy Secret Key
+              Copy Secret Key
             </button>
           </div>
 
           {/* Verification Form */}
           <div className="bg-gradient-to-r from-green-500 to-teal-500 p-5 rounded-xl text-white shadow-md">
             <h3 className="font-semibold mb-4 text-center text-lg">
-              🎯 Complete Account Setup
+              Complete Account Setup
             </h3>
             <p className="text-sm opacity-90 text-center mb-4 leading-relaxed">
               Enter the 6-digit code from your authenticator app:
@@ -336,10 +336,10 @@ const Setup2FA = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="000000"
+                  placeholder=""
                   value={otpCode}
                   onChange={handleInputChange}
-                  className="w-full p-4 rounded-lg text-center text-black text-xl font-mono tracking-[0.5em] border-2 border-transparent focus:border-white focus:outline-none transition-all duration-200"
+                  className="w-full p-4 rounded-lg text-center text-white text-xl font-mono tracking-[0.5em] border-2 border-transparent border-white focus:outline-none transition-all duration-200"
                   maxLength="6"
                   disabled={verifying}
                   autoComplete="off"
@@ -347,14 +347,14 @@ const Setup2FA = () => {
                 />
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <div className="flex space-x-2">
-                    {[...Array(6)].map((_, i) => (
+                    {/* {[...Array(6)].map((_, i) => (
                       <div
                         key={i}
                         className={`w-2 h-2 rounded-full transition-colors ${
-                          i < otpCode.length ? "bg-green-400" : "bg-gray-300"
+                          i < otpCode.length ? "bg-bu-400" : "bg-gray-300"
                         }`}
                       />
-                    ))}
+                    ))} */}
                   </div>
                 </div>
               </div>
@@ -370,7 +370,7 @@ const Setup2FA = () => {
                   </>
                 ) : (
                   <>
-                    <span>🚀</span>
+                    <span></span>
                     <span>Complete Setup</span>
                   </>
                 )}
@@ -387,8 +387,7 @@ const Setup2FA = () => {
             <ul className="text-sm text-blue-700 space-y-2 leading-relaxed">
               <li className="flex items-start">
                 <span className="mr-2 mt-0.5">•</span>
-                Download Google Authenticator, Microsoft Authenticator, or Authy
-                from your app store
+                 Download Google Authenticator from your app store
               </li>
               <li className="flex items-start">
                 <span className="mr-2 mt-0.5">•</span>
@@ -412,7 +411,7 @@ const Setup2FA = () => {
               disabled={loading}
               className="text-blue-600 text-sm hover:text-blue-700 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              🔄 Refresh QR Code
+              Refresh QR Code
             </button>
             <button
               onClick={() => navigate("/login")}
@@ -426,7 +425,7 @@ const Setup2FA = () => {
         {/* Footer */}
         <div className="bg-gray-50 px-6 py-4 text-center border-t border-gray-100">
           <p className="text-xs text-gray-500 leading-relaxed">
-            🔒 Your security is our priority. This two-factor authentication
+             Your security is our priority. This two-factor authentication
             helps protect your account from unauthorized access.
           </p>
         </div>

@@ -94,6 +94,7 @@ const Header = () => {
     "/clientsignup",
     "/forgetpass",
     "/workerquestion",
+    "/setup-2fa",
   ];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
   const showAuthButtons = authPages.includes(currentPath);
