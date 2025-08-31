@@ -1,104 +1,115 @@
 import { useState, useEffect } from "react";
-import { MapPin, Briefcase, Clock, Search, X } from "lucide-react";
+import { MapPin, Briefcase, Clock, Search, X, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import jobPostsData from "../Objects/jobPosts";
 import { checkAuth } from "../api/auth";
-import skillCategories from "../Objects/skillCategories";
-import skillsByCategory from "../Objects/skillsByCategory";
+import { getAllJobs, postJob as createJob } from "../api/jobs";
+import axios from "axios";
 
-// Example placeholder user (replace with real auth user later)
 const currentUser = {
-  avatar: "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png",
+  avatar:
+    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png",
 };
 
 const FindWork = () => {
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
-  const [skill, setSkill] = useState("");
-  const [jobPosts, setJobPosts] = useState(jobPostsData);
+  const [jobPosts, setJobPosts] = useState([]);
   const [user, setUser] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [newJob, setNewJob] = useState({
-    title: "",
     description: "",
     location: "",
     priceOffer: "",
   });
 
+  const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedSkills, setSelectedSkills] = useState([]);
 
-  // Toggle skill selection
-  const handleSkillToggle = (skillName) => {
-    setSelectedSkills((prev) =>
-      prev.includes(skillName)
-        ? prev.filter((s) => s !== skillName)
-        : [...prev, skillName]
-    );
-  };
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/skills");
+        const cats = res.data?.data?.categories;
+        if (Array.isArray(cats)) setCategories(cats);
+        else setCategories([]);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Handle posting a new job
-  const handlePostJob = (e) => {
+  const handlePostJob = async (e) => {
     e.preventDefault();
-
-    if (
-      !newJob.title ||
-      !newJob.description ||
-      !newJob.location ||
-      !newJob.priceOffer
-    ) {
+    if (!newJob.description || !newJob.location || !newJob.priceOffer) {
       alert("Please fill out all required fields");
       return;
     }
-
-    const jobToAdd = {
-      id: Date.now(),
-      clientName: user.fullName, 
-      title: newJob.title,
-      description: newJob.description,
-      location: newJob.location,
-      skillsRequired: selectedSkills,
-      priceOffer: parseFloat(newJob.priceOffer),
-      datePosted: "Just now",
-    };
-
-    setJobPosts([jobToAdd, ...jobPosts]);
-    setNewJob({
-      title: "",
-      description: "",
-      location: "",
-      priceOffer: "",
-    });
-    setSelectedCategory("");
-    setSelectedSkills([]);
-    setIsModalOpen(false);
+    if (!selectedCategory) {
+      alert("Please select a category");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      const jobData = {
+        description: newJob.description,
+        location: newJob.location,
+        price: parseFloat(newJob.priceOffer),
+        category: selectedCategory,
+      };
+      const res = await createJob(jobData, token);
+      const jobCreated = res.data?.data?.job || res.data?.data || res.data;
+      setJobPosts((prev) => [jobCreated, ...prev]);
+      setNewJob({ description: "", location: "", priceOffer: "" });
+      setSelectedCategory("");
+      setIsModalOpen(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error("Error posting job:", error);
+      alert(error.response?.data?.message || "Failed to post job");
+    }
   };
 
-  // Filter jobs based on search inputs
-  const filteredJobs = jobPosts.filter((job) => {
-    const matchesSearch =
-      job.title.toLowerCase().includes(search.toLowerCase()) ||
-      job.description.toLowerCase().includes(search.toLowerCase());
-    const matchesLocation = location
-      ? job.location.toLowerCase().includes(location.toLowerCase())
-      : true;
-    const matchesSkill = skill
-      ? job.skillsRequired.some((s) =>
-        s.toLowerCase().includes(skill.toLowerCase())
-      )
-      : true;
-
-    return matchesSearch && matchesLocation && matchesSkill;
-  });
+  // Fetch jobs
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const res = await getAllJobs(1, 20);
+        const jobsArray = Array.isArray(res.data?.data?.jobs)
+          ? res.data.data.jobs
+          : [];
+        setJobPosts(jobsArray);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+      }
+    };
+    fetchJobs();
+  }, []);
 
   // Fetch logged-in user
   useEffect(() => {
     checkAuth()
-      .then((res) => setUser(res.data.data))
+      .then((res) => setUser(res.data?.data))
       .catch(() => setUser(null));
   }, []);
+
+  // Filter jobs based on search inputs
+  const filteredJobs = Array.isArray(jobPosts)
+    ? jobPosts.filter((job) => {
+        const desc = job.description || "";
+        const loc = job.location || "";
+        return (
+          desc.toLowerCase().includes(search.toLowerCase()) &&
+          (location ? loc.toLowerCase().includes(location.toLowerCase()) : true)
+        );
+      })
+    : [];
 
   return (
     <div className="max-w-5xl mx-auto p-4 mt-20 md:mt-30">
@@ -117,13 +128,6 @@ const FindWork = () => {
           placeholder="Filter by location"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-        <input
-          type="text"
-          placeholder="Filter by skill"
-          value={skill}
-          onChange={(e) => setSkill(e.target.value)}
           className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
       </div>
@@ -147,11 +151,6 @@ const FindWork = () => {
 
       {/* Modal */}
       {isModalOpen && (
-
-        
-        
-
-
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
             <button
@@ -161,38 +160,28 @@ const FindWork = () => {
               <X size={20} />
             </button>
 
-             {/* Live Preview */}
-            {(newJob.title || newJob.description || newJob.location || selectedSkills.length > 0) && (
+            {(newJob.description || newJob.location || selectedCategory) && (
               <div className="mt-6 pt-4">
-               
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-[#252525] opacity-75">
-                      {user.fullName}
+                      {user?.fullName || "Client Name"}
                     </span>
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                       <Clock size={16} /> Just now
                     </span>
                   </div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                     <Briefcase size={20} className="text-blue-400" />
-                    {newJob.title || "Job title here..."}
-                  </h2>
-                  <p className="text-gray-700 mt-1 text-left">
                     {newJob.description || "Job description will appear here..."}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedSkills.length > 0 ? (
-                      selectedSkills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs"
-                        >
-                          {skill}
-                        </span>
-                      ))
+                    {selectedCategory ? (
+                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                        {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                      </span>
                     ) : (
-                      <span className="text-gray-400 text-sm">No skills selected</span>
+                      <span className="text-gray-400 text-sm">No category selected</span>
                     )}
                   </div>
                   <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
@@ -200,7 +189,9 @@ const FindWork = () => {
                       <MapPin size={16} /> {newJob.location || "Location"}
                     </span>
                     <span className="font-bold text-green-400">
-                      {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                      {newJob.priceOffer
+                        ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}`
+                        : "₱0"}
                     </span>
                   </div>
                 </div>
@@ -208,13 +199,6 @@ const FindWork = () => {
             )}
 
             <form onSubmit={handlePostJob} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Job title"
-                value={newJob.title}
-                onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-                className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
-              />
               <textarea
                 placeholder="Job description"
                 value={newJob.description}
@@ -232,54 +216,23 @@ const FindWork = () => {
                 }
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
               />
-
-              {/* Category + Skills */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                   Category
                 </label>
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(Number(e.target.value))}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
                 >
                   <option value="">Select a category</option>
-                  {skillCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
                     </option>
                   ))}
                 </select>
-
-                {selectedCategory && (
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
-                      Skills
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {skillsByCategory
-                        .filter((s) => s.categoryId === selectedCategory)
-                        .map((s) => {
-                          const isSelected = selectedSkills.includes(s.name);
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => handleSkillToggle(s.name)}
-                              className={`px-3 py-1 rounded-full text-sm border ${isSelected
-                                  ? "bg-[#55b3f3] text-white border-blue-500"
-                                  : "bg-gray-100 text-gray-700 border-gray-300"
-                                }`}
-                            >
-                              {s.name}
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
               </div>
-
               <input
                 type="number"
                 placeholder="Price offer (₱)"
@@ -289,7 +242,6 @@ const FindWork = () => {
                 }
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
               />
-
               <button
                 type="submit"
                 className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer"
@@ -297,53 +249,50 @@ const FindWork = () => {
                 Post Job
               </button>
             </form>
-
-           
           </div>
         </div>
       )}
 
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+          <CheckCircle size={20} /> Job posted successfully!
+        </div>
+      )}
 
       {/* Job Posts */}
       {filteredJobs.length > 0 ? (
         <div className="space-y-4">
           {filteredJobs.map((job) => (
             <Link
-              key={job.id}
-              to={`/job/${job.id}`}
+              key={job._id}
+              to={`/job/${job._id}`}
               className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block"
             >
               <div className="rounded-xl p-4 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-[#252525] opacity-75">
-                    {job.clientName}
+                    {job.client?.fullName || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                    <Clock size={16} />
-                    {job.datePosted}
+                    <Clock size={16} /> {new Date(job.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
+                <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                   <Briefcase size={20} className="text-blue-400" />
-                  {job.title}
-                </h2>
-                <p className="text-gray-700 mt-1 text-left">{job.description}</p>
+                  {job.description}
+                </p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {job.skillsRequired.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+                  <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                    {job.categoryName || "Uncategorized"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <MapPin size={16} /> {job.location}
                   </span>
                   <span className="font-bold text-green-400">
-                    ₱{job.priceOffer.toLocaleString()}
+                    ₱{job.price.toLocaleString()}
                   </span>
                 </div>
               </div>
