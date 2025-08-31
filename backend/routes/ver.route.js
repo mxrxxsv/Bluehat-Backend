@@ -170,7 +170,7 @@ router.post("/reset-password", resetLimiter, resetPassword);
  * @desc    Check authentication status and get user data
  * @access  Private
  */
-router.get("/check", verifyToken, checkAuth);
+router.get("/check-auth", verifyToken, checkAuth);
 
 /**
  * @route   POST /auth/logout
@@ -206,7 +206,7 @@ router.use("*", (req, res) => {
       "POST /auth/login - User login with credentials + TOTP",
       "POST /auth/forgot-password - Request password reset",
       "POST /auth/reset-password - Reset password with token",
-      "GET /auth/check - Check authentication status (Auth required)",
+      "GET /auth/check-auth - Check authentication status (Auth required)",
       "POST /auth/logout - User logout (Auth required)",
       "GET /auth/health - Health check",
     ],
