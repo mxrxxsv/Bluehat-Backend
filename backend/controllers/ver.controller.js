@@ -1466,7 +1466,7 @@ const checkAuth = async (req, res) => {
         isVerified: credential.isVerified,
         address: decryptedAddress,
         image: user.image || null,
-        ...(userType === "worker" && { portfolio: user.portfolio || [] }),
+        ...(userType === "worker" && { portfolio: user.portfolio || [] }), //portfolio now can be lack
       },
       meta: {
         processingTime: `${processingTime}ms`,
