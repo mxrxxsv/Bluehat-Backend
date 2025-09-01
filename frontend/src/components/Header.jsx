@@ -145,7 +145,7 @@ const Header = () => {
                     </Link>
                     <Link
                       to="/signup"
-                      className="text-white bg-sky-500 hover:bg-sky-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-sm hover:shadow-md"
+                      className="text-white bg-sky-500 hover:bg-blue-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-sm hover:shadow-md"
                     >
                       Sign up
                     </Link>
