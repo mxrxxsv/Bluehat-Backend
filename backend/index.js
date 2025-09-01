@@ -16,6 +16,7 @@ const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
 const skillsRoute = require("./routes/skill.route");
+const profileRoute = require("./routes/profile.route");
 const allowedOrigins = [process.env.CLIENT_URL];
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -73,7 +74,7 @@ app.use("/advertisement", adsRoute);
 app.use("/jobs", jobRoute);
 app.use("/job-applications", jobApplicationRoute);
 app.use("/skills", skillsRoute);
-
+app.use("/profile", profileRoute);
 // 8) 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Not Found" });
