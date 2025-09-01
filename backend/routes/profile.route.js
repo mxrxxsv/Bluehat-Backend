@@ -17,16 +17,16 @@ const {
   getProfile,
 } = require("../controllers/profile.controller");
 
-const { authenticateToken } = require("../middleware/verifyToken");
-const uploadMiddleware = require("../middleware/upload");
-const { profileLimiter } = require("../middleware/rateLimiter");
+const authenticateToken = require("../middleware/verifyToken");
+const uploadUserMiddleware = require("../middleware/userUpload");
+const { profileLimiter } = require("../utils/rateLimit");
 
 // ✅ PROFILE PICTURE ROUTES
 router.post(
   "/upload-picture",
   authenticateToken,
   profileLimiter,
-  uploadMiddleware,
+  uploadUserMiddleware,
   uploadProfilePicture
 );
 router.delete(
@@ -53,14 +53,14 @@ router.post(
   "/portfolio",
   authenticateToken,
   profileLimiter,
-  uploadMiddleware,
+  uploadUserMiddleware,
   createPortfolio
 );
 router.put(
   "/portfolio",
   authenticateToken,
   profileLimiter,
-  uploadMiddleware,
+  uploadUserMiddleware,
   updatePortfolio
 );
 router.delete(
@@ -75,7 +75,7 @@ router.post(
   "/certificate",
   authenticateToken,
   profileLimiter,
-  uploadMiddleware,
+  uploadUserMiddleware,
   uploadCertificate
 );
 router.delete(

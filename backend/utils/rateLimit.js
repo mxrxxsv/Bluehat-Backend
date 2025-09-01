@@ -246,6 +246,55 @@ const uploadLimiter = rateLimit({
   },
 });
 
+// ✅ NEW: Profile operations limiter (profile updates, image uploads)
+const profileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // 50 profile operations per window
+  keyGenerator: (req) => {
+    const userId = req.user?._id?.toString();
+    return userId || req.ip;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    const userId = req.user?._id?.toString();
+    const identifier = userId || req.ip;
+
+    logger.warn("Profile operations rate limit exceeded", {
+      userId,
+      identifier,
+      userType: req.user?.userType,
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+      endpoint: req.originalUrl,
+      method: req.method,
+      limit: 50,
+      windowMs: 15 * 60 * 1000,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(429).json({
+      success: false,
+      message:
+        "Too many profile operations. Please wait 15 minutes before making more changes.",
+      code: "PROFILE_RATE_LIMIT_EXCEEDED",
+      retryAfter: "15 minutes",
+      limit: 50,
+      windowMs: 15 * 60 * 1000,
+      suggestion:
+        "Profile updates are limited to prevent spam. Please wait before making additional changes.",
+      timestamp: new Date().toISOString(),
+    });
+  },
+  skip: (req) => {
+    // Skip for health checks
+    if (req.path === "/health") return true;
+    // Skip for profile viewing (GET requests)
+    if (req.method === "GET") return true;
+    return false;
+  },
+});
+
 // ✅ NEW: Global API limiter (fallback protection)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -287,5 +336,6 @@ module.exports = {
   resetLimiter, // ✅ NEW: For password reset operations
   adminLimiter, // ✅ NEW: For admin operations
   uploadLimiter, // ✅ NEW: For file uploads
+  profileLimiter, // ✅ NEW: For profile operations
   globalLimiter, // ✅ NEW: Global fallback protection
 };

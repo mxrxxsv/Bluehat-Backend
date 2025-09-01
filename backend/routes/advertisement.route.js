@@ -3,7 +3,7 @@ const router = express.Router();
 const helmet = require("helmet");
 
 // Use your existing middleware
-const upload = require("../middleware/upload");
+const upload = require("../middleware/adminUpload");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const { authLimiter, verifyLimiter } = require("../utils/rateLimit");
 const logger = require("../utils/logger");

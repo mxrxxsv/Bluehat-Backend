@@ -393,7 +393,7 @@ const handleJobError = (
 
 // ==================== CONTROLLERS ====================
 
-// Get all jobs (public, only verified/not deleted) with pagination & filtering
+// ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
 const getAllJobs = async (req, res) => {
   const startTime = Date.now();
 
@@ -456,72 +456,26 @@ const getAllJobs = async (req, res) => {
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // ✅ Get jobs with optimized aggregation pipeline
-    const jobs = await Job.aggregate([
-      { $match: filter },
-      // Lookup client profile
-      {
-        $lookup: {
-          from: "clients",
-          localField: "clientId",
-          foreignField: "_id",
-          as: "clientProfile",
+    // ✅ FIXED: Use simpler approach like other functions
+    const jobs = await Job.find(filter)
+      .populate({
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+        populate: {
+          path: "credentialId",
+          match: { isVerified: true, isBlocked: { $ne: true } },
+          select: "email",
         },
-      },
-      // Lookup client credential to verify they're verified
-      {
-        $lookup: {
-          from: "credentials",
-          localField: "clientProfile.credentialId",
-          foreignField: "_id",
-          as: "clientCredential",
-        },
-      },
-      // Only include jobs from verified clients
-      {
-        $match: {
-          "clientCredential.isVerified": true,
-          "clientCredential.isBlocked": { $ne: true },
-        },
-      },
-      // Lookup category
-      {
-        $lookup: {
-          from: "skillcategories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryInfo",
-        },
-      },
-      // Lookup hired worker if exists
-      {
-        $lookup: {
-          from: "workers",
-          localField: "hiredWorker",
-          foreignField: "_id",
-          as: "hiredWorkerInfo",
-        },
-      },
-      {
-        $addFields: {
-          client: { $arrayElemAt: ["$clientProfile", 0] },
-          categoryName: { $arrayElemAt: ["$categoryInfo.categoryName", 0] },
-          hiredWorkerProfile: { $arrayElemAt: ["$hiredWorkerInfo", 0] },
-        },
-      },
-      {
-        $project: {
-          clientProfile: 0,
-          clientCredential: 0,
-          categoryInfo: 0,
-          hiredWorkerInfo: 0,
-          "client.credentialId": 0,
-        },
-      },
-      { $sort: { [sortBy]: sortOrder } },
-      { $skip: (page - 1) * limit },
-      { $limit: Number(limit) },
-    ]);
+      })
+      .populate("category", "categoryName")
+      .populate("hiredWorker", "firstName lastName profilePicture")
+      .sort({ [sortBy]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(); // ✅ Performance optimization
+
+    // ✅ Filter out jobs from unverified clients (same as other functions)
+    const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
 
     // ✅ Get total count for pagination
     const totalCount = await Job.countDocuments({
@@ -541,10 +495,11 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    const optimizedJobs = jobs.map(optimizeJobForResponse);
+    // ✅ FIXED: Use verifiedJobs instead of jobs
+    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
 
     logger.info("Jobs retrieved successfully", {
-      totalJobs: jobs.length,
+      totalJobs: verifiedJobs.length,
       totalCount,
       page,
       limit,
@@ -734,7 +689,8 @@ const getJobsByCategory = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    const optimizedJobs = jobs.map(optimizeJobForResponse);
+    // ✅ FIXED: Use verifiedJobs instead of jobs
+    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
 
     logger.info("Jobs by category retrieved successfully", {
       categoryId,
@@ -930,7 +886,8 @@ const getJobsByLocation = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    const optimizedJobs = jobs.map(optimizeJobForResponse);
+    // ✅ FIXED: Use verifiedJobs instead of jobs
+    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
 
     logger.info("Jobs by location retrieved successfully", {
       location,
@@ -1056,6 +1013,7 @@ const getJobById = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    // ✅ Optimize single job for response
     const optimizedJob = optimizeJobForResponse(job);
 
     logger.info("Job retrieved successfully", {
@@ -1066,6 +1024,12 @@ const getJobById = async (req, res) => {
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
+    });
+
+    // ✅ Set cache headers for public endpoint
+    res.set({
+      "Cache-Control": "public, max-age=600", // 10 minutes cache for single job
+      ETag: `"job-${job._id}-${job.updatedAt}"`,
     });
 
     res.status(200).json({

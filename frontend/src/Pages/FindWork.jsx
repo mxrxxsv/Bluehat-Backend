@@ -82,6 +82,7 @@ const FindWork = () => {
       try {
         const res = await getAllJobs({ page: 1, limit: 20, status: "open" });
         const jobsArray = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
+
         setJobPosts(jobsArray);
       } catch (err) {
         console.error("Error fetching jobs:", err);
