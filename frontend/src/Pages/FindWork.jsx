@@ -277,7 +277,7 @@ const FindWork = () => {
               <div className="rounded-xl p-4 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-[#252525] opacity-75">
-                    {job.client?.fullName || "Client Name"}
+                    {job.clientProfile?.fullName || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                     <Clock size={16} />{" "}
