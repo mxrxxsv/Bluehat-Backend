@@ -280,7 +280,6 @@ const isContentAppropriate = (text) => {
   return { isAppropriate: true };
 };
 
-// Add this helper function after your existing helper functions
 // ✅ ENHANCED: Helper function to optimize job data for frontend
 const optimizeJobForResponse = (job) => {
   let clientName = "Anonymous Client";

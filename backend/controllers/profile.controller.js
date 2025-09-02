@@ -5,7 +5,7 @@ const logger = require("../utils/logger");
 const Client = require("../models/Client");
 const Worker = require("../models/Worker");
 const SkillCategory = require("../models/SkillCategory");
-const cloudinary = require("../db/cloudinary"); //../utils/cloudinary
+const cloudinary = require("../db/cloudinary");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 // ✅ VALIDATION SCHEMAS

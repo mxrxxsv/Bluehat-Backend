@@ -155,7 +155,7 @@ const CredentialSchema = new mongoose.Schema(
       select: false,
     },
 
-    // ==================== PROFILE REFERENCES ====================
+    // ==================== ID VERIFICATION REFERENCES ====================
     idPictureId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "IDPicture",
