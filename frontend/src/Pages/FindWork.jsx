@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { MapPin, Briefcase, Clock, Search, X, CheckCircle } from "lucide-react";
+import {
+  MapPin,
+  Briefcase,
+  Clock,
+  Search,
+  X,
+  CheckCircle,
+  RefreshCw,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
@@ -15,6 +23,8 @@ const FindWork = () => {
   const [location, setLocation] = useState("");
   const [jobPosts, setJobPosts] = useState([]);
   const [user, setUser] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -27,6 +37,56 @@ const FindWork = () => {
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+
+  // ✅ EXTRACTED: Fetch jobs function for reuse
+  const fetchJobs = async (useCache = true) => {
+    try {
+      console.log("Fetching jobs..."); // Debug
+      const options = {
+        page: 1,
+        limit: 20,
+        status: "open",
+      };
+
+      // ✅ Add cache buster for manual refresh
+      if (!useCache) {
+        options._t = Date.now();
+      }
+
+      const response = await getAllJobs(options);
+
+      console.log("=== API RESPONSE DEBUG ===");
+      console.log("Full response:", response);
+      console.log("Response data:", response.data);
+      console.log("Jobs path:", response.data?.data?.jobs);
+      console.log("========================");
+
+      const jobsArray = Array.isArray(response.data?.data?.jobs)
+        ? response.data.data.jobs
+        : [];
+
+      console.log("Jobs array:", jobsArray);
+      console.log("Jobs count:", jobsArray.length);
+      setJobPosts(jobsArray);
+      setLastRefreshTime(new Date());
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      console.error("Error response:", err.response?.data);
+    }
+  };
+
+  // ✅ EFFICIENT: Manual refresh with cache busting
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchJobs(false); // false = no cache, fresh data
+      console.log(
+        `Manual refresh completed at ${new Date().toLocaleTimeString()}`
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Fetch categories
   useEffect(() => {
@@ -43,6 +103,27 @@ const FindWork = () => {
     fetchCategories();
   }, []);
 
+  // ✅ EFFICIENT: Only initial fetch + refresh on page visibility
+  useEffect(() => {
+    // Initial fetch with cache
+    fetchJobs(true);
+
+    // ✅ Refresh only when user returns to tab (not expensive)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("Page became visible, refreshing jobs...");
+        fetchJobs(false); // Fresh data when returning to tab
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   // Handle posting a new job
   const handlePostJob = async (e) => {
     e.preventDefault();
@@ -55,15 +136,19 @@ const FindWork = () => {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
       const jobData = {
         description: newJob.description,
         location: newJob.location,
         price: parseFloat(newJob.priceOffer),
         category: selectedCategory,
       };
-      const res = await createJob(jobData, token);
-      const jobCreated = res.data?.data?.job || res.data?.data || res.data;
+
+      console.log("Creating job with data:", jobData);
+      const response = await createJob(jobData);
+
+      console.log("Job creation response:", response);
+      const jobCreated = response.data?.data || response.data;
+
       setJobPosts((prev) => [jobCreated, ...prev]);
       setNewJob({ description: "", location: "", priceOffer: "" });
       setSelectedCategory("");
@@ -72,24 +157,10 @@ const FindWork = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
+      console.error("Error response:", error.response?.data);
       alert(error.response?.data?.message || "Failed to post job");
     }
   };
-
-  // Fetch jobs
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await getAllJobs({ page: 1, limit: 20, status: "open" });
-        const jobsArray = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
-
-        setJobPosts(jobsArray);
-      } catch (err) {
-        console.error("Error fetching jobs:", err);
-      }
-    };
-    fetchJobs();
-  }, []);
 
   // Fetch logged-in user
   useEffect(() => {
@@ -129,6 +200,26 @@ const FindWork = () => {
           onChange={(e) => setLocation(e.target.value)}
           className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
+
+        {/* ✅ ENHANCED: Refresh button with last update time */}
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            <RefreshCw
+              size={16}
+              className={isRefreshing ? "animate-spin" : ""}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh Jobs"}
+          </button>
+          {lastRefreshTime && (
+            <span className="text-xs text-gray-500 text-center">
+              Updated: {lastRefreshTime.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Post Box */}
@@ -159,6 +250,7 @@ const FindWork = () => {
               <X size={20} />
             </button>
 
+            {/* Job Preview */}
             {(newJob.description || newJob.location || selectedCategory) && (
               <div className="mt-6 pt-4">
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
@@ -203,6 +295,7 @@ const FindWork = () => {
               </div>
             )}
 
+            {/* Job Creation Form */}
             <form onSubmit={handlePostJob} className="space-y-3">
               <textarea
                 placeholder="Job description"
@@ -211,6 +304,7 @@ const FindWork = () => {
                   setNewJob({ ...newJob, description: e.target.value })
                 }
                 className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
+                rows="3"
               />
               <input
                 type="text"
@@ -246,10 +340,12 @@ const FindWork = () => {
                   setNewJob({ ...newJob, priceOffer: e.target.value })
                 }
                 className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
+                min="0"
+                step="0.01"
               />
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer"
+                className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
               >
                 Post Job
               </button>
@@ -260,28 +356,28 @@ const FindWork = () => {
 
       {/* Success Modal */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
           <CheckCircle size={20} /> Job posted successfully!
         </div>
       )}
 
-      {/* Job Posts */}
+      {/* Job Posts Display */}
       {filteredJobs.length > 0 ? (
         <div className="space-y-4">
           {filteredJobs.map((job) => (
             <Link
-              key={job._id}
-              to={`/job/${job._id}`}
+              key={job.id || job._id}
+              to={`/job/${job.id || job._id}`}
               className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block"
             >
               <div className="rounded-xl p-4 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-[#252525] opacity-75">
-                    {job.clientProfile?.fullName || "Client Name"}
+                    {job.client?.name || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                    <Clock size={16} />{" "}
-                    {new Date(job.createdAt).toLocaleDateString()}
+                    <Clock size={16} />
+                    {new Date(job.createdAt).toLocaleTimeString()}
                   </span>
                 </div>
                 <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
@@ -290,7 +386,7 @@ const FindWork = () => {
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                    {job.categoryName || "Uncategorized"}
+                    {job.category?.name || "Uncategorized"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
@@ -298,7 +394,7 @@ const FindWork = () => {
                     <MapPin size={16} /> {job.location}
                   </span>
                   <span className="font-bold text-green-400">
-                    ₱{job.price.toLocaleString()}
+                    ₱{job.price?.toLocaleString() || 0}
                   </span>
                 </div>
               </div>
@@ -306,7 +402,23 @@ const FindWork = () => {
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-center mt-10">No job posts found.</p>
+        <div className="text-center mt-10">
+          <p className="text-gray-500 mb-4">No job posts found.</p>
+          {search || location ? (
+            <p className="text-sm text-gray-400">
+              Try adjusting your search filters or{" "}
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setLocation("");
+                }}
+                className="text-blue-500 hover:underline"
+              >
+                clear all filters
+              </button>
+            </p>
+          ) : null}
+        </div>
       )}
     </div>
   );

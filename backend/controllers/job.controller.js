@@ -281,6 +281,7 @@ const isContentAppropriate = (text) => {
 };
 
 // Add this helper function after your existing helper functions
+// ✅ ENHANCED: Helper function to optimize job data for frontend
 const optimizeJobForResponse = (job) => {
   let clientName = "Anonymous Client";
 
@@ -305,6 +306,7 @@ const optimizeJobForResponse = (job) => {
     }
   }
 
+  // ✅ OPTIMIZED: Return only what frontend needs
   return {
     id: job._id,
     description: job.description,
@@ -315,24 +317,24 @@ const optimizeJobForResponse = (job) => {
     updatedAt: job.updatedAt,
     category: {
       id: job.category?._id || job.category,
-      name: job.categoryName || job.category?.categoryName,
+      name:
+        job.categoryName || job.category?.categoryName || "Unknown Category",
     },
     client: {
-      name: clientName,
+      name: clientName, // ✅ Decrypted client name
       profilePicture: client?.profilePicture?.url || null,
+      isVerified: true, // ✅ All clients are verified at this point
     },
-    hiredWorker:
-      job.hiredWorkerProfile || job.hiredWorker
-        ? {
-            id: (job.hiredWorkerProfile || job.hiredWorker)._id,
-            name: `${(job.hiredWorkerProfile || job.hiredWorker).firstName} ${
-              (job.hiredWorkerProfile || job.hiredWorker).lastName
-            }`.trim(),
-            profilePicture:
-              (job.hiredWorkerProfile || job.hiredWorker).profilePicture?.url ||
-              null,
-          }
-        : null,
+    hiredWorker: job.hiredWorker
+      ? {
+          id: job.hiredWorker._id,
+          name:
+            `${job.hiredWorker.firstName || ""} ${
+              job.hiredWorker.lastName || ""
+            }`.trim() || "Unknown Worker",
+          profilePicture: job.hiredWorker.profilePicture?.url || null,
+        }
+      : null,
   };
 };
 
@@ -394,6 +396,7 @@ const handleJobError = (
 // ==================== CONTROLLERS ====================
 
 // ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
+// ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
 const getAllJobs = async (req, res) => {
   const startTime = Date.now();
 
@@ -423,123 +426,93 @@ const getAllJobs = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize inputs
+    // ✅ Sanitize all inputs
     const sanitizedQuery = sanitizeInput(value);
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      location,
-      search,
-      status,
-      sortBy = "createdAt",
-      order = "desc",
-    } = sanitizedQuery;
+    const { page, limit, category, location, search, status, sortBy, order } =
+      sanitizedQuery;
 
-    // ✅ Build base filter
-    const filter = { isDeleted: false };
+    // Build filter - only show verified jobs from verified clients
+    const filter = {
+      isVerified: true,
+      isDeleted: false,
+    };
 
-    if (category) filter.category = category;
-    if (location) filter.location = { $regex: location, $options: "i" };
-    if (status) filter.status = status;
-    if (search) filter.description = { $regex: search, $options: "i" };
+    // Category filter
+    if (category) {
+      filter.category = category;
+    }
+
+    // Location filter (case-insensitive partial match)
+    if (location) {
+      filter.location = { $regex: location, $options: "i" };
+    }
+
+    // Status filter
+    if (status) {
+      filter.status = status;
+    }
+
+    // Search filter (search in description)
+    if (search) {
+      filter.description = { $regex: search, $options: "i" };
+    }
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // ✅ Get jobs with optimized aggregation pipeline
-    const jobs = await Job.aggregate([
-      { $match: filter },
-      // Lookup client profile
-      {
-        $lookup: {
-          from: "clients",
-          localField: "clientId",
-          foreignField: "_id",
-          as: "clientProfile",
+    // ✅ FIXED: Use same approach as other functions with client verification
+    const jobs = await Job.find(filter)
+      .populate({
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+        populate: {
+          path: "credentialId",
+          match: { isVerified: true, isBlocked: { $ne: true } },
+          select: "email",
         },
-      },
-      // Lookup client credential to verify they're verified
-      {
-        $lookup: {
-          from: "credentials",
-          localField: "clientProfile.credentialId",
-          foreignField: "_id",
-          as: "clientCredential",
-        },
-      },
-      // Only include jobs from verified clients
-      {
-        $match: {
-          "clientCredential.isVerified": true,
-          "clientCredential.isBlocked": { $ne: true },
-        },
-      },
-      // Lookup category
-      {
-        $lookup: {
-          from: "skillcategories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryInfo",
-        },
-      },
-      // Lookup hired worker if exists
-      {
-        $lookup: {
-          from: "workers",
-          localField: "hiredWorker",
-          foreignField: "_id",
-          as: "hiredWorkerInfo",
-        },
-      },
-      {
-        $addFields: {
-          client: { $arrayElemAt: ["$clientProfile", 0] },
-          categoryName: { $arrayElemAt: ["$categoryInfo.categoryName", 0] },
-          hiredWorkerProfile: { $arrayElemAt: ["$hiredWorkerInfo", 0] },
-        },
-      },
-      {
-        $project: {
-          clientProfile: 0,
-          clientCredential: 0,
-          categoryInfo: 0,
-          hiredWorkerInfo: 0,
-          "client.credentialId": 0,
-        },
-      },
-      { $sort: { [sortBy]: sortOrder } },
-      { $skip: (page - 1) * limit },
-      { $limit: Number(limit) },
-    ]);
+      })
+      .populate("category", "categoryName")
+      .populate("hiredWorker", "firstName lastName profilePicture")
+      .sort({ [sortBy]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(); // ✅ Performance optimization
 
-    // ✅ Decrypt client names
-    const jobsWithDecryptedClients = jobs.map((job) => {
-      if (!job.clientProfile) return job;
+    // ✅ Filter out jobs from unverified clients (same as other functions)
+    const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
 
-      let decryptedFirstName = "";
-      let decryptedLastName = "";
-
-      try {
-        decryptedFirstName = decryptAES128(job.clientProfile.firstName);
-        decryptedLastName = decryptAES128(job.clientProfile.lastName);
-      } catch (err) {
-        logger.error("Decryption failed", {
-          jobId: job._id,
-          error: err.message,
-        });
-      }
-
-      return {
-        ...job,
-        clientProfile: {
-          ...job.clientProfile,
-          fullName: `${decryptedFirstName} ${decryptedLastName}`.trim(),
+    // ✅ Handle no jobs found
+    if (!verifiedJobs || verifiedJobs.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No jobs found",
+        code: "NO_JOBS_FOUND",
+        data: {
+          jobs: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: limit,
+            hasNextPage: false,
+            hasPrevPage: page > 1,
+          },
+          filters: {
+            category,
+            location,
+            search,
+            status,
+            sortBy,
+            order,
+          },
         },
-      };
-    });
+        meta: {
+          processingTime: `${Date.now() - startTime}ms`,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
 
-    // ✅ Total count
+    // ✅ Get total count for pagination (only verified jobs)
     const totalCount = await Job.countDocuments({
       ...filter,
       clientId: {
@@ -557,10 +530,11 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    const optimizedJobs = jobs.map(optimizeJobForResponse);
+    // ✅ FIXED: Use verifiedJobs and apply optimization with name decryption
+    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
 
     logger.info("Jobs retrieved successfully", {
-      totalJobs: jobs.length,
+      totalJobs: verifiedJobs.length,
       totalCount,
       page,
       limit,
@@ -571,18 +545,19 @@ const getAllJobs = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    // ✅ Set cache headers for public endpoint
     res.set({
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "public, max-age=300", // 5 minutes
       ETag: `"jobs-${Date.now()}"`,
       "X-Total-Count": totalCount.toString(),
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Jobs retrieved successfully",
       code: "JOBS_RETRIEVED",
       data: {
-        jobs: jobsWithDecryptedClients,
+        jobs: optimizedJobs, // ✅ Now with decrypted client names
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -591,7 +566,14 @@ const getAllJobs = async (req, res) => {
           hasNextPage: page < Math.ceil(totalCount / limit),
           hasPrevPage: page > 1,
         },
-        filters: { category, location, search, status, sortBy, order },
+        filters: {
+          category,
+          location,
+          search,
+          status,
+          sortBy,
+          order,
+        },
       },
       meta: {
         processingTime: `${processingTime}ms`,
