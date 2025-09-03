@@ -8,9 +8,10 @@ const {
   uploadSelfie,
   getVerificationStatus,
   deleteDocument,
+  getPendingVerifications,
 } = require("../controllers/userIDVerification");
 const verifyToken = require("../middleware/verifyToken");
-
+const verifyAdmin = require("../middleware/verifyAdmin");
 const router = express.Router();
 
 // ==================== MULTER CONFIGURATION ====================
@@ -163,6 +164,7 @@ router.delete(
   deleteDocument
 );
 
+router.get("/pending", statusRateLimit, verifyAdmin, getPendingVerifications);
 // ==================== ROUTE DOCUMENTATION ====================
 
 /*
@@ -190,6 +192,10 @@ API ENDPOINTS:
    - documentType: 'idPicture' or 'selfie'
    - Requires authentication
    - Rate limited: 20 requests per 15 minutes
-*/
 
+5. GET /id-verification/pending
+   - Get a list of pending verification requests
+   - Requires admin authentication
+   - Rate limited: 30 requests per minute
+*/
 module.exports = router;

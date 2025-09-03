@@ -138,8 +138,8 @@ const signupSchema = Joi.object({
       "any.required": "Contact number is required",
     }),
 
-  sex: Joi.string().valid("male", "female", "other").required().messages({
-    "any.only": "Sex must be 'male', 'female', or 'other'",
+  sex: Joi.string().valid("male", "female").required().messages({
+    "any.only": "Sex must be 'male' or 'female'",
     "any.required": "Sex is required",
   }),
 
@@ -153,11 +153,18 @@ const signupSchema = Joi.object({
   // }),
 
   maritalStatus: Joi.string()
-    .valid("single", "married", "divorced", "widowed")
+    .valid(
+      "single",
+      "married",
+      "separated",
+      "divorced",
+      "widowed",
+      "prefer not to say"
+    )
     .required()
     .messages({
       "any.only":
-        "Marital status must be 'single', 'married', 'divorced', or 'widowed'",
+        "Marital status must be 'single', 'married', 'separated', 'divorced', 'widowed', or 'prefer not to say'",
       "any.required": "Marital status is required",
     }),
 
@@ -283,35 +290,7 @@ const isPasswordStrong = (password) => {
   const hasDigit = /\d/.test(password);
   const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password);
 
-  // Check for common patterns
-  const hasSequential = /012|123|234|345|456|567|678|789|890|abc|bcd|cde/i.test(
-    password
-  );
-  const hasRepeated = /(.)\1{2,}/.test(password);
-
-  // Common password check
-  const commonPasswords = [
-    "password123",
-    "admin123",
-    "qwerty123",
-    "123456789",
-    "password1",
-    "welcome123",
-    "changeme123",
-  ];
-  const isCommon = commonPasswords.some((common) =>
-    password.toLowerCase().includes(common.toLowerCase())
-  );
-
-  return (
-    hasLower &&
-    hasUpper &&
-    hasDigit &&
-    hasSpecial &&
-    !hasSequential &&
-    !hasRepeated &&
-    !isCommon
-  );
+  return hasLower && hasUpper && hasDigit && hasSpecial;
 };
 
 const getPasswordStrengthFeedback = (password) => {
@@ -326,6 +305,60 @@ const getPasswordStrengthFeedback = (password) => {
   }
 
   return feedback;
+};
+
+const validateAge = (dateOfBirth) => {
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+
+  if (isNaN(birthDate.getTime())) {
+    return {
+      isValid: false,
+      error: "Invalid date format",
+      code: "INVALID_DATE",
+    };
+  }
+
+  if (birthDate > today) {
+    return {
+      isValid: false,
+      error: "Date of birth cannot be in the future",
+      code: "FUTURE_DATE",
+    };
+  }
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  if (age < 18) {
+    return {
+      isValid: false,
+      error: "You must be at least 18 years old to register",
+      code: "UNDERAGE",
+      currentAge: age,
+    };
+  }
+
+  if (age >= 100) {
+    return {
+      isValid: false,
+      error: "Please verify your date of birth (age cannot be 100 or above)",
+      code: "OVERAGE",
+      currentAge: age,
+    };
+  }
+
+  return {
+    isValid: true,
+    age: age,
+  };
 };
 
 const handleAuthError = (
@@ -503,6 +536,37 @@ const signup = async (req, res) => {
       maritalStatus,
       address,
     } = sanitizedData;
+
+    const passwordValidation = isPasswordStrong(password);
+    if (!passwordValidation) {
+      logger.warn("Sign up failed - weak password", {
+        email: email,
+        ip: req.ip,
+        userAgent: req.get("User-Agent"),
+        timestamp: new Date().toISOString(),
+      });
+      return res.status(400).json({
+        success: false,
+        message: "Password is too weak",
+        code: "WEAK_PASSWORD",
+      });
+    }
+
+    const ageValidation = validateAge(dateOfBirth);
+    if (!ageValidation.isValid) {
+      logger.warn("Sign up failed - invalid age", {
+        email: email,
+        ip: req.ip,
+        userAgent: req.get("User-Agent"),
+        timestamp: new Date().toISOString(),
+      });
+      return res.status(400).json({
+        success: false,
+        message: ageValidation.error,
+        code: ageValidation.code,
+        currentAge: ageValidation.currentAge,
+      });
+    }
 
     // ✅ Check for existing credentials
     const matchingCredential = await Credential.findOne({
