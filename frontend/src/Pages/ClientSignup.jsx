@@ -105,7 +105,7 @@ const ClientSignup = () => {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSymbol = /[^A-Za-z0-9]/.test(password);
-    const isLongEnough = password.length >= 8;
+    const isLongEnough = password.length >= 12;
 
     if (!password) {
       newErrors.password = "Password is required.";
@@ -394,7 +394,7 @@ const ClientSignup = () => {
               placeholder="Anthony"
             />
           </div>
-          <div>
+          {/* <div>
             <label
               htmlFor="suffixName"
               className="block mb-2 text-sm font-medium text-gray-900 text-left"
@@ -409,6 +409,28 @@ const ClientSignup = () => {
               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
               placeholder="Jr."
             />
+          </div> */}
+          <div>
+            <label
+              htmlFor="sex"
+              className="block mb-2 text-sm font-medium text-gray-900 text-left"
+            >
+              Suffix <span className="text-gray-500">(Optional)</span>
+            </label>
+            <select
+              id="suffixName"
+              value={formData.suffixName}
+              onChange={handleChange}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              required
+            >
+              <option value="">Select Suffix</option>
+              <option value="Jr.">Jr.</option>
+              <option value="Sr.">Sr.</option>
+              <option value="II.">II.</option>
+              <option value="III.">III.</option>
+              <option value="IV.">IV.</option>
+            </select>
           </div>
           <div>
             <label
@@ -467,7 +489,7 @@ const ClientSignup = () => {
                         : "text-red-600"
                     }
                   >
-                    At least 8 characters
+                    At least 12 characters
                   </li>
                   <li
                     className={
@@ -567,7 +589,7 @@ const ClientSignup = () => {
               htmlFor="sex"
               className="block mb-2 text-sm font-medium text-gray-900 text-left"
             >
-              Sex
+              Gender
             </label>
             <select
               id="sex"
@@ -576,11 +598,9 @@ const ClientSignup = () => {
               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
               required
             >
-              <option value="">Select sex</option>
+              <option value="">Select Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="other">Other</option>
-              <option value="prefer not to say">prefer not to say</option>
             </select>
           </div>
           <div>
