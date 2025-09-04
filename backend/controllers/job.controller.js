@@ -395,7 +395,6 @@ const handleJobError = (
 // ==================== CONTROLLERS ====================
 
 // ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
-// ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
 const getAllJobs = async (req, res) => {
   const startTime = Date.now();
 

@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const speakeasy = require("speakeasy");
 const qrcode = require("qrcode");
-const qrcodeTerminal = require("qrcode-terminal");
 const Joi = require("joi");
 const xss = require("xss");
 
@@ -181,7 +180,7 @@ const loginSchema = Joi.object({
   email: Joi.string()
     .email({
       minDomainSegments: 2,
-      tlds: { allow: VALID_TLDS }, // ✅ FIXED: Use TLDs without dots
+      tlds: { allow: VALID_TLDS },
     })
     .lowercase()
     .required()
@@ -206,12 +205,11 @@ const emailSchema = Joi.object({
   email: Joi.string()
     .email({
       minDomainSegments: 2,
-      tlds: { allow: VALID_TLDS }, // ✅ FIXED: Use TLDs without dots
+      tlds: { allow: VALID_TLDS },
     })
     .lowercase()
     .required()
     .custom((value, helpers) => {
-      // ✅ Additional domain validation
       const emailDomain = value.split("@")[1];
       if (!VALID_DOMAINS.includes(emailDomain)) {
         return helpers.error("email.domain", {
@@ -459,7 +457,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
         url: "",
         public_id: "",
       },
-      biography: pending.biography || "",
+      biography: "",
       skillsByCategory: [],
       portfolio: [],
       experience: [],
@@ -512,11 +510,6 @@ const signup = async (req, res) => {
         success: false,
         message: "Validation failed",
         code: "VALIDATION_ERROR",
-        errors: error.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-          value: detail.context?.value,
-        })),
       });
     }
 
@@ -657,7 +650,8 @@ const signup = async (req, res) => {
     });
 
     // ✅ Send verification email
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl =
+      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
     const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
 
     try {
@@ -1643,8 +1637,8 @@ const forgotPassword = async (req, res) => {
     }
 
     // ✅ Generate reset token
-    const token = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = token;
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = Date.now() + 1000 * 60 * 15; // 15 minutes
     await user.save();
 
@@ -1670,9 +1664,9 @@ const forgotPassword = async (req, res) => {
     }
 
     // ✅ Build reset URL and send email
-    const resetUrl = `${
-      process.env.FRONTEND_URL || "https://yourdomain.com"
-    }/reset-password?token=${token}`;
+    const frontendUrl =
+      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     try {
       const mailSent = await forgotPasswordMailer(
@@ -1843,6 +1837,175 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const resendEmailVerification = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error, value } = emailSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { email } = sanitizeInput(value);
+
+    const pending = await PendingSignup.findOne({
+      email: email,
+    }).select("+email +emailVerified +lastEmailResent +emailResendAttempts");
+
+    if (!pending) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending signup found for this email",
+        code: "PENDING_NOT_FOUND",
+        data: {
+          email: email,
+          suggestion: "Please start the signup process first",
+        },
+      });
+    }
+
+    if (pending.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified",
+        code: "EMAIL_ALREADY_VERIFIED",
+        data: {
+          email: email,
+          nextStep: "Proceed to TOTP verification",
+        },
+      });
+    }
+
+    // Rate limiting (2 minutes)
+    const emailResendCooldown = 2 * 60 * 1000;
+    if (
+      pending.lastEmailResent &&
+      Date.now() - pending.lastEmailResent < emailResendCooldown
+    ) {
+      const remainingTime = Math.ceil(
+        (emailResendCooldown - (Date.now() - pending.lastEmailResent)) / 1000
+      );
+
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${Math.ceil(
+          remainingTime / 60
+        )} minutes before requesting another verification email`,
+        code: "EMAIL_RESEND_RATE_LIMITED",
+        data: {
+          email: email,
+          retryAfter: remainingTime,
+          nextAvailableAt: new Date(
+            Date.now() + remainingTime * 1000
+          ).toISOString(),
+        },
+      });
+    }
+
+    // Daily limit (max 5 resends)
+    const dailyLimit = 5;
+    const emailResendAttempts = pending.emailResendAttempts || 0;
+
+    if (emailResendAttempts >= dailyLimit) {
+      return res.status(429).json({
+        success: false,
+        message:
+          "Daily email resend limit exceeded. Please try again tomorrow or contact support.",
+        code: "EMAIL_RESEND_LIMIT_EXCEEDED",
+        data: {
+          email: email,
+          attemptsUsed: emailResendAttempts,
+          dailyLimit: dailyLimit,
+        },
+      });
+    }
+
+    // Generate new verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    const emailVerificationExpires = Date.now() + 1000 * 60 * 60 * 24;
+
+    // Update pending signup
+    pending.emailVerificationToken = emailVerificationToken;
+    pending.emailVerificationExpires = emailVerificationExpires;
+    pending.lastEmailResent = Date.now();
+    pending.emailResendAttempts = (pending.emailResendAttempts || 0) + 1;
+    await pending.save();
+
+    // Send verification email
+    const frontendUrl =
+      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+    const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
+
+    try {
+      await sendVerificationEmail(email, verifyUrl);
+
+      const processingTime = Date.now() - startTime;
+
+      res.status(200).json({
+        success: true,
+        message: "Verification email sent successfully",
+        code: "EMAIL_RESENT_SUCCESS",
+        data: {
+          email: email,
+          attemptsUsed: pending.emailResendAttempts,
+          attemptsRemaining: dailyLimit - pending.emailResendAttempts,
+          nextResendAvailable: new Date(
+            Date.now() + emailResendCooldown
+          ).toISOString(),
+          expiresAt: new Date(emailVerificationExpires).toISOString(),
+          estimatedDelivery: "Within 5-10 minutes",
+        },
+        meta: {
+          processingTime: `${processingTime}ms`,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (emailError) {
+      logger.error("Failed to resend verification email", {
+        error: emailError.message,
+        email: email,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again later.",
+        code: "EMAIL_SEND_FAILED",
+        data: {
+          email: email,
+          canRetry: true,
+          retryAfter: 60,
+        },
+      });
+    }
+  } catch (err) {
+    const processingTime = Date.now() - startTime;
+
+    logger.error("Resend email verification failed", {
+      error: err.message,
+      stack: err.stack,
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return handleAuthError(err, res, "Resend email verification", req);
+  }
+};
+
 const getQRCode = async (req, res) => {
   const startTime = Date.now();
 
@@ -1963,5 +2126,6 @@ module.exports = {
   logout,
   forgotPassword,
   resetPassword,
+  resendEmailVerification,
   getQRCode,
 };

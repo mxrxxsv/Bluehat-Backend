@@ -98,6 +98,14 @@ const pendingSignupSchema = new mongoose.Schema({
   verifyAttempts: { type: Number, default: 0 },
   blockedUntil: { type: Date },
   lastResendAt: Date,
+  lastEmailResent: {
+    type: Date,
+    default: null,
+  },
+  emailResendAttempts: {
+    type: Number,
+    default: 0,
+  },
   createdAt: { type: Date, default: Date.now, expires: 86400 }, // 1 day TTL
 });
 

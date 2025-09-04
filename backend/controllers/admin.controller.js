@@ -58,7 +58,9 @@ const adminSignupSchema = Joi.object({
   password: Joi.string()
     .min(8)
     .max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .pattern(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]+$/
+    )
     .required()
     .messages({
       "string.min": "Password must be at least 8 characters",
@@ -240,7 +242,7 @@ const signup = async (req, res) => {
 
       return res.status(409).json({
         success: false,
-        message: "Username already exists. Please choose a different one.",
+        message: "Username is invalid. Please choose a different one.",
         code: "USERNAME_EXISTS",
       });
     }
@@ -424,9 +426,7 @@ const login = async (req, res) => {
           id: admin._id,
           firstName: admin.firstName,
           lastName: admin.lastName,
-          userName: admin.userName,
           role: "admin",
-          lastLogin: admin.lastLogin,
         },
       },
       meta: {
