@@ -29,6 +29,7 @@ const verifyAdmin = async (req, res, next) => {
 
     // Set complete admin object (not just decoded token)
     req.admin = admin;
+    req.admin.role = "admin";
     next();
   } catch (error) {
     console.error("Admin verification error:", error);

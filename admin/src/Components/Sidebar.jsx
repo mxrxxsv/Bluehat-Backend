@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { logout } from "../Api/auth";
 import Logo from "./../assets/image.png";
 import { UserCog, Users, LogOut } from "lucide-react";
@@ -91,8 +91,8 @@ const Sidebar = () => {
 
             {/* Dashboard */}
             <li>
-              <a
-                href="#"
+              <Link
+                to="/dashboard"
                 className="flex items-center p-2 text-gray-900 rounded-lg group hover:border-blue-300 hover:border-l-4"
               >
                 <svg
@@ -105,7 +105,7 @@ const Sidebar = () => {
                   <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z" />
                 </svg>
                 <span className="ms-3">Dashboard</span>
-              </a>
+              </Link>
             </li>
 
             {/* User Management with Dropdown */}
@@ -203,8 +203,8 @@ const Sidebar = () => {
 
             {/* Advertisement */}
             <li>
-              <a
-                href="#"
+              <Link
+                to={"/advertisement"}
                 className="flex items-center p-2 text-gray-900 rounded-lg  group hover:border-blue-300 hover:border-l-4"
               >
                 <svg
@@ -217,7 +217,7 @@ const Sidebar = () => {
                   <path d="M17 5.923A1 1 0 0 0 16 5h-3V4a4 4 0 1 0-8 0v1H2a1 1 0 0 0-1 .923L.086 17.846A2 2 0 0 0 2.08 20h13.84a2 2 0 0 0 1.994-2.153L17 5.923ZM7 9a1 1 0 0 1-2 0V7h2v2Zm0-5a2 2 0 1 1 4 0v1H7V4Zm6 5a1 1 0 1 1-2 0V7h2v2Z" />
                 </svg>
                 <span className="flex-1 ms-3 whitespace-nowrap">Advertisement</span>
-              </a>
+              </Link>
             </li>
 
             {/* ✅ Logout */}
