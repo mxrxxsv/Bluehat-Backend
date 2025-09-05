@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return ;
 
   return authenticated ? children : <Navigate to="/" replace />;
 }

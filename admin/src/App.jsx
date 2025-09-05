@@ -2,7 +2,8 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from './Components/Sidebar';
 import Login from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
-import ProtectedRoute from './Components/ProtectedRoute'; 
+import Advertisement from "./Pages/Advertisment";
+import ProtectedRoute from './Components/ProtectedRoute';
 
 function App() {
   const location = useLocation();
@@ -25,7 +26,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/advertisement"
+            element={
+              <ProtectedRoute>
+                <Advertisement />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
+
+
       </div>
     </div>
   );
