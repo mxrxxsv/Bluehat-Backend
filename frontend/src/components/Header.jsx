@@ -201,7 +201,7 @@ const Header = () => {
                             <li>
                               <button
                                 onClick={goToProfile}
-                                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
                               >
                                 Profile
                               </button>
@@ -209,7 +209,7 @@ const Header = () => {
                             <li>
                               <button
                                 onClick={handleLogout}
-                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 cursor-pointer"
                               >
                                 Logout
                               </button>
