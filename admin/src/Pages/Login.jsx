@@ -95,7 +95,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="w-full text-white bg-blue-300 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center block"
+                className="w-full text-white bg-blue-300 hover:bg-blue-400 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center block cursor-pointer"
               >
                 Log in
               </button>
@@ -106,7 +106,7 @@ const Login = () => {
 
       {/* Modal for code verification */}
       {showCodeModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
+        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-20">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
             <h2 className="text-xl font-semibold text-center mb-4">Enter Verification Code</h2>
             <input
@@ -128,14 +128,14 @@ const Login = () => {
             <button
               onClick={handleVerifyCode}
               disabled={loading}
-              className="w-full text-white bg-blue-300 hover:bg-blue-400 disabled:opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+              className="w-full text-white bg-blue-300 hover:bg-blue-400 disabled:opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 text-center cursor-pointer"
             >
               {loading ? "Verifying..." : "Verify & Login"}
             </button>
             <button
               onClick={() => setShowCodeModal(false)}
               disabled={loading}
-              className="w-full mt-2 text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+              className="w-full mt-2 text-gray-700 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 font-medium rounded-lg text-sm px-5 py-2.5 text-center cursor-pointer"
             >
               Cancel
             </button>
