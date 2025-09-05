@@ -101,7 +101,7 @@ const Content = () => {
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition duration-200 cursor-pointer"
+              className="px-4 py-2 bg-[#55b3f3] text-white rounded-xl hover:bg-sky-700 transition duration-200 cursor-pointer"
             >
               Add Skill
             </button>
@@ -123,7 +123,7 @@ const Content = () => {
                   <span className="text-gray-700 font-medium">{cat.categoryName}</span>
                   <div className="flex gap-3">
                     <button
-                      className="text-blue-500 font-semibold hover:underline cursor-pointer"
+                      className="text-[#55b3f3] font-semibold hover:underline cursor-pointer"
                       onClick={() => {
                         setSelectedCategory(cat);
                         setEditCategoryName(cat.categoryName);
@@ -168,7 +168,7 @@ const Content = () => {
             </button>
             <button
               onClick={handleCreate}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition duration-200 cursor-pointer"
+              className="px-4 py-2 bg-[#55b3f3] text-white rounded-xl hover:bg-sky-700 transition duration-200 cursor-pointer"
             >
               Add
             </button>

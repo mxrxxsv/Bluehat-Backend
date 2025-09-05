@@ -110,7 +110,7 @@ const Login = () => {
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
             <h2 className="text-xl font-semibold text-center mb-4">Enter Verification Code</h2>
             <input
-              type="text"
+              type="password"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Enter code"
