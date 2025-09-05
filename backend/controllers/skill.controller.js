@@ -274,87 +274,39 @@ const getAllSkills = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate query parameters
     const { error, value } = getSkillsSchema.validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
     });
 
     if (error) {
-      logger.warn("Get skill categories validation failed", {
-        errors: error.details,
-        ip: req.ip,
-        userAgent: req.get("User-Agent"),
-        timestamp: new Date().toISOString(),
-      });
-
       return res.status(400).json({
         success: false,
         message: "Validation failed",
         code: "VALIDATION_ERROR",
-        errors: error.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
+        errors: error.details.map((d) => ({
+          field: d.path.join("."),
+          message: d.message,
         })),
       });
     }
 
-    const sanitizedQuery = sanitizeInput(value);
-    const { page, limit, search, sortBy, order, includeDeleted } =
-      sanitizedQuery;
+    const { page = 1, limit = 10, search, sortBy = "createdAt", order = "asc", includeDeleted = false } =
+      sanitizeInput(value);
+
     const skip = (page - 1) * limit;
 
-    // ✅ Build search filter with soft delete support
-    let filter = {};
+    const filter = {};
+    if (!includeDeleted) filter.isDeleted = false;
+    if (search) filter.categoryName = { $regex: search, $options: "i" };
 
-    // ✅ FIXED: Handle soft delete properly
-    if (!includeDeleted) {
-      filter.isDeleted = false;
-    }
-
-    if (search) {
-      filter.categoryName = {
-        $regex: search,
-        $options: "i",
-      };
-    }
-
-    // ✅ Build sort object
-    const sortObject = {};
-    sortObject[sortBy] = order === "asc" ? 1 : -1;
+    const sort = {};
+    sort[sortBy] = order === "asc" ? 1 : -1;
 
     const [categories, totalCount] = await Promise.all([
-      SkillCategory.find(filter)
-        .sort(sortObject)
-        .skip(skip)
-        .limit(limit)
-        .lean(), // ✅ Performance optimization
-
+      SkillCategory.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       SkillCategory.countDocuments(filter),
     ]);
-
-    const processingTime = Date.now() - startTime;
-
-    logger.info("Skill categories retrieved successfully", {
-      totalCategories: categories.length,
-      totalCount,
-      page,
-      limit,
-      search: search || "none",
-      sortBy,
-      order,
-      includeDeleted,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    // ✅ Set cache headers
-    res.set({
-      "Cache-Control": "public, max-age=300", // 5 minutes for public data
-      "X-Total-Count": totalCount.toString(),
-    });
 
     res.status(200).json({
       success: true,
@@ -367,85 +319,38 @@ const getAllSkills = async (req, res) => {
           totalPages: Math.ceil(totalCount / limit),
           totalItems: totalCount,
           itemsPerPage: limit,
-          hasNextPage: page < Math.ceil(totalCount / limit),
-          hasPrevPage: page > 1,
         },
-        filters: {
-          search: search || null,
-          sortBy,
-          order,
-          includeDeleted,
-        },
-      },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
       },
     });
   } catch (err) {
-    const processingTime = Date.now() - startTime;
-
-    logger.error("Get skill categories failed", {
-      error: err.message,
-      stack: err.stack,
-      query: req.query,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
     return handleSkillError(err, res, "Get skill categories", req);
   }
 };
 
-// GET SKILL CATEGORY BY ID
+// GET SKILL CATEGORY BY ID (with soft delete check)
 const getSkillByID = async (req, res) => {
-  const startTime = Date.now();
-
   try {
-    // ✅ Validate skill category ID
     const { error, value } = skillIdSchema.validate(req.params, {
       abortEarly: false,
       stripUnknown: true,
     });
 
     if (error) {
-      logger.warn("Get skill category by ID validation failed", {
-        errors: error.details,
-        params: req.params,
-        ip: req.ip,
-        userAgent: req.get("User-Agent"),
-        timestamp: new Date().toISOString(),
-      });
-
       return res.status(400).json({
         success: false,
         message: "Validation failed",
         code: "VALIDATION_ERROR",
-        errors: error.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
       });
     }
 
     const { id } = value;
 
-    // ✅ Find skill category (excluding soft deleted by default)
     const category = await SkillCategory.findOne({
       _id: id,
-      isDeleted: false, // ✅ FIXED: Respect soft delete
+      isDeleted: false, // soft delete check
     });
 
     if (!category) {
-      logger.warn("Skill category not found", {
-        categoryId: id,
-        ip: req.ip,
-        userAgent: req.get("User-Agent"),
-        timestamp: new Date().toISOString(),
-      });
-
       return res.status(404).json({
         success: false,
         message: "Skill category not found",
@@ -453,27 +358,8 @@ const getSkillByID = async (req, res) => {
       });
     }
 
-    // ✅ Count workers using this category with performance optimization
     const workerCount = await Worker.countDocuments({
       "skillsByCategory.skillCategoryId": category._id,
-    });
-
-    const processingTime = Date.now() - startTime;
-
-    logger.info("Skill category retrieved by ID", {
-      categoryId: category._id,
-      categoryName: category.categoryName,
-      workerCount,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    // ✅ Set cache headers
-    res.set({
-      "Cache-Control": "public, max-age=600", // 10 minutes for single category
-      ETag: `"${category._id}-${category.updatedAt.getTime()}"`,
     });
 
     res.status(200).json({
@@ -490,24 +376,8 @@ const getSkillByID = async (req, res) => {
           workerCount,
         },
       },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
-      },
     });
   } catch (err) {
-    const processingTime = Date.now() - startTime;
-
-    logger.error("Get skill category by ID failed", {
-      error: err.message,
-      stack: err.stack,
-      categoryId: req.params?.id,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
     return handleSkillError(err, res, "Get skill category by ID", req);
   }
 };

@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from './Components/Sidebar';
 import Login from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
+import Content from "./Pages/Content";
 import Advertisement from "./Pages/Advertisment";
 import ProtectedRoute from './Components/ProtectedRoute';
 
@@ -35,7 +36,20 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+          path="/content"
+          element={
+            <ProtectedRoute>
+              <Content />
+            </ProtectedRoute>
+          }
+        />
+        
         </Routes>
+
+        
+      
 
 
       </div>
