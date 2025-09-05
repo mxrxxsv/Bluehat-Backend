@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+* {
+    font-family: "Libre Franklin", sans-serif;
+  }
+  
+  body, html{
+    background-color: #f4f6f6;
+    overflow: auto;
+    height: 100%;
+    scroll-behavior: smooth;
+  }
+  
+  nav{
+    background-color: #f4f6f6;
+  }
