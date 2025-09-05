@@ -9,7 +9,6 @@ const connectDb = require("./db/connectDb");
 const { authLimiter, verifyLimiter } = require("./utils/rateLimit");
 
 const verRoute = require("./routes/ver.route");
-const uploadRoute = require("./routes/upload.route");
 const adminRoute = require("./routes/admin.route");
 const adminTaskRoute = require("./routes/adminTask.route");
 const adsRoute = require("./routes/advertisement.route");
@@ -18,7 +17,7 @@ const jobApplicationRoute = require("./routes/jobApplication.route");
 const skillsRoute = require("./routes/skill.route");
 const profileRoute = require("./routes/profile.route");
 const userIDVerificationRoute = require("./routes/userIDVerification");
-const allowedOrigins = [process.env.CLIENT_URL];
+const allowedOrigins = [process.env.FRONTEND_URL];
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -70,7 +69,6 @@ app.get("/healthz", (req, res) => res.sendStatus(200));
 app.use("/ver", verRoute);
 app.use("/admin", adminRoute);
 app.use("/admin-tasks", adminTaskRoute);
-app.use("/upload", uploadRoute);
 app.use("/advertisement", adsRoute);
 app.use("/jobs", jobRoute);
 app.use("/job-applications", jobApplicationRoute);
