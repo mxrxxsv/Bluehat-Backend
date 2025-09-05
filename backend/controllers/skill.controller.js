@@ -216,7 +216,6 @@ const addSkill = async (req, res) => {
     // ✅ Create new skill category
     const newCategory = new SkillCategory({
       categoryName: categoryName,
-      // ✅ FIXED: Removed manual createdAt/updatedAt - handled by timestamps: true
     });
 
     await newCategory.save();
@@ -291,8 +290,14 @@ const getAllSkills = async (req, res) => {
       });
     }
 
-    const { page = 1, limit = 10, search, sortBy = "createdAt", order = "asc", includeDeleted = false } =
-      sanitizeInput(value);
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      sortBy = "createdAt",
+      order = "asc",
+      includeDeleted = false,
+    } = sanitizeInput(value);
 
     const skip = (page - 1) * limit;
 

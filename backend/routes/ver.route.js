@@ -25,6 +25,7 @@ const {
   logout,
   forgotPassword,
   resetPassword,
+  resendEmailVerification,
   getQRCode,
 } = require("../controllers/ver.controller");
 
@@ -139,10 +140,22 @@ router.post("/verify", verifyLimiter, verifyCode, verify);
 router.post("/resend-code", verifyLimiter, /*verifyCaptcha,*/ resendCode);
 
 /**
+ * @route   POST /auth/resend-email-verification
+ * @desc    Resend email verification link
+ * @access  Public
+ */
+router.post(
+  "/resend-email-verification",
+  verifyLimiter,
+  /*verifyCaptcha,*/ resendEmailVerification
+);
+
+/**
  * @route   POST /auth/login
  * @desc    User login with credentials and TOTP
  * @access  Public
  */
+
 router.post("/login", authLimiter, /*verifyCaptcha,*/ login);
 
 /**
@@ -203,6 +216,7 @@ router.use("*", (req, res) => {
       "GET /auth/verify-email?token=xxx - Verify email address",
       "POST /auth/verify - Complete account setup with TOTP",
       "POST /auth/resend-code - Resend QR code for TOTP",
+      "POST /auth/resend-email-verification - Resend email verification link", // ✅ ADD this line
       "POST /auth/login - User login with credentials + TOTP",
       "POST /auth/forgot-password - Request password reset",
       "POST /auth/reset-password - Reset password with token",
