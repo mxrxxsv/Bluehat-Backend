@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
+import AddressInput from "../components/AddressInput";
 
 const currentUser = {
   avatar:
@@ -172,13 +173,13 @@ const FindWork = () => {
   // Filter jobs based on search inputs
   const filteredJobs = Array.isArray(jobPosts)
     ? jobPosts.filter((job) => {
-        const desc = job.description || "";
-        const loc = job.location || "";
-        return (
-          desc.toLowerCase().includes(search.toLowerCase()) &&
-          (location ? loc.toLowerCase().includes(location.toLowerCase()) : true)
-        );
-      })
+      const desc = job.description || "";
+      const loc = job.location || "";
+      return (
+        desc.toLowerCase().includes(search.toLowerCase()) &&
+        (location ? loc.toLowerCase().includes(location.toLowerCase()) : true)
+      );
+    })
     : [];
 
   return (
@@ -306,14 +307,12 @@ const FindWork = () => {
                 className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
                 rows="3"
               />
-              <input
-                type="text"
-                placeholder="Location"
+              {/* Replace the location input with PSGC address picker */}
+              <AddressInput
                 value={newJob.location}
-                onChange={(e) =>
-                  setNewJob({ ...newJob, location: e.target.value })
+                onChange={(address) =>
+                  setNewJob({ ...newJob, location: address })
                 }
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
