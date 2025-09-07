@@ -5,6 +5,7 @@ import Dashboard from './Pages/Dashboard';
 import Content from "./Pages/Content";
 import Advertisement from "./Pages/Advertisment";
 import ProtectedRoute from './Components/ProtectedRoute';
+import JobPending from "./Pages/JobPending";
 
 function App() {
   const location = useLocation();
@@ -45,8 +46,17 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
-        </Routes>
+
+        <Route
+          path="/job-pending"
+          element={
+            <ProtectedRoute>
+              <JobPending />
+            </ProtectedRoute>
+          }
+        />
+
+      </Routes>
 
         
       

@@ -6,18 +6,19 @@ import { UserCog, Users, LogOut } from "lucide-react";
 
 const Sidebar = () => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isContentDropdownOpen, setIsContentDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true); 
+      setIsLoggingOut(true);
       await logout(); // ✅ calls POST /admin/logout
       navigate("/"); // ✅ redirect to login page
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
-      setIsLoggingOut(false); 
+      setIsLoggingOut(false);
     }
   };
 
@@ -124,9 +125,8 @@ const Sidebar = () => {
                 </svg>
                 <span className="ms-3">User Management</span>
                 <svg
-                  className={`w-4 h-4 transition-transform ${
-                    isUserDropdownOpen ? "rotate-90" : ""
-                  }`}
+                  className={`w-4 h-4 ml-2 transition-transform ${isUserDropdownOpen ? "rotate-90" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -164,23 +164,71 @@ const Sidebar = () => {
               )}
             </li>
 
-            {/* Manage Content */}
+            {/* Manage Content with Dropdown */}
             <li>
-              <Link
-                to={"/content"}
-                className="flex items-center p-2 text-gray-900 rounded-lg group hover:border-blue-300 hover:border-l-4"
+              <button
+                onClick={() => setIsContentDropdownOpen(!isContentDropdownOpen)}
+                className="flex items-center w-full p-2 text-gray-900 rounded-lg group hover:border-blue-300 hover:border-l-4 cursor-pointer"
               >
-                <svg
-                  className="shrink-0 w-5 h-5 text-[#55b3f3]"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="shrink-0 w-5 h-5 text-[#55b3f3]"
+                  xmlns="http://www.w3.org/2000/svg" fill="currentColor"
+                  viewBox="0 0 20 20" >
                   <path d="m17.418 3.623-.018-.008a6.713 6.713 0 0 0-2.4-.569V2h1a1 1 0 1 0 0-2h-2a1 1 0 0 0-1 1v2H9.89A6.977 6.977 0 0 1 12 8v5h-2V8A5 5 0 1 0 0 8v6a1 1 0 0 0 1 1h8v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h6a1 1 0 0 0 1-1V8a5 5 0 0 0-2.582-4.377ZM6 12H4a1 1 0 0 1 0-2h2a1 1 0 0 1 0 2Z" />
                 </svg>
-                <span className="flex-1 ms-3 whitespace-nowrap">Manage Content</span>
-              </Link>
+                <span className="ms-3 whitespace-nowrap">Manage Content</span>
+                <svg
+                  className={`w-4 h-4 ml-2 transition-transform ${isContentDropdownOpen ? "rotate-90" : ""
+                    }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {isContentDropdownOpen && (
+                <ul className="ml-8 mt-2 space-y-2">
+                  {/* Skill Categories */}
+                  <li>
+                    <Link
+                      to="/content"
+                      className="flex items-center gap-2 p-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-5 h-5 text-gray-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M4 4h6v6H4V4Zm0 10h6v6H4v-6Zm10-10h6v6h-6V4Zm0 10h6v6h-6v-6Z" />
+                      </svg>
+                      <span>Skill Categories</span>
+                    </Link>
+                  </li>
+
+                  {/* Pending Jobs */}
+                  <li>
+                    <Link
+                      to="/job-pending"
+                      className="flex items-center gap-2 p-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-5 h-5 text-gray-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M6 2a2 2 0 0 0-2 2v16l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
+                      </svg>
+                      <span>Pending Jobs</span>
+                    </Link>
+                  </li>
+                </ul>
+              )}
             </li>
+
 
             {/* Verification */}
             <li>
