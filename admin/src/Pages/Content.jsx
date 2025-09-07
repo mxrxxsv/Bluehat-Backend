@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllSkills, addSkill, updateSkill, deleteSkill } from "../Api/skillApi";
+import { getPendingJobs, approveJob, rejectJob } from "../Api/jobApi";
 
 const Content = () => {
   const [categories, setCategories] = useState([]);
@@ -14,6 +15,7 @@ const Content = () => {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [showSkills, setShowSkills] = useState(true);
 
+  // ✅ Fetch skill categories
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -27,12 +29,12 @@ const Content = () => {
     } finally {
       setLoading(false);
     }
-  };
-
+  }
   useEffect(() => {
     fetchCategories();
   }, []);
 
+  // ✅ Skill CRUD
   const handleCreate = async () => {
     if (!newCategoryName.trim()) return;
     try {
@@ -50,18 +52,10 @@ const Content = () => {
 
   const handleUpdate = async () => {
     if (!selectedCategory || !editCategoryName.trim()) return;
-
     try {
       const res = await updateSkill(selectedCategory._id, { categoryName: editCategoryName });
       if (res.data.success) {
-        const updatedCategory = res.data.data.category;
-        setCategories((prev) =>
-          prev.map((cat) =>
-            cat._id === updatedCategory.id
-              ? { ...cat, categoryName: updatedCategory.categoryName }
-              : cat
-          )
-        );
+        fetchCategories();
         setSelectedCategory(null);
         setEditCategoryName("");
         setShowEditModal(false);
@@ -89,7 +83,8 @@ const Content = () => {
 
   return (
     <div className="p-4 sm:ml-64">
-      <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl shadow-md">
+      {/* === Skills Section === */}
+      <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl shadow-md mb-10">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Skill Categories</h1>
           <div className="flex gap-3">
@@ -149,7 +144,7 @@ const Content = () => {
         )}
       </div>
 
-      {/* ADD MODAL */}
+      {/* === Modals (Add/Edit/Delete for Skills) === */}
       {showAddModal && (
         <Modal title="Add New Skill" onClose={() => setShowAddModal(false)}>
           <input
@@ -176,7 +171,6 @@ const Content = () => {
         </Modal>
       )}
 
-      {/* EDIT MODAL */}
       {showEditModal && selectedCategory && (
         <Modal title="Edit Skill" onClose={() => setShowEditModal(false)}>
           <input
@@ -202,7 +196,6 @@ const Content = () => {
         </Modal>
       )}
 
-      {/* DELETE MODAL */}
       {showDeleteModal && categoryToDelete && (
         <Modal title="Confirm Delete" onClose={() => setShowDeleteModal(false)}>
           <p className="mb-4">
@@ -228,7 +221,7 @@ const Content = () => {
   );
 };
 
-// Reusable Modal Component
+// Reusable Modal
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex justify-center items-center z-50">
     <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-lg">
