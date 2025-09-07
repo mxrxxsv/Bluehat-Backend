@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { signup, verify, resendCode } from "../api/auth";
 import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
@@ -80,27 +80,90 @@ const ClientSignup = () => {
           [field]: value,
         },
       }));
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[`address.${field}`];
+        return copy;
+      });
     } else {
       setFormData((prev) => ({
         ...prev,
         [id]: type === "checkbox" ? checked : value,
       }));
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
     }
+  };
+
+  // Helper function for age validation
+  const validateAge = (dob) => {
+    if (!dob) return { isValid: false, error: "Date of birth is required.", code: "DOB_REQUIRED" };
+
+    const birthDate = new Date(dob);
+    if (isNaN(birthDate)) {
+      return { isValid: false, error: "Invalid date format.", code: "INVALID_DOB" };
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 18) {
+      return {
+        isValid: false,
+        error: "You must be at least 18 years old to sign up.",
+        code: "UNDERAGE",
+        currentAge: age
+      };
+    }
+
+    if (age > 100) {
+      return {
+        isValid: false,
+        error: "Age must be less than or equal to 100.",
+        code: "OVERAGE",
+        currentAge: age
+      };
+    }
+
+    return { isValid: true, currentAge: age };
   };
 
   const validate = () => {
     const newErrors = {};
-    const { firstName, lastName, email, password, confirm_password, agree } =
-      formData;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirm_password,
+      agree,
+      contactNumber,
+      sex,
+      dateOfBirth,
+      maritalStatus,
+      address: { region, province, city, barangay, street },
+    } = formData;
 
+    // Names
     if (!firstName.trim()) newErrors.firstName = "First name is required.";
     if (!lastName.trim()) newErrors.lastName = "Last name is required.";
+
+    // Email
     if (!email.trim()) {
       newErrors.email = "Email is required.";
     } else if (!/^\S+@\S+\.\S+$/.test(email)) {
       newErrors.email = "Enter a valid email address.";
     }
 
+    // Password strength
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
@@ -109,30 +172,83 @@ const ClientSignup = () => {
 
     if (!password) {
       newErrors.password = "Password is required.";
-    } else if (
-      !(hasUpperCase && hasLowerCase && hasNumber && hasSymbol && isLongEnough)
-    ) {
+    } else if (!(hasUpperCase && hasLowerCase && hasNumber && hasSymbol && isLongEnough)) {
       newErrors.password = "Password must meet all strength requirements.";
     }
 
+    // Confirm
     if (!confirm_password) {
       newErrors.confirm_password = "Please confirm your password.";
     } else if (password !== confirm_password) {
       newErrors.confirm_password = "Passwords do not match.";
     }
 
-    if (!agree) {
-      newErrors.agree = "You must agree to the Terms of Service.";
+    // Contact number (PH: 09xxxxxxxxx or +639xxxxxxxxx)
+    if (!contactNumber.trim()) {
+      newErrors.contactNumber = "Contact number is required.";
+    } else if (!/^(09\d{9}|(\+63)9\d{9})$/.test(contactNumber.trim())) {
+      newErrors.contactNumber = "Enter a valid PH mobile number (09xxxxxxxxx or +639xxxxxxxxx).";
     }
 
+    // Other required fields
+    if (!sex) newErrors.sex = "Gender is required.";
+    if (!dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required.";
+    } else {
+      const ageValidation = validateAge(dateOfBirth);
+      if (!ageValidation.isValid) {
+        newErrors.dateOfBirth = ageValidation.error; // ✅ same as backend logic
+      }
+    }
+    if (!maritalStatus) newErrors.maritalStatus = "Marital status is required.";
+
+    // Address required fields
+    if (!region) newErrors["address.region"] = "Region is required.";
+    if (!province) newErrors["address.province"] = "Province is required.";
+    if (!city) newErrors["address.city"] = "City / Municipality is required.";
+    if (!barangay) newErrors["address.barangay"] = "Barangay is required.";
+    if (!street.trim()) newErrors["address.street"] = "Street is required.";
+
+    // Terms
+    if (!agree) newErrors.agree = "You must agree to the Terms of Service.";
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    // Scroll to the first error in the same order as the form
+    const order = [
+      "firstName",
+      "lastName",
+      "middleName",
+      "suffixName",
+      "email",
+      "password",
+      "confirm_password",
+      "contactNumber",
+      "sex",
+      "dateOfBirth",
+      "maritalStatus",
+      "address.region",
+      "address.province",
+      "address.city",
+      "address.barangay",
+      "address.street",
+      "agree",
+    ];
+
+    const firstKey = order.find((k) => newErrors[k]);
+    if (firstKey) {
+      scrollToError(firstKey);
+      return false;
+    }
+    return true;
   };
+
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     setShowPasswordStrength(true);
     if (validate()) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setIsLoading(true);
       try {
         await signup(formData);
@@ -302,7 +418,40 @@ const ClientSignup = () => {
       ...prev,
       address: { ...prev.address, street: e.target.value },
     }));
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy["address.street"];
+      return copy;
+    });
   };
+
+  // --- add below your useState hooks ---
+
+  // Hold DOM refs for fields so we can scroll/focus the first one with an error
+  const fieldRefs = useRef({});
+  const setFieldRef = (key) => (el) => {
+    if (el) fieldRefs.current[key] = el;
+  };
+
+  const hasError = (key) => Boolean(errors[key]);
+
+  // Reusable input class with red highlight if there's an error
+  const inputClass = (key, extra = "") =>
+    `bg-gray-50 border ${hasError(key)
+      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+    } text-gray-900 text-sm rounded-lg block w-full p-2.5 ${extra}`;
+
+  // Smoothly scroll to a field by its key (matches what you pass to setFieldRef)
+  const scrollToError = (key) => {
+    const el = fieldRefs.current[key];
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      // focus after scroll to improve accessibility
+      setTimeout(() => el.focus?.({ preventScroll: true }), 250);
+    }
+  };
+
 
   return (
     <>
@@ -344,9 +493,11 @@ const ClientSignup = () => {
             <input
               type="text"
               id="firstName"
+              ref={setFieldRef("firstName")}
               value={formData.firstName}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("firstName")}
               placeholder="John"
               required
             />
@@ -364,11 +515,13 @@ const ClientSignup = () => {
               Last name
             </label>
             <input
+              ref={setFieldRef("lastName")}
               type="text"
               id="lastName"
               value={formData.lastName}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("lastName")}
               placeholder="Doe"
               required
             />
@@ -412,7 +565,7 @@ const ClientSignup = () => {
           </div> */}
           <div>
             <label
-              htmlFor="sex"
+              htmlFor="suffixName"
               className="block mb-2 text-sm font-medium text-gray-900 text-left"
             >
               Suffix <span className="text-gray-500">(Optional)</span>
@@ -422,14 +575,14 @@ const ClientSignup = () => {
               value={formData.suffixName}
               onChange={handleChange}
               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              required
+
             >
               <option value="">Select Suffix</option>
-              <option value="Jr.">Jr.</option>
-              <option value="Sr.">Sr.</option>
-              <option value="II.">II.</option>
-              <option value="III.">III.</option>
-              <option value="IV.">IV.</option>
+              <option value="Jr">Jr</option>
+              <option value="Sr">Sr</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
             </select>
           </div>
           <div>
@@ -440,11 +593,13 @@ const ClientSignup = () => {
               Email address
             </label>
             <input
+              ref={setFieldRef("email")}
               type="email"
               id="email"
               value={formData.email}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("email")}
               placeholder="john.doe@example.com"
               required
             />
@@ -463,13 +618,15 @@ const ClientSignup = () => {
                 Password
               </label>
               <input
+                ref={setFieldRef("password")}
                 type={showPassword ? "text" : "password"}
                 id="password"
                 value={formData.password}
                 onChange={handleChange}
                 onFocus={() => setShowPasswordStrength(true)}
                 onBlur={() => setShowPasswordStrength(false)}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
+                // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
+                className={inputClass("password", "pr-10")}
                 placeholder="********"
                 required
               />
@@ -484,7 +641,7 @@ const ClientSignup = () => {
                 <ul className="text-xs text-left text-gray-700 mt-1 ml-2 list-disc">
                   <li
                     className={
-                      formData.password.length >= 8
+                      formData.password.length >= 12
                         ? "text-green-600"
                         : "text-red-600"
                     }
@@ -544,11 +701,13 @@ const ClientSignup = () => {
                 Confirm Password
               </label>
               <input
+                ref={setFieldRef("confirm_password")}
                 type={showConfirmPassword ? "text" : "password"}
                 id="confirm_password"
                 value={formData.confirm_password}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
+                // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
+                className={inputClass("confirm_password", "pr-10")}
                 placeholder="********"
                 required
               />
@@ -575,14 +734,19 @@ const ClientSignup = () => {
               Contact Number
             </label>
             <input
+              ref={setFieldRef("contactNumber")}
               type="tel"
               id="contactNumber"
               value={formData.contactNumber}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("contactNumber")}
               placeholder="09123456789"
               required
             />
+            {errors.contactNumber && (
+              <p className="mt-1 text-sm text-red-500 text-left">{errors.contactNumber}</p>
+            )}
           </div>
           <div>
             <label
@@ -592,10 +756,12 @@ const ClientSignup = () => {
               Gender
             </label>
             <select
+              ref={setFieldRef("sex")}
               id="sex"
               value={formData.sex}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("sex")}
               required
             >
               <option value="">Select Gender</option>
@@ -611,13 +777,18 @@ const ClientSignup = () => {
               Date of Birth
             </label>
             <input
+              ref={setFieldRef("dateOfBirth")}
               type="date"
               id="dateOfBirth"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("dateOfBirth")}
               required
             />
+            {errors.dateOfBirth && (
+              <p className="text-red-500 text-sm mt-1 text-left">{errors.dateOfBirth}</p>
+            )}
           </div>
           <div>
             <label
@@ -627,10 +798,12 @@ const ClientSignup = () => {
               Marital Status
             </label>
             <select
+              ref={setFieldRef("maritalStatus")}
               id="maritalStatus"
               value={formData.maritalStatus}
               onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+              className={inputClass("maritalStatus")}
               required
             >
               <option value="">Select status</option>
@@ -653,9 +826,11 @@ const ClientSignup = () => {
             </label>
             <select
               id="region"
+              ref={setFieldRef("address.region")}
               value={formData.address.region}
               onChange={handleRegionChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              className={inputClass("address.region", "rounded-xl p-3 transition")}
               required
             >
               <option value="">Select Region</option>
@@ -677,9 +852,11 @@ const ClientSignup = () => {
             </label>
             <select
               id="province"
+              ref={setFieldRef("address.province")}
               value={formData.address.province || ""}
               onChange={handleProvinceChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              className={inputClass("address.province", "rounded-xl p-3 transition")}
               required
             >
               <option value="">Select Province</option>
@@ -701,9 +878,11 @@ const ClientSignup = () => {
             </label>
             <select
               id="city"
+              ref={setFieldRef("address.city")}
               value={formData.address.city}
               onChange={handleCityChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              className={inputClass("address.city", "rounded-xl p-3 transition")}
               required
             >
               <option value="">Select City</option>
@@ -725,9 +904,11 @@ const ClientSignup = () => {
             </label>
             <select
               id="barangay"
+              ref={setFieldRef("address.barangay")}
               value={formData.address.barangay}
               onChange={handleBarangayChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              className={inputClass("address.barangay", "rounded-xl p-3 transition")}
               required
             >
               <option value="">Select Barangay</option>
@@ -750,9 +931,11 @@ const ClientSignup = () => {
             <input
               type="text"
               id="street"
+              ref={setFieldRef("address.street")}
               value={formData.address.street}
               onChange={handleStreetChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 transition"
+              className={inputClass("address.street", "rounded-xl p-3 transition")}
               placeholder="Street"
               required
             />
@@ -859,7 +1042,7 @@ const ClientSignup = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="text-white bg-[#00a6f4] hover:bg-sky-400 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center"
+            className="text-white bg-[#00a6f4] hover:bg-sky-400 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center cursor-pointer"
           >
             Create Account
           </button>
@@ -904,9 +1087,8 @@ const ClientSignup = () => {
           )}
           <div className="flex justify-between items-center">
             <button
-              className={`text-sky-600 hover:underline ${
-                timer === 0 ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-              }`}
+              className={`text-sky-600 hover:underline ${timer === 0 ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
               disabled={timer !== 0 || isLoading}
               onClick={resendOtp}
             >
