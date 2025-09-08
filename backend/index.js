@@ -16,6 +16,7 @@ const jobRoute = require("./routes/job.route");
 const jobApplicationRoute = require("./routes/jobApplication.route");
 const skillsRoute = require("./routes/skill.route");
 const profileRoute = require("./routes/profile.route");
+const clientManagementRoute = require("./routes/clientManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification");
 const allowedOrigins = [process.env.FRONTEND_URL];
 const app = express();
@@ -75,6 +76,7 @@ app.use("/job-applications", jobApplicationRoute);
 app.use("/skills", skillsRoute);
 app.use("/profile", profileRoute);
 app.use("/id-verification", userIDVerificationRoute);
+app.use("/client-management", clientManagementRoute);
 // 8) 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Not Found" });

@@ -6,6 +6,7 @@ import Content from "./Pages/Content";
 import Advertisement from "./Pages/Advertisment";
 import ProtectedRoute from './Components/ProtectedRoute';
 import JobPending from "./Pages/JobPending";
+import ClientManagement from "./Pages/ClientManagement";
 
 function App() {
   const location = useLocation();
@@ -52,6 +53,15 @@ function App() {
           element={
             <ProtectedRoute>
               <JobPending />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/client-management"
+          element={
+            <ProtectedRoute>
+              <ClientManagement />
             </ProtectedRoute>
           }
         />
