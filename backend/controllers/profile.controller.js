@@ -152,7 +152,7 @@ const uploadProfilePicture = async (req, res) => {
     }
 
     const Model = req.user.userType === "client" ? Client : Worker;
-    const profile = await Model.findOne({ credentialId: req.user._id });
+    const profile = await Model.findOne({ credentialId: req.user.id }); 
 
     if (!profile) {
       return res.status(404).json({
@@ -170,7 +170,7 @@ const uploadProfilePicture = async (req, res) => {
         logger.warn("Failed to delete old profile picture", {
           publicId: profile.profilePicture.public_id,
           error: deleteError.message,
-          userId: req.user._id,
+          userId: req.user.id,
         });
       }
     }
@@ -181,7 +181,7 @@ const uploadProfilePicture = async (req, res) => {
         .upload_stream(
           {
             folder: "profile_pictures",
-            public_id: `${req.user.userType}_${req.user._id}_${Date.now()}`,
+            public_id: `${req.user.userType}_${req.user.id}_${Date.now()}`, 
             transformation: [
               { width: 500, height: 500, crop: "fill", gravity: "face" },
               { quality: "auto", fetch_format: "auto" },
@@ -205,7 +205,7 @@ const uploadProfilePicture = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Profile picture uploaded successfully", {
-      userId: req.user._id,
+      userId: req.user.id,
       userType: req.user.userType,
       profileId: profile._id,
       imageUrl: uploadResult.secure_url,
@@ -216,25 +216,31 @@ const uploadProfilePicture = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Profile picture uploaded successfully",
-      code: "PICTURE_UPLOADED",
-      data: {
-        profilePicture: {
-          url: uploadResult.secure_url,
-          public_id: uploadResult.public_id,
-        },
-      },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
-      },
+      data: { image: uploadResult.secure_url },
     });
   } catch (err) {
-    return handleProfileError(err, res, "Upload profile picture", req);
+    const processingTime = Date.now() - startTime;
+
+    logger.error("Profile picture upload failed", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id, 
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during image upload",
+      code: "UPLOAD_ERROR",
+    });
   }
 };
+
 
 const removeProfilePicture = async (req, res) => {
   const startTime = Date.now();

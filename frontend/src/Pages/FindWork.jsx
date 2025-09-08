@@ -39,51 +39,81 @@ const FindWork = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
+  // ✅ NEW: Draft and confirm modal state
+  const [draft, setDraft] = useState(null);
+  const [showDraftConfirm, setShowDraftConfirm] = useState(false);
+
+  // ✅ NEW: Reset form helper
+  const resetForm = () => {
+    setNewJob({ description: "", location: "", priceOffer: "" });
+    setSelectedCategory("");
+  };
+
+  // ✅ NEW: Handle modal close with draft check
+  const handleCloseModal = () => {
+    const hasInput =
+      newJob.description || newJob.location || newJob.priceOffer || selectedCategory;
+
+    if (hasInput) {
+      setShowDraftConfirm(true); // Ask user
+    } else {
+      resetForm();
+      setIsModalOpen(false);
+    }
+  };
+
+  // ✅ NEW: Save/Discard draft
+  const handleSaveDraft = () => {
+    setDraft({ ...newJob, category: selectedCategory });
+    setShowDraftConfirm(false);
+    setIsModalOpen(false);
+  };
+
+  const handleDiscardDraft = () => {
+    resetForm();
+    setDraft(null);
+    setShowDraftConfirm(false);
+    setIsModalOpen(false);
+  };
+
+  // ✅ NEW: Load draft when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      if (draft) {
+        setNewJob({
+          description: draft.description,
+          location: draft.location,
+          priceOffer: draft.priceOffer,
+        });
+        setSelectedCategory(draft.category);
+      } else {
+        resetForm();
+      }
+    }
+  }, [isModalOpen]);
+
+  // ================== YOUR EXISTING LOGIC ==================
+
   // ✅ EXTRACTED: Fetch jobs function for reuse
   const fetchJobs = async (useCache = true) => {
     try {
-      console.log("Fetching jobs..."); // Debug
-      const options = {
-        page: 1,
-        limit: 20,
-        status: "open",
-      };
-
-      // ✅ Add cache buster for manual refresh
-      if (!useCache) {
-        options._t = Date.now();
-      }
-
+      const options = { page: 1, limit: 20, status: "open" };
+      if (!useCache) options._t = Date.now(); // cache buster
       const response = await getAllJobs(options);
-
-      console.log("=== API RESPONSE DEBUG ===");
-      console.log("Full response:", response);
-      console.log("Response data:", response.data);
-      console.log("Jobs path:", response.data?.data?.jobs);
-      console.log("========================");
-
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs
         : [];
-
-      console.log("Jobs array:", jobsArray);
-      console.log("Jobs count:", jobsArray.length);
       setJobPosts(jobsArray);
       setLastRefreshTime(new Date());
     } catch (err) {
       console.error("Error fetching jobs:", err);
-      console.error("Error response:", err.response?.data);
     }
   };
 
-  // ✅ EFFICIENT: Manual refresh with cache busting
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await fetchJobs(false); // false = no cache, fresh data
-      console.log(
-        `Manual refresh completed at ${new Date().toLocaleTimeString()}`
-      );
+      await fetchJobs(false);
     } finally {
       setIsRefreshing(false);
     }
@@ -95,8 +125,7 @@ const FindWork = () => {
       try {
         const res = await axios.get("http://localhost:5000/skills");
         const cats = res.data?.data?.categories;
-        if (Array.isArray(cats)) setCategories(cats);
-        else setCategories([]);
+        setCategories(Array.isArray(cats) ? cats : []);
       } catch (err) {
         console.error("Error fetching categories:", err);
       }
@@ -104,25 +133,15 @@ const FindWork = () => {
     fetchCategories();
   }, []);
 
-  // ✅ EFFICIENT: Only initial fetch + refresh on page visibility
+  // Initial fetch + tab visibility refresh
   useEffect(() => {
-    // Initial fetch with cache
     fetchJobs(true);
-
-    // ✅ Refresh only when user returns to tab (not expensive)
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log("Page became visible, refreshing jobs...");
-        fetchJobs(false); // Fresh data when returning to tab
-      }
+      if (!document.hidden) fetchJobs(false);
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // Cleanup
-    return () => {
+    return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
   }, []);
 
   // Handle posting a new job
@@ -144,21 +163,16 @@ const FindWork = () => {
         category: selectedCategory,
       };
 
-      console.log("Creating job with data:", jobData);
       const response = await createJob(jobData);
-
-      console.log("Job creation response:", response);
       const jobCreated = response.data?.data || response.data;
-
       setJobPosts((prev) => [jobCreated, ...prev]);
-      setNewJob({ description: "", location: "", priceOffer: "" });
-      setSelectedCategory("");
+
+      resetForm();
       setIsModalOpen(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
-      console.error("Error response:", error.response?.data);
       alert(error.response?.data?.message || "Failed to post job");
     }
   };
@@ -170,7 +184,7 @@ const FindWork = () => {
       .catch(() => setUser(null));
   }, []);
 
-  // Filter jobs based on search inputs
+  // Filter jobs
   const filteredJobs = Array.isArray(jobPosts)
     ? jobPosts.filter((job) => {
       const desc = job.description || "";
@@ -183,10 +197,10 @@ const FindWork = () => {
     : [];
 
   return (
-    <div className="max-w-5xl mx-auto p-4 mt-20 md:mt-30">
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <Search className="relative left-2 top-11.5 md:left-12 md:top-5 text-gray-400 w-5 h-5 z-10" />
+        <Search className="relative left-2 top-11.5 md:left-12 md:top-2.5 text-gray-400 w-5 h-5 z-10" />
         <input
           type="text"
           placeholder="Search job titles or description"
@@ -201,26 +215,6 @@ const FindWork = () => {
           onChange={(e) => setLocation(e.target.value)}
           className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
-
-        {/* ✅ ENHANCED: Refresh button with last update time */}
-        <div className="flex flex-col items-center gap-1">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-          >
-            <RefreshCw
-              size={16}
-              className={isRefreshing ? "animate-spin" : ""}
-            />
-            {isRefreshing ? "Refreshing..." : "Refresh Jobs"}
-          </button>
-          {lastRefreshTime && (
-            <span className="text-xs text-gray-500 text-center">
-              Updated: {lastRefreshTime.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Post Box */}
@@ -230,10 +224,11 @@ const FindWork = () => {
       >
         <div className="flex items-center gap-3">
           <img
-            src={currentUser.avatar}
+            src={user?.image || currentUser.avatar}
             alt="Avatar"
             className="w-10 h-10 rounded-full object-cover"
           />
+
           <div className="flex-1 bg-gray-100 px-4 py-2 rounded-full text-gray-500 text-left">
             Post a work...
           </div>
@@ -244,8 +239,9 @@ const FindWork = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
+            {/* ✅ CHANGED: Close uses draft check */}
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={handleCloseModal}
               className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               <X size={20} />
@@ -256,17 +252,26 @@ const FindWork = () => {
               <div className="mt-6 pt-4">
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-[#252525] opacity-75">
-                      {user?.fullName || "Client Name"}
-                    </span>
+                    {/* <div className="flex items-center gap-2">
+                      
+                      <img
+                        src={user?.image || currentUser.avatar}
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                       */}
+                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                        {user?.fullName || "Client Name"}
+                      </span>
+                    {/* </div> */}
+
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                       <Clock size={16} /> Just now
                     </span>
                   </div>
                   <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                     <Briefcase size={20} className="text-blue-400" />
-                    {newJob.description ||
-                      "Job description will appear here..."}
+                    {newJob.description || "Job description will appear here..."}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {selectedCategory ? (
@@ -307,7 +312,6 @@ const FindWork = () => {
                 className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
                 rows="3"
               />
-              {/* Replace the location input with PSGC address picker */}
               <AddressInput
                 value={newJob.location}
                 onChange={(address) =>
@@ -353,9 +357,35 @@ const FindWork = () => {
         </div>
       )}
 
+      {/* Draft confirmation modal */}
+      {showDraftConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-40 z-50">
+          <div className="bg-white rounded-lg p-6 shadow-lg max-w-sm w-full text-center">
+            <h3 className="text-lg font-semibold mb-4">Save draft</h3>
+            <p className="text-gray-600 mb-6">
+              You have unsaved input. Do you want to save it as a draft or discard it?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={handleDiscardDraft}
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSaveDraft}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer transition-colors"
+              >
+                Save Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Success Modal */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
           <CheckCircle size={20} /> Job posted successfully!
         </div>
       )}

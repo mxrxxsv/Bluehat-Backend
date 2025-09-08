@@ -1523,7 +1523,7 @@ const checkAuth = async (req, res) => {
         isAuthenticated: credential.isAuthenticated,
         isVerified: credential.isVerified,
         address: decryptedAddress,
-        image: user.image || null,
+        image: user.profilePicture?.url || null,
         ...(userType === "worker" && { portfolio: user.portfolio || [] }), //portfolio now can be lack
       },
       meta: {
