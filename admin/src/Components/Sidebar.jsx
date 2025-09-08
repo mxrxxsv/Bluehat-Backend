@@ -143,13 +143,13 @@ const Sidebar = () => {
               {isUserDropdownOpen && (
                 <ul className="ml-8 mt-2 space-y-2">
                   <li>
-                    <a
-                      href="#"
+                    <Link
+                      to="/client-management"
                       className="flex items-center gap-2 p-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <UserCog className="w-5 h-5 text-gray-500 group-hover:text-gray-900" />
                       <span>Client Management</span>
-                    </a>
+                    </Link>
                   </li>
                   <li>
                     <a
