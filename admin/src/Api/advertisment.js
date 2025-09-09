@@ -3,7 +3,7 @@ import axios from "axios";
 // Axios instance for advertisements
 const advertisementApi = axios.create({
   baseURL: "http://localhost:5000/advertisement",
-  withCredentials: true, // ✅ cookies carry adminToken automatically
+  withCredentials: true, 
 });
 
 // ===== Advertisement API FUNCTIONS =====

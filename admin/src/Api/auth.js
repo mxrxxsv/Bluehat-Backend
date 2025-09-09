@@ -2,8 +2,8 @@ import axios from "axios";
 
 // ✅ Axios instance configured for cookies
 const auth = axios.create({
-  baseURL: "http://localhost:5000/admin", // adjust if needed
-  withCredentials: true, // 🔑 send/receive cookies
+  baseURL: "http://localhost:5000/admin", 
+  withCredentials: true, 
   headers: {
     "Content-Type": "application/json",
   },

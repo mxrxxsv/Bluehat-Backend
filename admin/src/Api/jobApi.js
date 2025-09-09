@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/jobs", // ✅ correct base
-  withCredentials: true, // if using cookies
+  baseURL: "http://localhost:5000/jobs", 
+  withCredentials: true, 
 });
 
 // ✅ Fetch all pending jobs
