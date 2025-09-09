@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 const Joi = require("joi");
 const xss = require("xss");
-const Client = require("../models/Client");
+const Worker = require("../models/Worker"); // ✅ Change to Worker model
 const Credential = require("../models/Credential");
 const { decryptAES128 } = require("../utils/encipher");
 const logger = require("../utils/logger");
 
 // ==================== JOI SCHEMAS ====================
-const blockClientSchema = Joi.object({
+const blockWorkerSchema = Joi.object({
   reason: Joi.string().trim().min(5).max(200).required().messages({
     "string.min": "Block reason must be at least 5 characters",
     "string.max": "Block reason cannot exceed 200 characters",
@@ -30,9 +30,8 @@ const sanitizeInput = (obj) => {
 };
 
 // ==================== CONTROLLERS ====================
-
-// Get all clients (decrypted) with pagination
-const getClients = async (req, res) => {
+// Get all workers (decrypted) with pagination
+const getWorkers = async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -53,13 +52,20 @@ const getClients = async (req, res) => {
         .messages({
           "any.only": "Status must be one of: blocked, active, all",
         }),
+      verificationStatus: Joi.string()
+        .valid("verified", "unverified", "all")
+        .default("all")
+        .messages({
+          "any.only":
+            "Verification status must be one of: verified, unverified, all",
+        }),
     }).validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
     });
 
     if (error) {
-      logger.warn("Get clients validation failed", {
+      logger.warn("Get workers validation failed", {
         errors: error.details,
         ip: req.ip,
         userAgent: req.get("User-Agent"),
@@ -79,16 +85,17 @@ const getClients = async (req, res) => {
 
     // ✅ Sanitize query parameters
     const sanitizedQuery = sanitizeInput(value);
-    const { page, sortBy, order, search, status } = sanitizedQuery;
+    const { page, sortBy, order, search, status, verificationStatus } =
+      sanitizedQuery;
 
-    // ✅ Fixed limit to 30 clients per page
+    // ✅ Fixed limit to 30 workers per page
     const limit = 30;
     const skip = (page - 1) * limit;
     const sortOrder = order === "asc" ? 1 : -1;
 
     // ✅ Build match conditions for aggregation
     const matchConditions = {
-      "cred.userType": "client",
+      "cred.userType": "worker", // ✅ Change to worker
     };
 
     // Add status filter
@@ -97,6 +104,15 @@ const getClients = async (req, res) => {
         matchConditions["cred.isBlocked"] = true;
       } else if (status === "active") {
         matchConditions["cred.isBlocked"] = { $ne: true };
+      }
+    }
+
+    // Add verification status filter
+    if (verificationStatus !== "all") {
+      if (verificationStatus === "verified") {
+        matchConditions["isVerified"] = true;
+      } else if (verificationStatus === "unverified") {
+        matchConditions["isVerified"] = { $ne: true };
       }
     }
 
@@ -124,6 +140,10 @@ const getClients = async (req, res) => {
           contactNumber: 1,
           dateOfBirth: 1,
           maritalStatus: 1,
+          isVerified: 1, // ✅ Worker specific field
+          verifiedAt: 1,
+          skills: 1, // ✅ Worker specific field
+          experience: 1, // ✅ Worker specific field
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
@@ -150,7 +170,7 @@ const getClients = async (req, res) => {
 
     // ✅ Get total count for pagination
     const totalCountPipeline = [...pipeline, { $count: "total" }];
-    const totalCountResult = await Client.aggregate(totalCountPipeline);
+    const totalCountResult = await Worker.aggregate(totalCountPipeline);
     const totalCount =
       totalCountResult.length > 0 ? totalCountResult[0].total : 0;
 
@@ -162,41 +182,41 @@ const getClients = async (req, res) => {
     );
 
     // ✅ Execute aggregation
-    const docs = await Client.aggregate(pipeline);
+    const docs = await Worker.aggregate(pipeline);
 
     // ✅ Decrypt sensitive data
     let successfulDecryptions = 0;
     let failedDecryptions = 0;
 
     for (let i = 0; i < docs.length; i++) {
-      const client = docs[i];
+      const worker = docs[i];
       try {
-        if (client.firstName)
-          client.firstName = decryptAES128(client.firstName);
-        if (client.lastName) client.lastName = decryptAES128(client.lastName);
-        if (client.middleName)
-          client.middleName = decryptAES128(client.middleName);
-        if (client.suffixName)
-          client.suffixName = decryptAES128(client.suffixName);
-        if (client.contactNumber)
-          client.contactNumber = decryptAES128(client.contactNumber);
-        if (client.address) {
-          if (client.address.street)
-            client.address.street = decryptAES128(client.address.street);
-          if (client.address.barangay)
-            client.address.barangay = decryptAES128(client.address.barangay);
-          if (client.address.city)
-            client.address.city = decryptAES128(client.address.city);
-          if (client.address.province)
-            client.address.province = decryptAES128(client.address.province);
-          if (client.address.region)
-            client.address.region = decryptAES128(client.address.region);
+        if (worker.firstName)
+          worker.firstName = decryptAES128(worker.firstName);
+        if (worker.lastName) worker.lastName = decryptAES128(worker.lastName);
+        if (worker.middleName)
+          worker.middleName = decryptAES128(worker.middleName);
+        if (worker.suffixName)
+          worker.suffixName = decryptAES128(worker.suffixName);
+        if (worker.contactNumber)
+          worker.contactNumber = decryptAES128(worker.contactNumber);
+        if (worker.address) {
+          if (worker.address.street)
+            worker.address.street = decryptAES128(worker.address.street);
+          if (worker.address.barangay)
+            worker.address.barangay = decryptAES128(worker.address.barangay);
+          if (worker.address.city)
+            worker.address.city = decryptAES128(worker.address.city);
+          if (worker.address.province)
+            worker.address.province = decryptAES128(worker.address.province);
+          if (worker.address.region)
+            worker.address.region = decryptAES128(worker.address.region);
         }
         successfulDecryptions++;
       } catch (decryptError) {
         logger.error("Decryption error", {
           error: decryptError.message,
-          clientId: client._id,
+          workerId: worker._id,
           timestamp: new Date().toISOString(),
         });
         failedDecryptions++;
@@ -209,7 +229,7 @@ const getClients = async (req, res) => {
     const hasPrevPage = page > 1;
 
     // ✅ Get statistics
-    const statsAggregation = await Client.aggregate([
+    const statsAggregation = await Worker.aggregate([
       {
         $lookup: {
           from: "credentials",
@@ -219,7 +239,7 @@ const getClients = async (req, res) => {
         },
       },
       { $unwind: "$cred" },
-      { $match: { "cred.userType": "client" } },
+      { $match: { "cred.userType": "worker" } },
       {
         $group: {
           _id: null,
@@ -229,6 +249,12 @@ const getClients = async (req, res) => {
           },
           active: {
             $sum: { $cond: [{ $ne: ["$cred.isBlocked", true] }, 1, 0] },
+          },
+          verified: {
+            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+          },
+          unverified: {
+            $sum: { $cond: [{ $ne: ["$isVerified", true] }, 1, 0] },
           },
         },
       },
@@ -240,33 +266,36 @@ const getClients = async (req, res) => {
             total: statsAggregation[0].total,
             blocked: statsAggregation[0].blocked,
             active: statsAggregation[0].active,
+            verified: statsAggregation[0].verified,
+            unverified: statsAggregation[0].unverified,
           }
-        : { total: 0, blocked: 0, active: 0 };
+        : { total: 0, blocked: 0, active: 0, verified: 0, unverified: 0 };
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Clients retrieved with pagination", {
+    logger.info("Workers retrieved with pagination", {
       page,
       limit,
       totalCount,
       totalPages,
-      clientsReturned: docs.length,
+      workersReturned: docs.length,
       successfulDecryptions,
       failedDecryptions,
       sortBy,
       order,
       search: search || "none",
       status,
+      verificationStatus,
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
 
     res.status(200).json({
       success: true,
-      message: "Clients retrieved successfully",
-      code: "CLIENTS_RETRIEVED",
+      message: "Workers retrieved successfully",
+      code: "WORKERS_RETRIEVED",
       data: {
-        clients: docs,
+        workers: docs,
         pagination: {
           currentPage: page,
           totalPages,
@@ -281,6 +310,7 @@ const getClients = async (req, res) => {
         filters: {
           search: search || null,
           status,
+          verificationStatus,
           sortBy,
           order,
         },
@@ -295,7 +325,7 @@ const getClients = async (req, res) => {
   } catch (error) {
     const processingTime = Date.now() - startTime;
 
-    logger.error("Error fetching clients", {
+    logger.error("Error fetching workers", {
       error: error.message,
       stack: error.stack,
       ip: req.ip,
@@ -306,8 +336,8 @@ const getClients = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to retrieve clients due to server error",
-      code: "CLIENTS_RETRIEVAL_ERROR",
+      message: "Failed to retrieve workers due to server error",
+      code: "WORKERS_RETRIEVAL_ERROR",
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
@@ -316,20 +346,135 @@ const getClients = async (req, res) => {
   }
 };
 
-// Block a client (update Credential)
-const blockClient = async (req, res) => {
+// Get single worker details by ID
+const getWorkerDetails = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { id } = req.params;
+
+    // Validate worker ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid worker ID format",
+        code: "INVALID_WORKER_ID",
+      });
+    }
+
+    // Find worker with credential data
+    const workerData = await Worker.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $lookup: {
+          from: "credentials",
+          localField: "credentialId",
+          foreignField: "_id",
+          as: "cred",
+        },
+      },
+      { $unwind: "$cred" },
+      { $match: { "cred.userType": "worker" } },
+      {
+        $project: {
+          firstName: 1,
+          middleName: 1,
+          lastName: 1,
+          suffixName: 1,
+          profilePicture: 1,
+          sex: 1,
+          address: 1,
+          contactNumber: 1,
+          dateOfBirth: 1,
+          maritalStatus: 1,
+          isVerified: 1,
+          verifiedAt: 1,
+          skills: 1,
+          experience: 1,
+          hourlyRate: 1,
+          portfolio: 1,
+          bio: 1,
+          createdAt: 1,
+          credentialId: "$cred._id",
+          email: "$cred.email",
+          userType: "$cred.userType",
+          isBlocked: "$cred.isBlocked",
+          blockReason: "$cred.blockReason",
+          blockedAt: "$cred.blockedAt",
+        },
+      },
+    ]);
+
+    if (!workerData || workerData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+        code: "WORKER_NOT_FOUND",
+      });
+    }
+
+    const worker = workerData[0];
+
+    // Decrypt sensitive data
+    try {
+      if (worker.firstName) worker.firstName = decryptAES128(worker.firstName);
+      if (worker.lastName) worker.lastName = decryptAES128(worker.lastName);
+      if (worker.middleName)
+        worker.middleName = decryptAES128(worker.middleName);
+      if (worker.suffixName)
+        worker.suffixName = decryptAES128(worker.suffixName);
+      if (worker.contactNumber)
+        worker.contactNumber = decryptAES128(worker.contactNumber);
+
+      if (worker.address) {
+        if (worker.address.street)
+          worker.address.street = decryptAES128(worker.address.street);
+        if (worker.address.barangay)
+          worker.address.barangay = decryptAES128(worker.address.barangay);
+        if (worker.address.city)
+          worker.address.city = decryptAES128(worker.address.city);
+        if (worker.address.province)
+          worker.address.province = decryptAES128(worker.address.province);
+        if (worker.address.region)
+          worker.address.region = decryptAES128(worker.address.region);
+      }
+    } catch (decryptError) {
+      logger.error("Decryption error for worker details", {
+        error: decryptError.message,
+        workerId: id,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Worker details retrieved successfully",
+      data: { worker },
+    });
+  } catch (error) {
+    logger.error("Error fetching worker details", { error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve worker details",
+    });
+  }
+};
+
+// Block a worker (update Credential)
+const blockWorker = async (req, res) => {
   const startTime = Date.now();
   try {
     const { id } = req.params;
-    const { error, value } = blockClientSchema.validate(req.body, {
+    const { error, value } = blockWorkerSchema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
     });
 
     if (error) {
-      logger.warn("Block client validation failed", {
+      logger.warn("Block worker validation failed", {
         errors: error.details,
-        clientId: id,
+        workerId: id,
       });
       return res.status(400).json({
         success: false,
@@ -346,11 +491,11 @@ const blockClient = async (req, res) => {
 
     // Find credential and block
     const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "client") {
+    if (!credential || credential.userType !== "worker") {
       return res.status(404).json({
         success: false,
-        message: "Client credential not found",
-        code: "CLIENT_NOT_FOUND",
+        message: "Worker credential not found",
+        code: "WORKER_NOT_FOUND",
       });
     }
 
@@ -359,17 +504,17 @@ const blockClient = async (req, res) => {
     credential.blockReason = sanitizedReason;
     await credential.save();
 
-    logger.info("Client blocked", {
-      clientId: id,
+    logger.info("Worker blocked", {
+      workerId: id,
       reason: sanitizedReason,
       processingTime: `${Date.now() - startTime}ms`,
     });
 
     res.status(200).json({
       success: true,
-      message: "Client blocked successfully",
+      message: "Worker blocked successfully",
       data: {
-        clientId: id,
+        workerId: id,
         blockedAt: credential.blockedAt,
         blockReason: credential.blockReason,
       },
@@ -379,28 +524,28 @@ const blockClient = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Error blocking client", { error: error.message });
+    logger.error("Error blocking worker", { error: error.message });
     res.status(500).json({
       success: false,
-      message: "Error blocking client",
+      message: "Error blocking worker",
       error: error.message,
     });
   }
 };
 
-// Unblock a client (update Credential)
-const unblockClient = async (req, res) => {
+// Unblock a worker (update Credential)
+const unblockWorker = async (req, res) => {
   const startTime = Date.now();
   try {
     const { id } = req.params;
 
     // Find credential and unblock
     const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "client") {
+    if (!credential || credential.userType !== "worker") {
       return res.status(404).json({
         success: false,
-        message: "Client credential not found",
-        code: "CLIENT_NOT_FOUND",
+        message: "Worker credential not found",
+        code: "WORKER_NOT_FOUND",
       });
     }
 
@@ -409,17 +554,17 @@ const unblockClient = async (req, res) => {
     credential.unblockNotes = "Unblocked by admin";
     await credential.save();
 
-    logger.info("Client unblocked", {
-      clientId: id,
+    logger.info("Worker unblocked", {
+      workerId: id,
       unblockedAt: credential.unblockedAt,
       processingTime: `${Date.now() - startTime}ms`,
     });
 
     res.status(200).json({
       success: true,
-      message: "Client unblocked successfully",
+      message: "Worker unblocked successfully",
       data: {
-        clientId: id,
+        workerId: id,
         unblockedAt: credential.unblockedAt,
       },
       meta: {
@@ -428,17 +573,18 @@ const unblockClient = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Error unblocking client", { error: error.message });
+    logger.error("Error unblocking worker", { error: error.message });
     res.status(500).json({
       success: false,
-      message: "Error unblocking client",
+      message: "Error unblocking worker",
       error: error.message,
     });
   }
 };
 
 module.exports = {
-  getClients,
-  blockClient,
-  unblockClient,
+  getWorkers,
+  getWorkerDetails,
+  blockWorker,
+  unblockWorker,
 };

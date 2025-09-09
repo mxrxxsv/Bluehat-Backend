@@ -35,8 +35,8 @@ API.interceptors.response.use(
   }
 );
 
-// Get all clients with pagination and filters
-export const getClients = async (params = {}) => {
+// Get all workers with pagination and filters
+export const getWorkers = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
 
@@ -47,21 +47,22 @@ export const getClients = async (params = {}) => {
     // Add filter parameters
     if (params.search) queryParams.append("search", params.search);
     if (params.status) queryParams.append("status", params.status);
+    if (params.verificationStatus)
+      queryParams.append("verificationStatus", params.verificationStatus);
     if (params.sortBy) queryParams.append("sortBy", params.sortBy);
     if (params.order) queryParams.append("order", params.order);
 
     console.log("API Request params:", params);
     console.log("Query string:", queryParams.toString());
 
-    // ✅ FIXED: Match backend route exactly
     const response = await API.get(
-      `/client-management/?${queryParams.toString()}`
+      `/worker-management?${queryParams.toString()}`
     );
 
     console.log("API Response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("getClients API Error:", error);
+    console.error("getWorkers API Error:", error);
 
     if (error.response) {
       console.error("Error response data:", error.response.data);
@@ -72,22 +73,42 @@ export const getClients = async (params = {}) => {
   }
 };
 
-// Block a client
-export const blockClient = async (credentialId, data) => {
+// Get worker details by ID
+export const getWorkerDetails = async (workerId) => {
   try {
-    console.log("Blocking client with credential ID:", credentialId);
+    console.log("Getting worker details for ID:", workerId);
+
+    const response = await API.get(`/worker-management/${workerId}`);
+
+    console.log("Worker details response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("getWorkerDetails API Error:", error);
+
+    if (error.response) {
+      console.error("Error response data:", error.response.data);
+      console.error("Error status:", error.response.status);
+    }
+
+    throw error;
+  }
+};
+
+// Block a worker
+export const blockWorker = async (credentialId, data) => {
+  try {
+    console.log("Blocking worker with credential ID:", credentialId);
     console.log("Block data:", data);
 
-    // ✅ FIXED: Match backend route exactly
     const response = await API.post(
-      `/client-management/${credentialId}/block`,
+      `/worker-management/${credentialId}/block`,
       data
     );
 
-    console.log("Block client response:", response.data);
+    console.log("Block worker response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("blockClient API Error:", error);
+    console.error("blockWorker API Error:", error);
 
     if (error.response) {
       console.error("Error response data:", error.response.data);
@@ -98,20 +119,19 @@ export const blockClient = async (credentialId, data) => {
   }
 };
 
-// Unblock a client
-export const unblockClient = async (credentialId) => {
+// Unblock a worker
+export const unblockWorker = async (credentialId) => {
   try {
-    console.log("Unblocking client with credential ID:", credentialId);
+    console.log("Unblocking worker with credential ID:", credentialId);
 
-    // ✅ FIXED: Match backend route exactly
     const response = await API.post(
-      `/client-management/${credentialId}/unblock`
+      `/worker-management/${credentialId}/unblock`
     );
 
-    console.log("Unblock client response:", response.data);
+    console.log("Unblock worker response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("unblockClient API Error:", error);
+    console.error("unblockWorker API Error:", error);
 
     if (error.response) {
       console.error("Error response data:", error.response.data);
@@ -121,34 +141,11 @@ export const unblockClient = async (credentialId) => {
     throw error;
   }
 };
-
-// ❌ REMOVED: This endpoint doesn't exist in backend
-// Get client details by ID
-// export const getClientDetails = async (clientId) => {
-//   try {
-//     console.log("Getting client details for ID:", clientId);
-
-//     const response = await API.get(`/api/client-management/${clientId}`);
-
-//     console.log("Client details response:", response.data);
-//     return response.data;
-//   } catch (error) {
-//     console.error("getClientDetails API Error:", error);
-
-//     if (error.response) {
-//       console.error("Error response data:", error.response.data);
-//       console.error("Error status:", error.response.status);
-//     }
-
-//     throw error;
-//   }
-// };
 
 // Health check
 export const healthCheck = async () => {
   try {
-    // ✅ FIXED: Match backend route exactly
-    const response = await API.get("/client-management/health");
+    const response = await API.get("/worker-management/health");
     return response.data;
   } catch (error) {
     console.error("Health check API Error:", error);

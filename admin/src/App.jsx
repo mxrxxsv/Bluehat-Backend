@@ -1,12 +1,13 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-import Sidebar from './Components/Sidebar';
-import Login from './Pages/Login';
-import Dashboard from './Pages/Dashboard';
+import Sidebar from "./Components/Sidebar";
+import Login from "./Pages/Login";
+import Dashboard from "./Pages/Dashboard";
 import Content from "./Pages/Content";
 import Advertisement from "./Pages/Advertisment";
-import ProtectedRoute from './Components/ProtectedRoute';
+import ProtectedRoute from "./Components/ProtectedRoute";
 import JobPending from "./Pages/JobPending";
 import ClientManagement from "./Pages/ClientManagement";
+import WorkerManagement from "./Pages/WorkerManagement";
 
 function App() {
   const location = useLocation();
@@ -40,38 +41,41 @@ function App() {
           />
 
           <Route
-          path="/content"
-          element={
-            <ProtectedRoute>
-              <Content />
-            </ProtectedRoute>
-          }
-        />
+            path="/content"
+            element={
+              <ProtectedRoute>
+                <Content />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/job-pending"
-          element={
-            <ProtectedRoute>
-              <JobPending />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/job-pending"
+            element={
+              <ProtectedRoute>
+                <JobPending />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/client-management"
-          element={
-            <ProtectedRoute>
-              <ClientManagement />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/client-management"
+            element={
+              <ProtectedRoute>
+                <ClientManagement />
+              </ProtectedRoute>
+            }
+          />
 
-      </Routes>
-
-        
-      
-
-
+          <Route
+            path="/worker-management"
+            element={
+              <ProtectedRoute>
+                <WorkerManagement />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </div>
     </div>
   );

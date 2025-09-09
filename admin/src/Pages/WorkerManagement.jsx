@@ -11,20 +11,28 @@ import {
   AlertTriangle,
   X,
   Loader,
+  UserCheck,
+  UserX,
+  Star,
+  MapPin,
+  Phone,
+  Calendar,
+  Shield,
 } from "lucide-react";
 import {
-  getClients,
-  blockClient,
-  unblockClient,
-} from "../Api/clientmanagement";
+  getWorkers,
+  blockWorker,
+  unblockWorker,
+  getWorkerDetails,
+} from "../Api/workermanagement";
 
-const ClientManagement = () => {
-  const [clients, setClients] = useState([]);
+const WorkerManagement = () => {
+  const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedWorker, setSelectedWorker] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
-  const [blockingClient, setBlockingClient] = useState(null);
+  const [blockingWorker, setBlockingWorker] = useState(null);
   const [blockReason, setBlockReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -34,34 +42,50 @@ const ClientManagement = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [verificationFilter, setVerificationFilter] = useState("all");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [statistics, setStatistics] = useState({
     total: 0,
     blocked: 0,
     active: 0,
+    verified: 0,
+    pending: 0,
   });
 
   useEffect(() => {
-    fetchClients();
-  }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
+    fetchWorkers();
+  }, [
+    currentPage,
+    searchTerm,
+    statusFilter,
+    verificationFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
-  const fetchClients = async () => {
+  const fetchWorkers = async () => {
     try {
       setLoading(true);
+      console.log("🔍 Fetching workers...");
 
       const params = {
         page: currentPage,
         search: searchTerm.trim() || undefined,
         status: statusFilter,
+        verification: verificationFilter,
         sortBy,
         order: sortOrder,
       };
 
-      const response = await getClients(params);
+      console.log("📤 Request params:", params);
 
-      if (response.success) {
-        setClients(response.data.clients || []);
+      const response = await getWorkers(params);
+      console.log("📥 API Response:", response);
+
+      if (response && response.success) {
+        console.log("✅ Workers data:", response.data.workers);
+        setWorkers(response.data.workers || []);
 
         // Update pagination info
         const pagination = response.data.pagination || {};
@@ -74,15 +98,29 @@ const ClientManagement = () => {
             total: 0,
             blocked: 0,
             active: 0,
+            verified: 0,
+            pending: 0,
           }
         );
       } else {
-        console.error("API returned error:", response.message);
-        setClients([]);
+        console.error("❌ API returned error:", response?.message);
+        setWorkers([]);
       }
     } catch (error) {
-      console.error("Error fetching clients:", error);
-      setClients([]);
+      console.error("💥 Error fetching workers:", error);
+      console.error("💥 Error details:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      setWorkers([]);
+
+      // Show user-friendly error
+      alert(
+        `Error loading workers: ${
+          error.response?.data?.message || error.message
+        }`
+      );
     } finally {
       setLoading(false);
     }
@@ -95,6 +133,11 @@ const ClientManagement = () => {
 
   const handleStatusFilter = (status) => {
     setStatusFilter(status);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handleVerificationFilter = (verification) => {
+    setVerificationFilter(verification);
     setCurrentPage(1); // Reset to first page when filtering
   };
 
@@ -112,61 +155,74 @@ const ClientManagement = () => {
     setCurrentPage(page);
   };
 
-  const viewClientDetails = (client) => {
-    setSelectedClient(client);
-    setShowModal(true);
+  const viewWorkerDetails = async (worker) => {
+    try {
+      setActionLoading(true);
+      const response = await getWorkerDetails(worker._id);
+      if (response.success) {
+        setSelectedWorker(response.data.worker);
+        setShowModal(true);
+      } else {
+        alert("Failed to load worker details");
+      }
+    } catch (error) {
+      console.error("Error loading worker details:", error);
+      alert("Failed to load worker details");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const closeModal = () => {
-    setSelectedClient(null);
+    setSelectedWorker(null);
     setShowModal(false);
   };
 
-  const openBlockModal = (client) => {
-    setBlockingClient(client);
+  const openBlockModal = (worker) => {
+    setBlockingWorker(worker);
     setBlockReason("");
     setShowBlockModal(true);
   };
 
   const closeBlockModal = () => {
-    setBlockingClient(null);
+    setBlockingWorker(null);
     setBlockReason("");
     setShowBlockModal(false);
   };
 
-  const handleBlockClient = async () => {
+  const handleBlockWorker = async () => {
     if (!blockReason.trim()) {
-      alert("Please provide a reason for blocking this client.");
+      alert("Please provide a reason for blocking this worker.");
       return;
     }
 
     try {
       setActionLoading(true);
 
-      const response = await blockClient(blockingClient.credentialId, {
+      const response = await blockWorker(blockingWorker.credentialId, {
         reason: blockReason.trim(),
       });
 
       if (response.success) {
-        // Refresh the clients list
-        await fetchClients();
+        // Refresh the workers list
+        await fetchWorkers();
         closeBlockModal();
-        alert("Client blocked successfully!");
+        alert("Worker blocked successfully!");
       } else {
-        alert(response.message || "Failed to block client");
+        alert(response.message || "Failed to block worker");
       }
     } catch (error) {
-      console.error("Error blocking client:", error);
-      alert("Failed to block client. Please try again.");
+      console.error("Error blocking worker:", error);
+      alert("Failed to block worker. Please try again.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleUnblockClient = async (client) => {
+  const handleUnblockWorker = async (worker) => {
     if (
       !confirm(
-        `Are you sure you want to unblock ${client.firstName} ${client.lastName}?`
+        `Are you sure you want to unblock ${worker.firstName} ${worker.lastName}?`
       )
     ) {
       return;
@@ -175,24 +231,25 @@ const ClientManagement = () => {
     try {
       setActionLoading(true);
 
-      const response = await unblockClient(client.credentialId);
+      const response = await unblockWorker(worker.credentialId);
 
       if (response.success) {
-        // Refresh the clients list
-        await fetchClients();
-        alert("Client unblocked successfully!");
+        // Refresh the workers list
+        await fetchWorkers();
+        alert("Worker unblocked successfully!");
       } else {
-        alert(response.message || "Failed to unblock client");
+        alert(response.message || "Failed to unblock worker");
       }
     } catch (error) {
-      console.error("Error unblocking client:", error);
-      alert("Failed to unblock client. Please try again.");
+      console.error("Error unblocking worker:", error);
+      alert("Failed to unblock worker. Please try again.");
     } finally {
       setActionLoading(false);
     }
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -217,27 +274,55 @@ const ClientManagement = () => {
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   };
 
+  const getVerificationBadge = (worker) => {
+    if (worker.isVerified) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <UserCheck className="w-3 h-3 mr-1" />
+          Verified
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <UserX className="w-3 h-3 mr-1" />
+          Pending
+        </span>
+      );
+    }
+  };
+
+  const getRatingDisplay = (rating) => {
+    if (!rating || rating === 0) return "No ratings";
+    return (
+      <div className="flex items-center gap-1">
+        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+        <span className="text-sm font-medium">{rating.toFixed(1)}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="p-4 sm:ml-64 overflow-hidden">
+    <div className="p-4 sm:ml-64">
       <div className="p-6 bg-white border border-gray-200 rounded-2xl shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Users className="w-7 h-7 text-blue-500" />
-            Client Management
+            Worker Management
           </h1>
           <div className="text-sm text-gray-500">
-            Total: {totalItems} clients
+            Total: {totalItems} workers
           </div>
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-600">
-                  Total Clients
+                  Total Workers
                 </p>
                 <p className="text-2xl font-bold text-blue-800">
                   {statistics.total}
@@ -250,7 +335,7 @@ const ClientManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600">
-                  Active Clients
+                  Active Workers
                 </p>
                 <p className="text-2xl font-bold text-green-800">
                   {statistics.active}
@@ -259,12 +344,32 @@ const ClientManagement = () => {
               <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600">Verified</p>
+                <p className="text-2xl font-bold text-purple-800">
+                  {statistics.verified}
+                </p>
+              </div>
+              <Shield className="w-8 h-8 text-purple-500" />
+            </div>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-800">
+                  {statistics.pending}
+                </p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-yellow-500" />
+            </div>
+          </div>
           <div className="bg-red-50 p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">
-                  Blocked Clients
-                </p>
+                <p className="text-sm font-medium text-red-600">Blocked</p>
                 <p className="text-2xl font-bold text-red-800">
                   {statistics.blocked}
                 </p>
@@ -275,13 +380,13 @@ const ClientManagement = () => {
         </div>
 
         {/* Filters and Search */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search by email..."
+              placeholder="Search by name or email..."
               value={searchTerm}
               onChange={handleSearch}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -292,7 +397,7 @@ const ClientManagement = () => {
           <div className="flex gap-2">
             <button
               onClick={() => handleStatusFilter("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === "all"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -302,7 +407,7 @@ const ClientManagement = () => {
             </button>
             <button
               onClick={() => handleStatusFilter("active")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === "active"
                   ? "bg-green-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -312,7 +417,7 @@ const ClientManagement = () => {
             </button>
             <button
               onClick={() => handleStatusFilter("blocked")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === "blocked"
                   ? "bg-red-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -321,24 +426,60 @@ const ClientManagement = () => {
               Blocked
             </button>
           </div>
+
+          {/* Verification Filter */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleVerificationFilter("all")}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                verificationFilter === "all"
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => handleVerificationFilter("verified")}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                verificationFilter === "verified"
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Verified
+            </button>
+            <button
+              onClick={() => handleVerificationFilter("pending")}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                verificationFilter === "pending"
+                  ? "bg-yellow-500 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Pending
+            </button>
+          </div>
         </div>
 
         {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader className="animate-spin w-8 h-8 text-blue-500" />
-            <span className="ml-2 text-gray-500">Loading clients...</span>
+            <span className="ml-2 text-gray-500">Loading workers...</span>
           </div>
-        ) : clients.length === 0 ? (
+        ) : workers.length === 0 ? (
           <div className="text-center py-12">
             <Users className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No clients found
+              No workers found
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || statusFilter !== "all"
+              {searchTerm ||
+              statusFilter !== "all" ||
+              verificationFilter !== "all"
                 ? "Try adjusting your search or filters."
-                : "No clients have registered yet."}
+                : "No workers have registered yet."}
             </p>
           </div>
         ) : (
@@ -370,9 +511,11 @@ const ClientManagement = () => {
                         </span>
                       )}
                     </th>
-                    <th className="px-6 py-3">Gender</th>
                     <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">City</th>
+                    <th className="px-6 py-3">Verification</th>
+                    <th className="px-6 py-3">Rating</th>
+                    <th className="px-6 py-3">Skills</th>
+                    <th className="px-6 py-3">Location</th>
                     <th className="px-6 py-3">Contact</th>
                     <th
                       className="px-6 py-3 cursor-pointer hover:bg-gray-200"
@@ -389,15 +532,15 @@ const ClientManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {clients.map((client) => (
+                  {workers.map((worker) => (
                     <tr
-                      key={client._id}
+                      key={worker._id}
                       className="hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-3">
                         <img
                           src={
-                            client.profilePicture?.url || "/default-avatar.png"
+                            worker.profilePicture?.url || "/default-avatar.png"
                           }
                           alt="Profile"
                           className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
@@ -405,21 +548,25 @@ const ClientManagement = () => {
                       </td>
                       <td className="px-6 py-3">
                         <div className="font-medium text-gray-900">
-                          {client.firstName}{" "}
-                          {client.middleName && `${client.middleName} `}
-                          {client.lastName}
-                          {client.suffixName && ` ${client.suffixName}`}
+                          {worker.firstName}{" "}
+                          {worker.middleName && `${worker.middleName} `}
+                          {worker.lastName}
+                          {worker.suffixName && ` ${worker.suffixName}`}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {worker.sex && `${worker.sex} • `}
+                          {worker.dateOfBirth &&
+                            `${calculateAge(worker.dateOfBirth)} years old`}
                         </div>
                       </td>
                       <td className="px-6 py-3">
-                        <div className="text-gray-900">{client.email}</div>
+                        <div className="text-gray-900">{worker.email}</div>
                         <div className="text-xs text-gray-500 capitalize">
-                          {client.userType}
+                          {worker.userType}
                         </div>
                       </td>
-                      <td className="px-6 py-3 capitalize">{client.sex}</td>
                       <td className="px-6 py-3">
-                        {client.isBlocked ? (
+                        {worker.isBlocked ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             <Ban className="w-3 h-3 mr-1" />
                             Blocked
@@ -431,23 +578,68 @@ const ClientManagement = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-3">{client.address?.city}</td>
-                      <td className="px-6 py-3">{client.contactNumber}</td>
+                      <td className="px-6 py-3">
+                        {getVerificationBadge(worker)}
+                      </td>
+                      <td className="px-6 py-3">
+                        {getRatingDisplay(worker.averageRating)}
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="max-w-32">
+                          {worker.skills && worker.skills.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {worker.skills.slice(0, 2).map((skill, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {worker.skills.length > 2 && (
+                                <span className="text-xs text-gray-500">
+                                  +{worker.skills.length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              No skills listed
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <MapPin className="w-3 h-3" />
+                          {worker.address?.city || "N/A"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                          <Phone className="w-3 h-3" />
+                          {worker.contactNumber}
+                        </div>
+                      </td>
                       <td className="px-6 py-3 text-gray-500">
-                        {formatDate(client.createdAt)}
+                        <div className="flex items-center gap-1 text-xs">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(worker.createdAt)}
+                        </div>
                       </td>
                       <td className="px-6 py-3">
                         <div className="flex gap-1">
                           <button
-                            onClick={() => viewClientDetails(client)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                            onClick={() => viewWorkerDetails(worker)}
+                            disabled={actionLoading}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
                           >
                             <Eye className="w-3 h-3" />
                             View
                           </button>
-                          {client.isBlocked ? (
+                          {worker.isBlocked ? (
                             <button
-                              onClick={() => handleUnblockClient(client)}
+                              onClick={() => handleUnblockWorker(worker)}
                               disabled={actionLoading}
                               className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50"
                             >
@@ -456,7 +648,7 @@ const ClientManagement = () => {
                             </button>
                           ) : (
                             <button
-                              onClick={() => openBlockModal(client)}
+                              onClick={() => openBlockModal(worker)}
                               disabled={actionLoading}
                               className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
                             >
@@ -477,7 +669,7 @@ const ClientManagement = () => {
               <div className="flex items-center justify-between mt-6">
                 <div className="text-sm text-gray-700">
                   Showing page {currentPage} of {totalPages} ({totalItems} total
-                  clients)
+                  workers)
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -524,13 +716,13 @@ const ClientManagement = () => {
           </>
         )}
 
-        {/* Client Details Modal */}
-        {showModal && selectedClient && (
+        {/* Worker Details Modal */}
+        {showModal && selectedWorker && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1000]">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">
-                  Client Details
+                  Worker Details
                 </h2>
                 <button
                   onClick={closeModal}
@@ -540,42 +732,56 @@ const ClientManagement = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Profile Section */}
-                <div className="flex items-center space-x-4">
+                <div className="flex items-start space-x-6">
                   <img
                     src={
-                      selectedClient.profilePicture?.url ||
+                      selectedWorker.profilePicture?.url ||
                       "/default-avatar.png"
                     }
                     alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
                   />
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {selectedClient.firstName}{" "}
-                      {selectedClient.middleName &&
-                        `${selectedClient.middleName} `}
-                      {selectedClient.lastName}{" "}
-                      {selectedClient.suffixName &&
-                        ` ${selectedClient.suffixName}`}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-medium text-gray-900">
+                      {selectedWorker.firstName}{" "}
+                      {selectedWorker.middleName &&
+                        `${selectedWorker.middleName} `}
+                      {selectedWorker.lastName}{" "}
+                      {selectedWorker.suffixName &&
+                        ` ${selectedWorker.suffixName}`}
                     </h3>
-                    <p className="text-sm text-gray-500">
-                      {selectedClient.email}
+                    <p className="text-sm text-gray-500 mb-2">
+                      {selectedWorker.email}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-sm text-gray-500 capitalize">
-                        {selectedClient.userType}
-                      </p>
-                      {selectedClient.isBlocked ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          <Ban className="w-3 h-3 mr-1" />
-                          Blocked
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Active
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-gray-500 capitalize">
+                          {selectedWorker.userType}
+                        </p>
+                        {selectedWorker.isBlocked ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <Ban className="w-3 h-3 mr-1" />
+                            Blocked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </span>
+                        )}
+                        {getVerificationBadge(selectedWorker)}
+                      </div>
+                    </div>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-4">
+                      {getRatingDisplay(selectedWorker.averageRating)}
+                      {selectedWorker.totalJobs && (
+                        <span className="text-sm text-gray-600">
+                          {selectedWorker.totalJobs} completed jobs
                         </span>
                       )}
                     </div>
@@ -583,105 +789,169 @@ const ClientManagement = () => {
                 </div>
 
                 {/* Block Reason */}
-                {selectedClient.isBlocked && selectedClient.blockReason && (
+                {selectedWorker.isBlocked && selectedWorker.blockReason && (
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                     <h4 className="font-medium text-red-800 mb-1">
                       Block Reason
                     </h4>
                     <p className="text-sm text-red-700">
-                      {selectedClient.blockReason}
+                      {selectedWorker.blockReason}
                     </p>
-                    {selectedClient.blockedAt && (
+                    {selectedWorker.blockedAt && (
                       <p className="text-xs text-red-600 mt-1">
-                        Blocked on: {formatDate(selectedClient.blockedAt)}
+                        Blocked on: {formatDate(selectedWorker.blockedAt)}
                       </p>
                     )}
                   </div>
                 )}
 
-                {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Personal Information */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-700 mb-2">
+                    <h4 className="font-medium text-gray-700 mb-3">
                       Personal Information
                     </h4>
                     <div className="space-y-2 text-sm">
                       <div>
                         <span className="font-medium">Gender:</span>{" "}
-                        <span className="capitalize">{selectedClient.sex}</span>
+                        <span className="capitalize">{selectedWorker.sex}</span>
                       </div>
                       <div>
                         <span className="font-medium">Date of Birth:</span>{" "}
-                        {selectedClient.dateOfBirth
-                          ? formatDOB(selectedClient.dateOfBirth)
+                        {selectedWorker.dateOfBirth
+                          ? formatDOB(selectedWorker.dateOfBirth)
                           : "N/A"}
                       </div>
                       <div>
                         <span className="font-medium">Age:</span>{" "}
-                        {selectedClient.dateOfBirth
+                        {selectedWorker.dateOfBirth
                           ? `${calculateAge(
-                              selectedClient.dateOfBirth
+                              selectedWorker.dateOfBirth
                             )} years old`
                           : "N/A"}
                       </div>
                       <div>
                         <span className="font-medium">Marital Status:</span>{" "}
                         <span className="capitalize">
-                          {selectedClient.maritalStatus || "N/A"}
+                          {selectedWorker.maritalStatus || "N/A"}
                         </span>
                       </div>
                     </div>
                   </div>
 
+                  {/* Contact Information */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-700 mb-2">
+                    <h4 className="font-medium text-gray-700 mb-3">
                       Contact Information
                     </h4>
                     <div className="space-y-2 text-sm">
                       <div>
                         <span className="font-medium">Email:</span>{" "}
-                        {selectedClient.email}
+                        {selectedWorker.email}
                       </div>
                       <div>
                         <span className="font-medium">Phone:</span>{" "}
-                        {selectedClient.contactNumber}
+                        {selectedWorker.contactNumber}
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Address Information */}
-                {selectedClient.address && (
+                {selectedWorker.address && (
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-700 mb-2">Address</h4>
+                    <h4 className="font-medium text-gray-700 mb-3">Address</h4>
                     <div className="text-sm text-gray-600">
-                      {selectedClient.address.street},{" "}
-                      {selectedClient.address.barangay},{" "}
-                      {selectedClient.address.city},{" "}
-                      {selectedClient.address.province},{" "}
-                      {selectedClient.address.region}
+                      {selectedWorker.address.street},{" "}
+                      {selectedWorker.address.barangay},{" "}
+                      {selectedWorker.address.city},{" "}
+                      {selectedWorker.address.province},{" "}
+                      {selectedWorker.address.region}
                     </div>
                   </div>
                 )}
 
+                {/* Skills */}
+                {selectedWorker.skills && selectedWorker.skills.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-700 mb-3">Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedWorker.skills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Work History */}
+                {selectedWorker.experience &&
+                  selectedWorker.experience.length > 0 && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">
+                        Work Experience
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedWorker.experience.map((exp, index) => (
+                          <div
+                            key={index}
+                            className="border-l-2 border-blue-200 pl-3"
+                          >
+                            <h5 className="font-medium text-gray-800">
+                              {exp.jobTitle}
+                            </h5>
+                            <p className="text-sm text-gray-600">
+                              {exp.company}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {exp.startDate} - {exp.endDate || "Present"}
+                            </p>
+                            {exp.description && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                {exp.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 {/* Account Information */}
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-700 mb-2">
+                  <h4 className="font-medium text-gray-700 mb-3">
                     Account Information
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="font-medium">Joined:</span>{" "}
-                      {formatDate(selectedClient.createdAt)}
+                      {formatDate(selectedWorker.createdAt)}
                     </div>
                     <div>
                       <span className="font-medium">Account ID:</span>{" "}
-                      {selectedClient._id}
+                      {selectedWorker._id}
                     </div>
-                    {selectedClient.credentialId && (
+                    {selectedWorker.credentialId && (
                       <div>
                         <span className="font-medium">Credential ID:</span>{" "}
-                        {selectedClient.credentialId}
+                        {selectedWorker.credentialId}
+                      </div>
+                    )}
+                    {selectedWorker.isVerified && selectedWorker.verifiedAt && (
+                      <div>
+                        <span className="font-medium">Verified Date:</span>{" "}
+                        {formatDate(selectedWorker.verifiedAt)}
+                      </div>
+                    )}
+                    {selectedWorker.lastLogin && (
+                      <div>
+                        <span className="font-medium">Last Login:</span>{" "}
+                        {formatDate(selectedWorker.lastLogin)}
                       </div>
                     )}
                   </div>
@@ -690,29 +960,29 @@ const ClientManagement = () => {
 
               {/* Modal Actions */}
               <div className="flex justify-end gap-2 mt-6">
-                {selectedClient.isBlocked ? (
+                {selectedWorker.isBlocked ? (
                   <button
                     onClick={() => {
-                      handleUnblockClient(selectedClient);
+                      handleUnblockWorker(selectedWorker);
                       closeModal();
                     }}
                     disabled={actionLoading}
                     className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Unblock Client
+                    Unblock Worker
                   </button>
                 ) : (
                   <button
                     onClick={() => {
                       closeModal();
-                      openBlockModal(selectedClient);
+                      openBlockModal(selectedWorker);
                     }}
                     disabled={actionLoading}
                     className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                   >
                     <Ban className="w-4 h-4" />
-                    Block Client
+                    Block Worker
                   </button>
                 )}
               </div>
@@ -720,13 +990,13 @@ const ClientManagement = () => {
           </div>
         )}
 
-        {/* Block Client Modal */}
-        {showBlockModal && blockingClient && (
+        {/* Block Worker Modal */}
+        {showBlockModal && blockingWorker && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1001]">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Block Client
+                  Block Worker
                 </h2>
                 <button
                   onClick={closeBlockModal}
@@ -741,9 +1011,9 @@ const ClientManagement = () => {
                   You are about to block:
                 </p>
                 <p className="font-medium text-gray-900">
-                  {blockingClient.firstName} {blockingClient.lastName}
+                  {blockingWorker.firstName} {blockingWorker.lastName}
                 </p>
-                <p className="text-sm text-gray-500">{blockingClient.email}</p>
+                <p className="text-sm text-gray-500">{blockingWorker.email}</p>
               </div>
 
               <div className="mb-6">
@@ -753,7 +1023,7 @@ const ClientManagement = () => {
                 <textarea
                   value={blockReason}
                   onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="Please provide a reason for blocking this client..."
+                  placeholder="Please provide a reason for blocking this worker..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                   rows={3}
                   maxLength={200}
@@ -772,7 +1042,7 @@ const ClientManagement = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleBlockClient}
+                  onClick={handleBlockWorker}
                   disabled={actionLoading || !blockReason.trim()}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                 >
@@ -781,7 +1051,7 @@ const ClientManagement = () => {
                   ) : (
                     <Ban className="w-4 h-4" />
                   )}
-                  Block Client
+                  Block Worker
                 </button>
               </div>
             </div>
@@ -792,4 +1062,4 @@ const ClientManagement = () => {
   );
 };
 
-export default ClientManagement;
+export default WorkerManagement;
