@@ -163,9 +163,13 @@ const FindWork = () => {
         category: selectedCategory,
       };
 
-      const response = await createJob(jobData);
-      const jobCreated = response.data?.data || response.data;
-      setJobPosts((prev) => [jobCreated, ...prev]);
+      // const response = await createJob(jobData);
+      // const jobCreated = response.data?.data || response.data;
+      // setJobPosts((prev) => [jobCreated, ...prev]);
+
+      await createJob(jobData);
+      // Refresh job list to include the new job
+      await fetchJobs(false);
 
       resetForm();
       setIsModalOpen(false);
@@ -260,9 +264,9 @@ const FindWork = () => {
                         className="w-8 h-8 rounded-full object-cover"
                       />
                        */}
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
-                        {user?.fullName || "Client Name"}
-                      </span>
+                    <span className="text-sm font-medium text-[#252525] opacity-75">
+                      {user?.fullName || "Client Name"}
+                    </span>
                     {/* </div> */}
 
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
@@ -312,6 +316,9 @@ const FindWork = () => {
                 className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
                 rows="3"
               />
+              <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
+                Address
+              </label>
               <AddressInput
                 value={newJob.location}
                 onChange={(address) =>
@@ -319,13 +326,13 @@ const FindWork = () => {
                 }
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+                <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
                   Category
                 </label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
+                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
@@ -392,7 +399,7 @@ const FindWork = () => {
 
       {/* Job Posts Display */}
       {filteredJobs.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
           {filteredJobs.map((job) => (
             <Link
               key={job.id || job._id}
@@ -405,9 +412,14 @@ const FindWork = () => {
                     {job.client?.name || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                    <Clock size={16} />
-                    {new Date(job.createdAt).toLocaleTimeString()}
+                    {/* <Clock size={16} /> */}
+                    {new Date(job.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </span>
+
                 </div>
                 <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                   <Briefcase size={20} className="text-blue-400" />

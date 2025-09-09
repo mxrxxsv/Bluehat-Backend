@@ -250,6 +250,7 @@ const isContentAppropriate = (text) => {
     "tangina",
     "kupal",
     "peste",
+    "titi",
   ];
 
   // Check for bad words

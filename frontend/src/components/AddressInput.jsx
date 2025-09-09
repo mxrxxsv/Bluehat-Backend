@@ -66,8 +66,8 @@ const AddressInput = ({ value, onChange }) => {
         ? barangays.find((b) => b.code === selectedBarangay)?.name
         : "",
       selectedCity ? cities.find((c) => c.code === selectedCity)?.name : "",
-      selectedProvince ? provinces.find((p) => p.code === selectedProvince)?.name : "",
-      selectedRegion ? regions.find((r) => r.code === selectedRegion)?.name : "",
+      // selectedProvince ? provinces.find((p) => p.code === selectedProvince)?.name : "",
+      // selectedRegion ? regions.find((r) => r.code === selectedRegion)?.name : "",
     ]
       .filter(Boolean)
       .join(", ");
@@ -80,7 +80,7 @@ const AddressInput = ({ value, onChange }) => {
       <select
         value={selectedRegion}
         onChange={(e) => setSelectedRegion(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
       >
         <option value="">Select Region</option>
         {regions.map((r) => (
@@ -94,7 +94,7 @@ const AddressInput = ({ value, onChange }) => {
       <select
         value={selectedProvince}
         onChange={(e) => setSelectedProvince(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
         disabled={!provinces.length}
       >
         <option value="">Select Province</option>
@@ -109,7 +109,7 @@ const AddressInput = ({ value, onChange }) => {
       <select
         value={selectedCity}
         onChange={(e) => setSelectedCity(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
         disabled={!cities.length}
       >
         <option value="">Select City/Municipality</option>
@@ -124,7 +124,7 @@ const AddressInput = ({ value, onChange }) => {
       <select
         value={selectedBarangay}
         onChange={(e) => setSelectedBarangay(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
         disabled={!barangays.length}
       >
         <option value="">Select Barangay</option>

@@ -782,14 +782,15 @@ const ClientSignup = () => {
               id="dateOfBirth"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
               className={inputClass("dateOfBirth")}
+              max={new Date().toISOString().split("T")[0]} // ✅ disallow future dates
               required
             />
             {errors.dateOfBirth && (
               <p className="text-red-500 text-sm mt-1 text-left">{errors.dateOfBirth}</p>
             )}
           </div>
+
           <div>
             <label
               htmlFor="maritalStatus"

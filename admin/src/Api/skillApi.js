@@ -3,7 +3,7 @@ import axios from "axios";
 // Axios instance for skills
 const skillApi = axios.create({
   baseURL: "http://localhost:5000/skills",
-  withCredentials: true, // ✅ send adminToken cookie automatically
+  withCredentials: true, 
 });
 
 // ===== Skill API FUNCTIONS =====

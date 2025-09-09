@@ -141,7 +141,7 @@ const Login = () => {
       )}
 
       {/* ✅ Main Layout */}
-      <div className="grid md:grid-cols-2 w-full max-w-7.5xl bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="grid md:grid-cols-2 w-full max-w-7.5xl bg-white rounded-lg shadow-md overflow-hidden mt-15">
         {/* Left Side Image */}
         <div className="hidden md:flex justify-center items-center p-8">
           <img src={cute} className="w-96 h-96 object-contain" alt="Cute" />
@@ -149,7 +149,7 @@ const Login = () => {
 
         {/* Right Side Form */}
         <div className="flex justify-center items-center p-8">
-          <div className="w-full max-w-md space-y-8">
+          <div className="w-full max-w-85 space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">
               {step === "login" ? "Login to" : "Enter OTP for"}{" "}
               <span className="text-[#55b3f3]">FixIT</span>
@@ -216,7 +216,7 @@ const Login = () => {
               <form className="space-y-6" onSubmit={handleOtpSubmit}>
                 <div>
                   <label htmlFor="otp" className="block mb-2 text-sm font-medium text-gray-900">
-                    Enter the 6-digit OTP sent to your email
+                    Enter the 6-digit OTP 
                   </label>
                   <input
                     type="text"
@@ -230,7 +230,7 @@ const Login = () => {
                   />
                 </div>
 
-                <div className="flex justify-between items-center text-sm text-gray-700">
+                {/* <div className="flex justify-between items-center text-sm text-gray-700">
                   {resendTimer > 0 ? (
                     <span>Resend available in {resendTimer}s</span>
                   ) : (
@@ -238,7 +238,7 @@ const Login = () => {
                       Resend OTP
                     </button>
                   )}
-                </div>
+                </div> */}
 
                 <button
                   type="submit"
