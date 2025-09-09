@@ -316,6 +316,9 @@ const FindWork = () => {
                 className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
                 rows="3"
               />
+              <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
+                  Address
+                </label>
               <AddressInput
                 value={newJob.location}
                 onChange={(address) =>
@@ -323,13 +326,13 @@ const FindWork = () => {
                 }
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+                <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
                   Category
                 </label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
+                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
