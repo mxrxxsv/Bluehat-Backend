@@ -163,9 +163,13 @@ const FindWork = () => {
         category: selectedCategory,
       };
 
-      const response = await createJob(jobData);
-      const jobCreated = response.data?.data || response.data;
-      setJobPosts((prev) => [jobCreated, ...prev]);
+      // const response = await createJob(jobData);
+      // const jobCreated = response.data?.data || response.data;
+      // setJobPosts((prev) => [jobCreated, ...prev]);
+      
+      await createJob(jobData);
+      // Refresh job list to include the new job
+      await fetchJobs(false);
 
       resetForm();
       setIsModalOpen(false);
@@ -392,7 +396,7 @@ const FindWork = () => {
 
       {/* Job Posts Display */}
       {filteredJobs.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
           {filteredJobs.map((job) => (
             <Link
               key={job.id || job._id}

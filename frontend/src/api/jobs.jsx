@@ -2,7 +2,7 @@ import axios from "axios";
 
 // ✅ FIXED: Correct baseURL without /jobs
 const API = axios.create({
-  baseURL: "http://localhost:5000", // ✅ Removed /jobs
+  baseURL: "http://localhost:5000",
   withCredentials: true,
 });
 
