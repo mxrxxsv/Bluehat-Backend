@@ -42,7 +42,7 @@ const getWorkers = async (req, res) => {
         .valid("createdAt", "firstName", "lastName", "email")
         .default("createdAt"),
       order: Joi.string().valid("asc", "desc").default("desc"),
-      search: Joi.string().trim().min(2).max(100).optional().messages({
+      search: Joi.string().trim().allow("").max(100).optional().messages({
         "string.min": "Search term must be at least 2 characters",
         "string.max": "Search term cannot exceed 100 characters",
       }),
