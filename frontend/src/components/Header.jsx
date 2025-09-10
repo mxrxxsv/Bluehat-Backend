@@ -97,7 +97,7 @@ const Header = () => {
     "/setup-2fa",
   ];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
-  const showAuthButtons = authPages.includes(currentPath);
+  const showAuthButtons = !user;
   const hideOp = opPages.includes(currentPath);
 
   const goToProfile = () => {
@@ -108,12 +108,14 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       await Logout();
+      setUser(null); // <-- clear local user state
       setShowDropdown(false);
       navigate("/home");
     } catch (err) {
       alert("Logout failed");
     }
   };
+
 
   return (
     <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
@@ -248,20 +250,18 @@ const Header = () => {
               </button>
             </div>
             <nav
-              className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${
-                isOpen ? "block" : "hidden"
-              } bg-white`}
+              className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${isOpen ? "block" : "hidden"
+                } bg-white`}
               id="navbar-sticky"
             >
               <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left">
                 <li>
                   <Link
                     to="/find-work"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/find-work")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Find Work
                   </Link>
@@ -269,11 +269,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/find-workers"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/find-workers")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Find Worker
                   </Link>
@@ -281,11 +280,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/ads"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/ads")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Advertisement
                   </Link>
