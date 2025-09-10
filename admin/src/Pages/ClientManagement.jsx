@@ -373,7 +373,7 @@ const ClientManagement = () => {
                     <th className="px-6 py-3">Gender</th>
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3">City</th>
-                    <th className="px-6 py-3">Contact</th>
+                    {/* <th className="px-6 py-3">Contact</th> */}
                     <th
                       className="px-6 py-3 cursor-pointer hover:bg-gray-200"
                       onClick={() => handleSort("createdAt")}
@@ -432,7 +432,7 @@ const ClientManagement = () => {
                         )}
                       </td>
                       <td className="px-6 py-3">{client.address?.city}</td>
-                      <td className="px-6 py-3">{client.contactNumber}</td>
+                      {/* <td className="px-6 py-3">{client.contactNumber}</td> */}
                       <td className="px-6 py-3 text-gray-500">
                         {formatDate(client.createdAt)}
                       </td>
