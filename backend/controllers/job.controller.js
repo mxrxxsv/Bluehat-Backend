@@ -40,6 +40,7 @@ const querySchema = Joi.object({
     .valid("createdAt", "price", "updatedAt")
     .default("createdAt"),
   order: Joi.string().valid("asc", "desc").default("desc"),
+  clientId: Joi.string().hex().length(24).optional(),
 });
 
 const jobSchema = Joi.object({
@@ -327,13 +328,12 @@ const optimizeJobForResponse = (job) => {
     },
     hiredWorker: job.hiredWorker
       ? {
-          id: job.hiredWorker._id,
-          name:
-            `${job.hiredWorker.firstName || ""} ${
-              job.hiredWorker.lastName || ""
+        id: job.hiredWorker._id,
+        name:
+          `${job.hiredWorker.firstName || ""} ${job.hiredWorker.lastName || ""
             }`.trim() || "Unknown Worker",
-          profilePicture: job.hiredWorker.profilePicture?.url || null,
-        }
+        profilePicture: job.hiredWorker.profilePicture?.url || null,
+      }
       : null,
   };
 };
@@ -427,8 +427,8 @@ const getAllJobs = async (req, res) => {
 
     // ✅ Sanitize all inputs
     const sanitizedQuery = sanitizeInput(value);
-    const { page, limit, category, location, search, status, sortBy, order } =
-      sanitizedQuery;
+    const { page, limit, category, location, search, status, sortBy, order, clientId } =
+      sanitizedQuery; // ✅ include clientId
 
     // Build filter - only show verified jobs from verified clients
     const filter = {
@@ -436,37 +436,31 @@ const getAllJobs = async (req, res) => {
       isDeleted: false,
     };
 
-    // Category filter
-    if (category) {
-      filter.category = category;
-    }
-
-    // Location filter (case-insensitive partial match)
-    if (location) {
-      filter.location = { $regex: location, $options: "i" };
-    }
-
-    // Status filter
-    if (status) {
-      filter.status = status;
-    }
-
-    // Search filter (search in description)
-    if (search) {
-      filter.description = { $regex: search, $options: "i" };
+    if (category) filter.category = category;
+    if (location) filter.location = { $regex: location, $options: "i" };
+    if (status) filter.status = status;
+    if (search) filter.description = { $regex: search, $options: "i" };
+    if (clientId) {
+      try {
+        filter.clientId = new mongoose.Types.ObjectId(clientId);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid clientId",
+        });
+      }
     }
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // ✅ FIXED: Use same approach as other functions with client verification
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
         populate: {
           path: "credentialId",
           match: { isVerified: true, isBlocked: { $ne: true } },
-          select: "email",
+          select: "email isVerified",
         },
       })
       .populate("category", "categoryName")
@@ -474,12 +468,11 @@ const getAllJobs = async (req, res) => {
       .sort({ [sortBy]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
-      .lean(); // ✅ Performance optimization
+      .lean();
 
-    // ✅ Filter out jobs from unverified clients (same as other functions)
+    // ✅ Only keep verified clients
     const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
 
-    // ✅ Handle no jobs found
     if (!verifiedJobs || verifiedJobs.length === 0) {
       return res.status(200).json({
         success: true,
@@ -495,14 +488,7 @@ const getAllJobs = async (req, res) => {
             hasNextPage: false,
             hasPrevPage: page > 1,
           },
-          filters: {
-            category,
-            location,
-            search,
-            status,
-            sortBy,
-            order,
-          },
+          filters: { category, location, search, status, sortBy, order, clientId },
         },
         meta: {
           processingTime: `${Date.now() - startTime}ms`,
@@ -511,7 +497,7 @@ const getAllJobs = async (req, res) => {
       });
     }
 
-    // ✅ Get total count for pagination (only verified jobs)
+    // ✅ Get total count
     const totalCount = await Job.countDocuments({
       ...filter,
       clientId: {
@@ -529,24 +515,49 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    // ✅ FIXED: Use verifiedJobs and apply optimization with name decryption
-    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
+    // ✅ Keep both clientId and client info
+    const optimizedJobs = verifiedJobs.map((job) => ({
+      id: job._id,
+      description: job.description,
+      price: job.price,
+      location: job.location,
+      status: job.status,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      category: job.category
+        ? { id: job.category._id, name: job.category.categoryName }
+        : null,
+      clientId: job.clientId?._id, 
+      client: job.clientId
+        ? {
+          name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(job.clientId.lastName)}`,
+          profilePicture: job.clientId.profilePicture,
+          isVerified: job.clientId.credentialId?.isVerified || false,
+        }
+        : null,
+      hiredWorker: job.hiredWorker
+        ? {
+          id: job.hiredWorker._id,
+          name: `${job.hiredWorker.firstName} ${job.hiredWorker.lastName}`,
+          profilePicture: job.hiredWorker.profilePicture,
+        }
+        : null,
+    }));
 
     logger.info("Jobs retrieved successfully", {
       totalJobs: verifiedJobs.length,
       totalCount,
       page,
       limit,
-      filters: { category, location, search, status },
+      filters: { category, location, search, status, clientId },
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ Set cache headers for public endpoint
     res.set({
-      "Cache-Control": "public, max-age=300", // 5 minutes
+      "Cache-Control": "public, max-age=300",
       ETag: `"jobs-${Date.now()}"`,
       "X-Total-Count": totalCount.toString(),
     });
@@ -556,7 +567,7 @@ const getAllJobs = async (req, res) => {
       message: "Jobs retrieved successfully",
       code: "JOBS_RETRIEVED",
       data: {
-        jobs: optimizedJobs, // ✅ Now with decrypted client names
+        jobs: optimizedJobs,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -565,14 +576,7 @@ const getAllJobs = async (req, res) => {
           hasNextPage: page < Math.ceil(totalCount / limit),
           hasPrevPage: page > 1,
         },
-        filters: {
-          category,
-          location,
-          search,
-          status,
-          sortBy,
-          order,
-        },
+        filters: { category, location, search, status, sortBy, order, clientId },
       },
       meta: {
         processingTime: `${processingTime}ms`,
