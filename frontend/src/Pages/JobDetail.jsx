@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Clock, MapPin, Briefcase, ArrowLeft } from "lucide-react";
 import { checkAuth } from "../api/auth"; 
-import { getJobById } from "../api/jobs"; // ✅ import API
+import { getJobById } from "../api/jobs"; 
 
 const JobDetails = () => {
   const { id } = useParams();

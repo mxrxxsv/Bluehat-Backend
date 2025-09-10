@@ -24,14 +24,17 @@ export const getAllJobs = (options = {}) => {
     location,
     search,
     status,
+    clientId, 
     _t,
   } = options;
+
   const params = { page, limit };
   if (category) params.category = category;
   if (location) params.location = location;
   if (search) params.search = search;
   if (status) params.status = status;
-  if (_t) params._t = _t; // ✅ Cache buster timestamp
+  if (clientId) params.clientId = clientId; 
+  if (_t) params._t = _t;
 
   return API.get("/jobs", {
     params,
@@ -42,6 +45,7 @@ export const getAllJobs = (options = {}) => {
     },
   });
 };
+
 
 // ✅ FIXED: Get single job by ID
 export const getJobById = (id) => API.get(`/jobs/${id}`);

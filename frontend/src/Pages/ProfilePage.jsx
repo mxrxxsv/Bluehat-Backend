@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Clock, MapPin, Briefcase, X } from "lucide-react";
-import jobPosts from "../Objects/jobPosts";
+import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import {
-  uploadProfilePicture,
-  removeProfilePicture,
-} from "../api/profile"; 
+import { uploadProfilePicture, removeProfilePicture } from "../api/profile";
+import { getAllJobs } from "../api/jobs"; // ✅ Import Jobs API
 
 const formatAddress = (address) => {
   if (!address || typeof address !== "object") return "Unknown";
@@ -23,10 +20,15 @@ const ProfilePage = () => {
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+  // User posts state
+  const [userPosts, setUserPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
+  // ✅ Load user
   useEffect(() => {
     checkAuth()
       .then((res) => {
-        setCurrentUser(res.data.data); // 👈 this already contains id, userType, fullName, address, image
+        setCurrentUser(res.data.data);
         setLoading(false);
       })
       .catch(() => {
@@ -35,6 +37,27 @@ const ProfilePage = () => {
       });
   }, []);
 
+  // ✅ Load jobs (if client) or portfolio (if freelancer)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    if (currentUser.userType === "client") {
+      setPostsLoading(true);
+      getAllJobs({ clientId: currentUser.profileId })
+        .then((res) => {
+          const jobs = res.data?.data?.jobs || [];
+        
+          setUserPosts(jobs);
+        })
+        .catch((err) => {
+        
+          setUserPosts([]);
+        })
+        .finally(() => setPostsLoading(false));
+    } else {
+      setUserPosts(currentUser.portfolio || []);
+    }
+  }, [currentUser]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -49,7 +72,7 @@ const ProfilePage = () => {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("image", selectedFile); 
+      formData.append("image", selectedFile);
       const res = await uploadProfilePicture(formData);
       setCurrentUser((prev) => ({
         ...prev,
@@ -91,16 +114,10 @@ const ProfilePage = () => {
 
   const { userType, fullName, image, address } = currentUser;
 
-  const userPosts =
-    userType === "client"
-      ? jobPosts.filter((post) => post.clientId === currentUser.id)
-      : currentUser.portfolio || [];
-
   return (
     <div className="max-w-6xl mx-auto p-6 mt-[100px]">
       {/* Profile Header */}
       <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow rounded-[20px] p-6 mb-10">
-        {/* 👇 Profile picture clickable */}
         <img
           src={
             image ||
@@ -115,7 +132,7 @@ const ProfilePage = () => {
           <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1">
             <MapPin size={16} /> {formatAddress(address)}
           </p>
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 mt-2 inline-block">
+          <span className="text-xs px-2 py-1 rounded-full bg-[#5eb6f3] text-white mt-2 inline-block">
             {userType === "client" ? "Client" : "Freelancer"}
           </span>
         </div>
@@ -127,27 +144,43 @@ const ProfilePage = () => {
           <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
             Your Job Posts
           </h3>
-          {userPosts.length > 0 ? (
+          {postsLoading ? (
+            <p className="text-gray-500 text-center">Loading jobs...</p>
+          ) : userPosts.length > 0 ? (
             <div className="space-y-4">
               {userPosts.map((post) => (
-                <div key={post.id} className="p-4 bg-white rounded-xl shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-lg font-semibold flex items-center gap-2 text-gray-800">
-                      <Briefcase size={18} className="text-blue-400" /> {post.title}
-                    </h4>
-                    <span className="text-sm text-green-500 font-bold">
-                      ₱{post.priceOffer.toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-gray-600">{post.description}</p>
-                  <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <MapPin size={14} />
-                      {post.location}
+                <div key={post.id} className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
+                  <div className="rounded-xl p-4 bg-white transition-all">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                        {post.client?.name || "Client Name"}
+                      </span>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {/* <Clock size={16} /> */}
+                        {new Date(post.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {post.datePosted}
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <Briefcase size={20} className="text-blue-400" />
+                      {post.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                        {post.category?.name || "Uncategorized"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} /> {post.location}
+                      </span>
+                      <span className="font-bold text-green-400">
+                        ₱{post.price?.toLocaleString() || 0}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -192,7 +225,7 @@ const ProfilePage = () => {
         </>
       )}
 
-      {/* 👇 Modal for profile picture upload/remove */}
+      {/* Modal for profile picture */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
@@ -202,8 +235,6 @@ const ProfilePage = () => {
             >
               <X size={20} />
             </button>
-
-            {/* <h3 className="text-lg font-bold mb-4">Edit Profile Picture</h3> */}
 
             <div className="flex flex-col items-center mt-5">
               <img
@@ -216,7 +247,6 @@ const ProfilePage = () => {
                 className="w-32 h-32 rounded-full object-cover mb-4 border"
               />
 
-              {/* Hidden file input */}
               <input
                 type="file"
                 id="fileInput"
@@ -225,7 +255,6 @@ const ProfilePage = () => {
                 className="hidden"
               />
 
-              {/* Styled label as button */}
               <label
                 htmlFor="fileInput"
                 className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-100 transition"
@@ -256,7 +285,6 @@ const ProfilePage = () => {
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}

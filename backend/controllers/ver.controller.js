@@ -1517,6 +1517,7 @@ const checkAuth = async (req, res) => {
       success: true,
       data: {
         id: credential._id,
+        profileId: user._id,
         fname: decryptedFirstName,
         fullName: `${decryptedFirstName} ${decryptedLastName}`,
         userType: credential.userType,
