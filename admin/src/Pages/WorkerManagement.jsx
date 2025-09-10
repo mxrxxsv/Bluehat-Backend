@@ -117,8 +117,7 @@ const WorkerManagement = () => {
 
       // Show user-friendly error
       alert(
-        `Error loading workers: ${
-          error.response?.data?.message || error.message
+        `Error loading workers: ${error.response?.data?.message || error.message
         }`
       );
     } finally {
@@ -303,7 +302,7 @@ const WorkerManagement = () => {
   };
 
   return (
-    <div className="p-4 sm:ml-64">
+    <div className="p-4 md:ml-64">
       <div className="p-6 bg-white border border-gray-200 rounded-2xl shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -317,67 +316,63 @@ const WorkerManagement = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-blue-50 p-4 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 mb-6">
+          {/* Total Workers */}
+          <div className="bg-blue-50 p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">
-                  Total Workers
-                </p>
-                <p className="text-2xl font-bold text-blue-800">
-                  {statistics.total}
-                </p>
+                <p className="text-sm font-medium text-blue-600">Total Workers</p>
+                <p className="text-2xl font-bold text-blue-800">{statistics.total}</p>
               </div>
               <Users className="w-8 h-8 text-blue-500" />
             </div>
           </div>
-          <div className="bg-green-50 p-4 rounded-lg">
+
+          {/* Active Workers */}
+          <div className="bg-green-50 p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600">
-                  Active Workers
-                </p>
-                <p className="text-2xl font-bold text-green-800">
-                  {statistics.active}
-                </p>
+                <p className="text-sm font-medium text-green-600">Active Workers</p>
+                <p className="text-2xl font-bold text-green-800">{statistics.active}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
+
+          {/* Verified */}
+          <div className="bg-purple-50 p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-600">Verified</p>
-                <p className="text-2xl font-bold text-purple-800">
-                  {statistics.verified}
-                </p>
+                <p className="text-2xl font-bold text-purple-800">{statistics.verified}</p>
               </div>
               <Shield className="w-8 h-8 text-purple-500" />
             </div>
           </div>
-          <div className="bg-yellow-50 p-4 rounded-lg">
+
+          {/* Pending */}
+          {/* <div className="bg-yellow-50 p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-yellow-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-800">
-                  {statistics.pending}
-                </p>
+                <p className="text-2xl font-bold text-yellow-800">{statistics.pending}</p>
               </div>
               <AlertTriangle className="w-8 h-8 text-yellow-500" />
             </div>
-          </div>
-          <div className="bg-red-50 p-4 rounded-lg">
+          </div> */}
+
+          {/* Blocked */}
+          <div className="bg-red-50 p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600">Blocked</p>
-                <p className="text-2xl font-bold text-red-800">
-                  {statistics.blocked}
-                </p>
+                <p className="text-2xl font-bold text-red-800">{statistics.blocked}</p>
               </div>
               <Ban className="w-8 h-8 text-red-500" />
             </div>
           </div>
         </div>
+
 
         {/* Filters and Search */}
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
@@ -397,31 +392,28 @@ const WorkerManagement = () => {
           <div className="flex gap-2">
             <button
               onClick={() => handleStatusFilter("all")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === "all"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${statusFilter === "all"
+                ? "bg-[#55b3f3] text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               All
             </button>
             <button
               onClick={() => handleStatusFilter("active")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === "active"
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${statusFilter === "active"
+                ? "bg-green-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               Active
             </button>
             <button
               onClick={() => handleStatusFilter("blocked")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === "blocked"
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${statusFilter === "blocked"
+                ? "bg-red-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               Blocked
             </button>
@@ -429,33 +421,30 @@ const WorkerManagement = () => {
 
           {/* Verification Filter */}
           <div className="flex gap-2">
-            <button
+            {/* <button
               onClick={() => handleVerificationFilter("all")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                verificationFilter === "all"
-                  ? "bg-purple-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${verificationFilter === "all"
+                ? "bg-purple-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               All
-            </button>
+            </button> */}
             <button
               onClick={() => handleVerificationFilter("verified")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                verificationFilter === "verified"
-                  ? "bg-purple-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${verificationFilter === "verified"
+                ? "bg-purple-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               Verified
             </button>
             <button
               onClick={() => handleVerificationFilter("pending")}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                verificationFilter === "pending"
-                  ? "bg-yellow-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${verificationFilter === "pending"
+                ? "bg-yellow-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               Pending
             </button>
@@ -476,8 +465,8 @@ const WorkerManagement = () => {
             </h3>
             <p className="mt-1 text-sm text-gray-500">
               {searchTerm ||
-              statusFilter !== "all" ||
-              verificationFilter !== "all"
+                statusFilter !== "all" ||
+                verificationFilter !== "all"
                 ? "Try adjusting your search or filters."
                 : "No workers have registered yet."}
             </p>
@@ -513,10 +502,10 @@ const WorkerManagement = () => {
                     </th>
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3">Verification</th>
-                    <th className="px-6 py-3">Rating</th>
+                    {/* <th className="px-6 py-3">Rating</th>
                     <th className="px-6 py-3">Skills</th>
                     <th className="px-6 py-3">Location</th>
-                    <th className="px-6 py-3">Contact</th>
+                    <th className="px-6 py-3">Contact</th> */}
                     <th
                       className="px-6 py-3 cursor-pointer hover:bg-gray-200"
                       onClick={() => handleSort("createdAt")}
@@ -540,7 +529,7 @@ const WorkerManagement = () => {
                       <td className="px-6 py-3">
                         <img
                           src={
-                            worker.profilePicture?.url || "/default-avatar.png"
+                            worker.profilePicture?.url || "https://t3.ftcdn.net/jpg/06/33/54/78/360_F_633547842_AugYzexTpMJ9z1YcpTKUBoqBF0CUCk10.jpg"
                           }
                           alt="Profile"
                           className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
@@ -581,7 +570,7 @@ const WorkerManagement = () => {
                       <td className="px-6 py-3">
                         {getVerificationBadge(worker)}
                       </td>
-                      <td className="px-6 py-3">
+                      {/* <td className="px-6 py-3">
                         {getRatingDisplay(worker.averageRating)}
                       </td>
                       <td className="px-6 py-3">
@@ -620,7 +609,7 @@ const WorkerManagement = () => {
                           <Phone className="w-3 h-3" />
                           {worker.contactNumber}
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-3 text-gray-500">
                         <div className="flex items-center gap-1 text-xs">
                           <Calendar className="w-3 h-3" />
@@ -632,7 +621,7 @@ const WorkerManagement = () => {
                           <button
                             onClick={() => viewWorkerDetails(worker)}
                             disabled={actionLoading}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-[#55b3f3] text-white rounded hover:bg-sky-500 transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             <Eye className="w-3 h-3" />
                             View
@@ -641,7 +630,7 @@ const WorkerManagement = () => {
                             <button
                               onClick={() => handleUnblockWorker(worker)}
                               disabled={actionLoading}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               <CheckCircle className="w-3 h-3" />
                               Unblock
@@ -650,7 +639,7 @@ const WorkerManagement = () => {
                             <button
                               onClick={() => openBlockModal(worker)}
                               disabled={actionLoading}
-                              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               <Ban className="w-3 h-3" />
                               Block
@@ -691,11 +680,10 @@ const WorkerManagement = () => {
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`px-3 py-1 text-sm border rounded ${
-                          currentPage === pageNum
-                            ? "bg-blue-500 text-white border-blue-500"
-                            : "hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                          ? "bg-blue-500 text-white border-blue-500"
+                          : "hover:bg-gray-50"
+                          }`}
                       >
                         {pageNum}
                       </button>
@@ -718,15 +706,15 @@ const WorkerManagement = () => {
 
         {/* Worker Details Modal */}
         {showModal && selectedWorker && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1000]">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
+          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[1000]">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-800">
-                  Worker Details
+                  {/* Worker Details */}
                 </h2>
                 <button
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -737,8 +725,7 @@ const WorkerManagement = () => {
                 <div className="flex items-start space-x-6">
                   <img
                     src={
-                      selectedWorker.profilePicture?.url ||
-                      "/default-avatar.png"
+                      selectedWorker.profilePicture?.url || "https://t3.ftcdn.net/jpg/06/33/54/78/360_F_633547842_AugYzexTpMJ9z1YcpTKUBoqBF0CUCk10.jpg"
                     }
                     alt="Profile"
                     className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
@@ -827,8 +814,8 @@ const WorkerManagement = () => {
                         <span className="font-medium">Age:</span>{" "}
                         {selectedWorker.dateOfBirth
                           ? `${calculateAge(
-                              selectedWorker.dateOfBirth
-                            )} years old`
+                            selectedWorker.dateOfBirth
+                          )} years old`
                           : "N/A"}
                       </div>
                       <div>
@@ -967,7 +954,7 @@ const WorkerManagement = () => {
                       closeModal();
                     }}
                     disabled={actionLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Unblock Worker
@@ -979,7 +966,7 @@ const WorkerManagement = () => {
                       openBlockModal(selectedWorker);
                     }}
                     disabled={actionLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <Ban className="w-4 h-4" />
                     Block Worker
@@ -992,7 +979,7 @@ const WorkerManagement = () => {
 
         {/* Block Worker Modal */}
         {showBlockModal && blockingWorker && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1001]">
+          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[1001]">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">
@@ -1000,7 +987,7 @@ const WorkerManagement = () => {
                 </h2>
                 <button
                   onClick={closeBlockModal}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1037,14 +1024,14 @@ const WorkerManagement = () => {
                 <button
                   onClick={closeBlockModal}
                   disabled={actionLoading}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBlockWorker}
                   disabled={actionLoading || !blockReason.trim()}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading ? (
                     <Loader className="w-4 h-4 animate-spin" />
