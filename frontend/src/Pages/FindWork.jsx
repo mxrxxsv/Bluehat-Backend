@@ -13,6 +13,7 @@ import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
 import AddressInput from "../components/AddressInput";
+import PortfolioSetup from "../components/PortfolioSetup";
 
 const currentUser = {
   avatar:
@@ -29,6 +30,7 @@ const FindWork = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
 
   const [newJob, setNewJob] = useState({
     description: "",
@@ -180,6 +182,41 @@ const FindWork = () => {
       alert(error.response?.data?.message || "Failed to post job");
     }
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await checkAuth();
+        const userData = res.data?.data;
+        setUser(userData);
+
+        if (userData?.userType === "worker") {
+        
+          const portfolios = Array.isArray(userData.portfolio) ? userData.portfolio : [];
+          const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
+          const skills = Array.isArray(userData.skills) ? userData.skills : [];
+          const experiences = Array.isArray(userData.experience) ? userData.experience : [];
+
+      
+          const shouldShowModal =
+            portfolios.length === 0 ||
+            certificates.length === 0 ||
+            skills.length === 0 ||
+            experiences.length === 0;
+
+          setShowPortfolioSetup(shouldShowModal);
+        } else {
+          setShowPortfolioSetup(false); 
+        }
+      } catch (err) {
+        console.error("Auth check failed", err);
+        setShowPortfolioSetup(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
 
   // Fetch logged-in user
   useEffect(() => {
@@ -390,6 +427,11 @@ const FindWork = () => {
         </div>
       )}
 
+      {/* 👇 Add this */}
+      {showPortfolioSetup && (
+        <PortfolioSetup onClose={() => setShowPortfolioSetup(false)} />
+      )}
+
       {/* Success Modal */}
       {showSuccess && (
         <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
@@ -461,6 +503,7 @@ const FindWork = () => {
           ) : null}
         </div>
       )}
+
     </div>
   );
 };

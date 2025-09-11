@@ -497,7 +497,7 @@ const createPortfolio = async (req, res) => {
     if (error) {
       logger.warn("Portfolio creation validation failed", {
         errors: error.details,
-        userId: req.user._id,
+        userId: req.user.id,
         ip: req.ip,
         timestamp: new Date().toISOString(),
       });
@@ -547,7 +547,7 @@ const createPortfolio = async (req, res) => {
     };
 
     const worker = await Worker.findOneAndUpdate(
-      { credentialId: req.user._id },
+      { credentialId: req.user.id },
       { $push: { portfolio: portfolioItem } },
       { new: true, runValidators: true }
     );
@@ -882,7 +882,7 @@ const uploadCertificate = async (req, res) => {
     };
 
     const worker = await Worker.findOneAndUpdate(
-      { credentialId: req.user._id },
+      { credentialId: req.user.id },
       { $push: { certificates: certificate } },
       { new: true, runValidators: true }
     );
@@ -1085,7 +1085,7 @@ const addExperience = async (req, res) => {
     };
 
     const worker = await Worker.findOneAndUpdate(
-      { credentialId: req.user._id },
+      { credentialId: req.user.id },
       { $push: { experience: experience } },
       { new: true, runValidators: true }
     );
@@ -1263,7 +1263,7 @@ const addSkillCategory = async (req, res) => {
       });
     }
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
+    const worker = await Worker.findOne({ credentialId: req.user.id });
 
     if (!worker) {
       return res.status(404).json({

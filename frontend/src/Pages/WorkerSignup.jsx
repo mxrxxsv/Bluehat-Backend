@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { signup, verify, resendCode } from "../api/auth";
 import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
+import PortfolioSetup from "../components/PortfolioSetup";
 
 const PHIL_API = "https://psgc.gitlab.io/api";
 
@@ -21,7 +22,7 @@ const Modal = ({ children, onClose }) => (
   </div>
 );
 
-const ClientSignup = () => {
+const WorkerSignup = () => {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +57,8 @@ const ClientSignup = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -253,6 +256,7 @@ const ClientSignup = () => {
       try {
         await signup(formData);
         setShowOTPModal(true);
+        // setShowPortfolioSetup(true);
         setTimer(60);
         setSuccessMessage("");
         setErrors({});
@@ -547,22 +551,6 @@ const ClientSignup = () => {
               placeholder="Anthony"
             />
           </div>
-          {/* <div>
-            <label
-              htmlFor="suffixName"
-              className="block mb-2 text-sm font-medium text-gray-900 text-left"
-            >
-              Suffix <span className="text-gray-500">(Optional)</span>
-            </label>
-            <input
-              type="text"
-              id="suffixName"
-              value={formData.suffixName}
-              onChange={handleChange}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-              placeholder="Jr."
-            />
-          </div> */}
           <div>
             <label
               htmlFor="suffixName"
@@ -782,14 +770,15 @@ const ClientSignup = () => {
               id="dateOfBirth"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
               className={inputClass("dateOfBirth")}
+              max={new Date().toISOString().split("T")[0]} // ✅ disallow future dates
               required
             />
             {errors.dateOfBirth && (
               <p className="text-red-500 text-sm mt-1 text-left">{errors.dateOfBirth}</p>
             )}
           </div>
+
           <div>
             <label
               htmlFor="maritalStatus"
@@ -942,79 +931,6 @@ const ClientSignup = () => {
           </div>
 
           {/*  */}
-
-          {/* <div>
-                        <label
-                            htmlFor="region"
-                            className="block mb-2 text-sm font-medium text-gray-900 text-left"
-                        >
-                            Region
-                        </label>
-                        <input
-                            type="text"
-                            id="region"
-                            data-address="region"
-                            value={formData.address.region}
-                            onChange={handleChange}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                            placeholder="Region"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="city"
-                            className="block mb-2 text-sm font-medium text-gray-900 text-left"
-                        >
-                            City
-                        </label>
-                        <input
-                            type="text"
-                            id="city"
-                            data-address="city"
-                            value={formData.address.city}
-                            onChange={handleChange}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                            placeholder="City"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="district"
-                            className="block mb-2 text-sm font-medium text-gray-900 text-left"
-                        >
-                            District
-                        </label>
-                        <input
-                            type="text"
-                            id="district"
-                            data-address="district"
-                            value={formData.address.district}
-                            onChange={handleChange}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                            placeholder="District"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="street"
-                            className="block mb-2 text-sm font-medium text-gray-900 text-left"
-                        >
-                            Street
-                        </label>
-                        <input
-                            type="text"
-                            id="street"
-                            data-address="street"
-                            value={formData.address.street}
-                            onChange={handleChange}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                            placeholder="Street"
-                            required
-                        />
-                    </div> */}
         </div>
 
         <div className="mb-4 flex items-center">
@@ -1048,6 +964,18 @@ const ClientSignup = () => {
           </button>
         </div>
       </form>
+
+      {/* Portfolio Setup Modal */}
+      {showPortfolioSetup && (
+        <PortfolioSetup
+          onClose={() => setShowPortfolioSetup(false)}
+          onComplete={() => {
+            setShowPortfolioSetup(false);
+            // setShowCodeModal(true); // move to OTP after finishing portfolio setup
+            setShowOTPModal(true);
+          }}
+        />
+      )}
 
       {/* OTP Modal */}
       {showOTPModal && (
@@ -1118,4 +1046,4 @@ const ClientSignup = () => {
   );
 };
 
-export default ClientSignup;
+export default WorkerSignup;
