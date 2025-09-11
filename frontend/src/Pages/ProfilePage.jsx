@@ -46,11 +46,11 @@ const ProfilePage = () => {
       getAllJobs({ clientId: currentUser.profileId })
         .then((res) => {
           const jobs = res.data?.data?.jobs || [];
-        
+
           setUserPosts(jobs);
         })
         .catch((err) => {
-        
+
           setUserPosts([]);
         })
         .finally(() => setPostsLoading(false));
@@ -194,26 +194,37 @@ const ProfilePage = () => {
         </>
       ) : (
         <>
+          {/* Portfolio Section */}
           <h3 className="text-xl font-semibold mb-4 text-gray-700">
             Your Portfolio
           </h3>
+
           {userPosts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userPosts.map((item, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-sm p-4">
-                  <h4 className="text-md font-bold text-gray-800">
+                <div
+                  key={index}
+                  className="bg-white rounded-xl shadow-sm p-4 flex flex-col"
+                >
+                  <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img
+                      src={
+                        item.image?.url 
+                          ? item.image.url
+                          : "https://via.placeholder.com/300x200?text=No+Image"
+                      }
+                      alt={item.projectTitle || "Portfolio Project"}
+                      className="w-full h-full object-cover transition-transform hover:scale-105"
+                    />
+
+                  </div>
+
+                  <h4 className="text-md font-bold text-gray-800 mt-3">
                     {item.projectTitle || "Untitled Project"}
                   </h4>
-                  <p className="text-gray-600 mt-1">
+                  <p className="text-gray-600 mt-1 text-sm">
                     {item.description || "No description provided."}
                   </p>
-                  {item.image && (
-                    <img
-                      src={item.image}
-                      alt={item.projectTitle}
-                      className="mt-3 w-full h-40 object-cover rounded-md"
-                    />
-                  )}
                 </div>
               ))}
             </div>
@@ -222,6 +233,7 @@ const ProfilePage = () => {
               You have not added any portfolio projects yet.
             </p>
           )}
+
         </>
       )}
 

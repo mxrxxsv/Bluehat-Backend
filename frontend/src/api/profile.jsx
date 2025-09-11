@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/profile", // 👈 matches your profile router
-  withCredentials: true, // 👈 ensures cookies are sent
+  baseURL: "http://localhost:5000/profile", 
+  withCredentials: true, 
 });
 
 // ========================
