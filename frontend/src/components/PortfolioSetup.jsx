@@ -148,9 +148,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
 
 
 
-    const handleFinish = () => onComplete();
-
-
 
 
     return (
@@ -413,10 +410,10 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                         </button>
                     ) : (
                         <button
-                            onClick={handleFinish}
+                            onClick={onClose}
                             className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-blue-300 cursor-pointer"
                         >
-                            Finish & Continue
+                            Done
                         </button>
                     )}
                 </div>
