@@ -157,11 +157,11 @@ const Header = () => {
                 <>
                   <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
                     <Link to="/chat">
-                      <Mail className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
+                      <Mail className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
                     </Link>
 
                     <Bell
-                      className="w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
+                      className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
                       onClick={handleNotificationClick}
                     />
 
@@ -186,17 +186,26 @@ const Header = () => {
                       </div>
                     )}
 
-                    <span className="pl-4 text-gray-700 text-[16px] font-medium">
-                      {user?.fname || user?.email}
+                    <span className="text-gray-700 text-[16px] font-medium">
+                      {/* {user?.fname || user?.email} */}
                     </span>
 
                     <div className="relative" ref={dropdownRef}>
-                      <img
+                      {/* <img
                         src={profile}
                         alt="Profile"
                         className="pb-2 h-8 w-8 rounded-full object-cover cursor-pointer"
                         onClick={() => setShowDropdown(!showDropdown)}
+                      /> */}
+                      <div className="flex items-center gap-2">
+                      
+                      <img
+                        src={user?.image || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                        onClick={() => setShowDropdown(!showDropdown)}
                       />
+                      </div>
                       {showDropdown && (
                         <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                           <ul className="py-2 text-sm text-gray-700">

@@ -141,7 +141,7 @@ const Login = () => {
       )}
 
       {/* ✅ Main Layout */}
-      <div className="grid md:grid-cols-2 w-full max-w-7.5xl bg-white rounded-lg shadow-md overflow-hidden mt-15">
+      <div className="grid md:grid-cols-2 w-full max-w-7.5xl bg-white rounded-lg shadow-md overflow-hidden m-2 md:m-2 md:mt-15">
         {/* Left Side Image */}
         <div className="hidden md:flex justify-center items-center p-8">
           <img src={cute} className="w-96 h-96 object-contain" alt="Cute" />
