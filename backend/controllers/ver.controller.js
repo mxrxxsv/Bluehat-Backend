@@ -959,9 +959,8 @@ const verify = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: `Invalid code. ${
-          ATTEMPT_LIMIT - pending.verifyAttempts
-        } attempt(s) left.`,
+        message: `Invalid code. ${ATTEMPT_LIMIT - pending.verifyAttempts
+          } attempt(s) left.`,
         code: "INVALID_TOTP",
         attemptsLeft: ATTEMPT_LIMIT - pending.verifyAttempts,
       });
@@ -1451,6 +1450,9 @@ const checkAuth = async (req, res) => {
       user = await Client.findOne({ credentialId: id });
     } else if (userType === "worker") {
       user = await Worker.findOne({ credentialId: id });
+      user = await Worker.findOne({ credentialId: id })
+        .populate("skillsByCategory.skillCategoryId", "categoryName") 
+        .lean();
     }
 
     if (!user) {
@@ -1525,13 +1527,20 @@ const checkAuth = async (req, res) => {
         isVerified: credential.isVerified,
         address: decryptedAddress,
         image: user.profilePicture?.url || null,
-        ...(userType === "worker" && { portfolio: user.portfolio || [] }), //portfolio now can be lack
+
+        ...(userType === "worker" && {
+          portfolio: user.portfolio || [],
+          skillsByCategory: user.skillsByCategory || [],
+          experience: user.experience || [],
+          certificates: user.certificates || [],
+        }),
       },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
+
   } catch (err) {
     const processingTime = Date.now() - startTime;
 
