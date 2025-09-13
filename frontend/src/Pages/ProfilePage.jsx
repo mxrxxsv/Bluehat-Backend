@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { uploadProfilePicture, removeProfilePicture } from "../api/profile";
-import { getAllJobs } from "../api/jobs"; // ✅ Import Jobs API
+import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
+import AddSkill from "../components/AddSkill";
+
 
 const formatAddress = (address) => {
   if (!address || typeof address !== "object") return "Unknown";
@@ -26,6 +28,8 @@ const ProfilePage = () => {
   const [postsLoading, setPostsLoading] = useState(false);
 
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
+  const [isAddSkillOpen, setIsAddSkillOpen] = useState(false);
+
 
   // ✅ Load user
   useEffect(() => {
@@ -72,6 +76,16 @@ const ProfilePage = () => {
       console.error("Failed to refresh portfolios:", err);
     }
   };
+
+  const fetchSkills = async () => {
+  try {
+    const res = await checkAuth(); 
+    setCurrentUser(res.data.data);
+  } catch (err) {
+    console.error("Failed to refresh skills:", err);
+  }
+};
+
 
 
   const handleFileChange = (e) => {
@@ -214,7 +228,7 @@ const ProfilePage = () => {
           <div className="bg-white shadow-md rounded-lg p-4 mb-8">
 
             {/* ================= SKILLS ================= */}
-            <div className="mb-8">
+            {/* <div className="mb-8">
               <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Skills</h3>
               {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -230,7 +244,46 @@ const ProfilePage = () => {
               ) : (
                 <p className="text-gray-500">No skills added yet.</p>
               )}
-            </div>
+            </div> */}
+
+            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
+              Skills
+              <button
+                onClick={() => setIsAddSkillOpen(true)}
+                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+              >
+                + Add
+              </button>
+            </h3>
+            {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {currentUser.skillsByCategory.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm"
+                  >
+                    {skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No skills added yet.</p>
+            )}
+
+            {/* AddSkill Modal */}
+            {isAddSkillOpen && (
+              <AddSkill
+                onClose={() => setIsAddSkillOpen(false)}
+                onAdd={(newSkills) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    skills: [...(prev.skills || []), ...newSkills],
+                  }))
+                }
+                onRefresh={fetchSkills}
+              />
+            )}
+
 
 
             {/* ================= PORTFOLIO ================= */}
@@ -310,10 +363,10 @@ const ProfilePage = () => {
                         alt="Certificate"
                         className="w-full h-40 object-cover rounded-md"
                       />
-                      <h4 className="text-md font-semibold text-gray-800 mt-3">
+                      {/* <h4 className="text-md font-semibold text-gray-800 mt-3">
                         {cert.title || "Untitled Certificate"}
                       </h4>
-                      <p className="text-sm text-gray-600">{cert.issuer || "Unknown Issuer"}</p>
+                      <p className="text-sm text-gray-600">{cert.issuer || "Unknown Issuer"}</p> */}
                     </div>
                   ))}
                 </div>
