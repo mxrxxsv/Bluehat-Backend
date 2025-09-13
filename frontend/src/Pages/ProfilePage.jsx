@@ -3,6 +3,7 @@ import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { uploadProfilePicture, removeProfilePicture } from "../api/profile";
 import { getAllJobs } from "../api/jobs"; // ✅ Import Jobs API
+import AddPortfolio from "../components/AddPortfolio";
 
 const formatAddress = (address) => {
   if (!address || typeof address !== "object") return "Unknown";
@@ -23,6 +24,8 @@ const ProfilePage = () => {
   // User posts state
   const [userPosts, setUserPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(false);
+
+  const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
 
   // ✅ Load user
   useEffect(() => {
@@ -59,6 +62,17 @@ const ProfilePage = () => {
       setUserPosts(currentUser.portfolio || []);
     }
   }, [currentUser]);
+
+
+  const fetchPortfolios = async () => {
+    try {
+      const res = await checkAuth();
+      setCurrentUser(res.data.data);
+    } catch (err) {
+      console.error("Failed to refresh portfolios:", err);
+    }
+  };
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -199,122 +213,144 @@ const ProfilePage = () => {
 
           <div className="bg-white shadow-md rounded-lg p-4 mb-8">
 
-           {/* ================= SKILLS ================= */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Skills</h3>
-            {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {currentUser.skillsByCategory.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm"
-                  >
-                    {skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No skills added yet.</p>
-            )}
-          </div>
+            {/* ================= SKILLS ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Skills</h3>
+              {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.skillsByCategory.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm"
+                    >
+                      {skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No skills added yet.</p>
+              )}
+            </div>
 
 
             {/* ================= PORTFOLIO ================= */}
-          <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left">
-            Portfolio
-          </h3>
-          {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {currentUser.portfolio.map((item, index) => (
-                <div
-                  key={index}
-                  className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition"
-                >
-                  <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <img
-                      src={
-                        item.image?.url
-                          ? item.image.url
-                          : "https://via.placeholder.com/300x200?text=No+Image"
-                      }
-                      alt={item.projectTitle || "Portfolio Project"}
-                      className="w-full h-full object-cover rounded-md"
-                    />
+            <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+              Portfolio
+              <button
+                onClick={() => setIsAddPortfolioOpen(true)}
+                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+              >
+                + Add
+              </button>
+            </h3>
+
+            {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {currentUser.portfolio.map((item, index) => (
+                  <div
+                    key={index}
+                    className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition"
+                  >
+                    <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                      <img
+                        src={
+                          item.image?.url
+                            ? item.image.url
+                            : "https://via.placeholder.com/300x200?text=No+Image"
+                        }
+                        alt={item.projectTitle || "Portfolio Project"}
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-800 mt-3">
+                      {item.projectTitle || "Untitled Project"}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {item.description || "No description provided."}
+                    </p>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-800 mt-3">
-                    {item.projectTitle || "Untitled Project"}
-                  </h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {item.description || "No description provided."}
-                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">You have not added any portfolio projects yet.</p>
+            )}
+
+            {/* Show AddPortfolio modal */}
+            {isAddPortfolioOpen && (
+              <AddPortfolio
+                onClose={() => setIsAddPortfolioOpen(false)}
+                onAdd={(newPortfolio) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    portfolio: [...(prev.portfolio || []), newPortfolio],
+                  }))
+                }
+                onRefresh={fetchPortfolios}
+              />
+            )}
+
+
+
+            {/* ================= CERTIFICATES ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Certificates</h3>
+              {currentUser.certificates && currentUser.certificates.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {currentUser.certificates.map((cert, index) => (
+                    <div
+                      key={index}
+                      className="shadow-sm p-3 rounded-md bg-white text-left"
+                    >
+                      <img
+                        src={
+                          cert.url
+                            ? cert.url
+                            : "https://via.placeholder.com/300x200?text=No+Certificate"
+                        }
+                        alt="Certificate"
+                        className="w-full h-40 object-cover rounded-md"
+                      />
+                      <h4 className="text-md font-semibold text-gray-800 mt-3">
+                        {cert.title || "Untitled Certificate"}
+                      </h4>
+                      <p className="text-sm text-gray-600">{cert.issuer || "Unknown Issuer"}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p className="text-gray-500">No certificates uploaded yet.</p>
+              )}
             </div>
-          ) : (
-            <p className="text-gray-500">You have not added any portfolio projects yet.</p>
-          )}
 
-
-          {/* ================= CERTIFICATES ================= */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Certificates</h3>
-            {currentUser.certificates && currentUser.certificates.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {currentUser.certificates.map((cert, index) => (
-                  <div
-                    key={index}
-                    className="shadow-sm p-3 rounded-md bg-white text-left"
-                  >
-                    <img
-                      src={
-                        cert.url
-                          ? cert.url
-                          : "https://via.placeholder.com/300x200?text=No+Certificate"
-                      }
-                      alt="Certificate"
-                      className="w-full h-40 object-cover rounded-md"
-                    />
-                    <h4 className="text-md font-semibold text-gray-800 mt-3">
-                      {cert.title || "Untitled Certificate"}
-                    </h4>
-                    <p className="text-sm text-gray-600">{cert.issuer || "Unknown Issuer"}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No certificates uploaded yet.</p>
-            )}
-          </div>
-
-          {/* ================= EXPERIENCE ================= */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Work Experience</h3>
-            {currentUser.experience && currentUser.experience.length > 0 ? (
-              <div className="space-y-4">
-                {currentUser.experience.map((exp, index) => (
-                  <div
-                    key={index}
-                    className="shadow-sm p-4 rounded-md text-left bg-white"
-                  >
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      {exp.position || "Unknown Position"}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {exp.companyName || "Unknown Company"}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {exp.startYear} – {exp.endYear || "Present"}
-                    </p>
-                    <p className="text-gray-700 mt-2 text-sm">
-                      {exp.responsibilities || "No details provided."}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No work experience added yet.</p>
-            )}
-          </div>
+            {/* ================= EXPERIENCE ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Work Experience</h3>
+              {currentUser.experience && currentUser.experience.length > 0 ? (
+                <div className="space-y-4">
+                  {currentUser.experience.map((exp, index) => (
+                    <div
+                      key={index}
+                      className="shadow-sm p-4 rounded-md text-left bg-white"
+                    >
+                      <h4 className="text-lg font-semibold text-gray-800">
+                        {exp.position || "Unknown Position"}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {exp.companyName || "Unknown Company"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {exp.startYear} – {exp.endYear || "Present"}
+                      </p>
+                      <p className="text-gray-700 mt-2 text-sm">
+                        {exp.responsibilities || "No details provided."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No work experience added yet.</p>
+              )}
+            </div>
 
           </div>
 
