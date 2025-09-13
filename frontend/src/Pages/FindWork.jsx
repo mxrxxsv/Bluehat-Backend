@@ -191,22 +191,22 @@ const FindWork = () => {
         setUser(userData);
 
         if (userData?.userType === "worker") {
-        
+
           const portfolios = Array.isArray(userData.portfolio) ? userData.portfolio : [];
           const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
-          const skills = Array.isArray(userData.skills) ? userData.skills : [];
+          const skills = Array.isArray(userData.skillsByCategory) ? userData.skillsByCategory : [];
           const experiences = Array.isArray(userData.experience) ? userData.experience : [];
 
-      
           const shouldShowModal =
             portfolios.length === 0 ||
             certificates.length === 0 ||
             skills.length === 0 ||
             experiences.length === 0;
 
+
           setShowPortfolioSetup(shouldShowModal);
         } else {
-          setShowPortfolioSetup(false); 
+          setShowPortfolioSetup(false);
         }
       } catch (err) {
         console.error("Auth check failed", err);
