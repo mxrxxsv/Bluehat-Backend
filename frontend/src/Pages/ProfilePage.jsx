@@ -5,6 +5,7 @@ import { uploadProfilePicture, removeProfilePicture } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
+import AddCertificate from "../components/AddCertificate";
 
 
 const formatAddress = (address) => {
@@ -29,6 +30,7 @@ const ProfilePage = () => {
 
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
   const [isAddSkillOpen, setIsAddSkillOpen] = useState(false);
+  const [isAddCertificateOpen, setIsAddCertificateOpen] = useState(false);
 
 
   // ✅ Load user
@@ -78,15 +80,22 @@ const ProfilePage = () => {
   };
 
   const fetchSkills = async () => {
-  try {
-    const res = await checkAuth(); 
-    setCurrentUser(res.data.data);
-  } catch (err) {
-    console.error("Failed to refresh skills:", err);
-  }
-};
+    try {
+      const res = await checkAuth();
+      setCurrentUser(res.data.data);
+    } catch (err) {
+      console.error("Failed to refresh skills:", err);
+    }
+  };
 
-
+  const fetchCertificates = async () => {
+    try {
+      const res = await checkAuth();
+      setCurrentUser(res.data.data);
+    } catch (err) {
+      console.error("Failed to refresh certificates:", err);
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -287,6 +296,7 @@ const ProfilePage = () => {
 
 
             {/* ================= PORTFOLIO ================= */}
+            <div className="mb-8 mt-4">
             <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
               Portfolio
               <button
@@ -324,9 +334,12 @@ const ProfilePage = () => {
                   </div>
                 ))}
               </div>
+              
             ) : (
               <p className="text-gray-500">You have not added any portfolio projects yet.</p>
+              
             )}
+            </div>
 
             {/* Show AddPortfolio modal */}
             {isAddPortfolioOpen && (
@@ -345,8 +358,16 @@ const ProfilePage = () => {
 
 
             {/* ================= CERTIFICATES ================= */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Certificates</h3>
+            <div className="mb-8 mt-4">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+              Certificates
+              <button
+                onClick={() => setIsAddCertificateOpen(true)}
+                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+              >
+                + Add
+              </button>
+            </h3>
               {currentUser.certificates && currentUser.certificates.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {currentUser.certificates.map((cert, index) => (
@@ -374,6 +395,20 @@ const ProfilePage = () => {
                 <p className="text-gray-500">No certificates uploaded yet.</p>
               )}
             </div>
+
+            {isAddCertificateOpen && (
+              <AddCertificate
+                onClose={() => setIsAddCertificateOpen(false)}
+                onAdd={(newCertificate) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    certificates: [...(prev.certificates || []), newCertificate],
+                  }))
+                }
+                onRefresh={fetchCertificates}
+              />
+            )}
+
 
             {/* ================= EXPERIENCE ================= */}
             <div className="mb-8">
