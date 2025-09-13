@@ -6,6 +6,7 @@ import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
 import AddCertificate from "../components/AddCertificate";
+import AddExperience from "../components/AddExperience";
 
 
 const formatAddress = (address) => {
@@ -31,6 +32,7 @@ const ProfilePage = () => {
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
   const [isAddSkillOpen, setIsAddSkillOpen] = useState(false);
   const [isAddCertificateOpen, setIsAddCertificateOpen] = useState(false);
+  const [isAddExperienceOpen, setIsAddExperienceOpen] = useState(false);
 
 
   // ✅ Load user
@@ -94,6 +96,15 @@ const ProfilePage = () => {
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh certificates:", err);
+    }
+  };
+
+  const fetchExperiences = async () => {
+    try {
+      const res = await checkAuth();
+      setCurrentUser(res.data.data);
+    } catch (err) {
+      console.error("Failed to refresh experiences:", err);
     }
   };
 
@@ -297,48 +308,48 @@ const ProfilePage = () => {
 
             {/* ================= PORTFOLIO ================= */}
             <div className="mb-8 mt-4">
-            <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-              Portfolio
-              <button
-                onClick={() => setIsAddPortfolioOpen(true)}
-                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-              >
-                + Add
-              </button>
-            </h3>
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Portfolio
+                <button
+                  onClick={() => setIsAddPortfolioOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              </h3>
 
-            {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {currentUser.portfolio.map((item, index) => (
-                  <div
-                    key={index}
-                    className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition"
-                  >
-                    <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                      <img
-                        src={
-                          item.image?.url
-                            ? item.image.url
-                            : "https://via.placeholder.com/300x200?text=No+Image"
-                        }
-                        alt={item.projectTitle || "Portfolio Project"}
-                        className="w-full h-full object-cover rounded-md"
-                      />
+              {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {currentUser.portfolio.map((item, index) => (
+                    <div
+                      key={index}
+                      className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition"
+                    >
+                      <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <img
+                          src={
+                            item.image?.url
+                              ? item.image.url
+                              : "https://via.placeholder.com/300x200?text=No+Image"
+                          }
+                          alt={item.projectTitle || "Portfolio Project"}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      </div>
+                      <h4 className="text-lg font-semibold text-gray-800 mt-3">
+                        {item.projectTitle || "Untitled Project"}
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {item.description || "No description provided."}
+                      </p>
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-800 mt-3">
-                      {item.projectTitle || "Untitled Project"}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {item.description || "No description provided."}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              
-            ) : (
-              <p className="text-gray-500">You have not added any portfolio projects yet.</p>
-              
-            )}
+                  ))}
+                </div>
+
+              ) : (
+                <p className="text-gray-500">You have not added any portfolio projects yet.</p>
+
+              )}
             </div>
 
             {/* Show AddPortfolio modal */}
@@ -360,14 +371,14 @@ const ProfilePage = () => {
             {/* ================= CERTIFICATES ================= */}
             <div className="mb-8 mt-4">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-              Certificates
-              <button
-                onClick={() => setIsAddCertificateOpen(true)}
-                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-              >
-                + Add
-              </button>
-            </h3>
+                Certificates
+                <button
+                  onClick={() => setIsAddCertificateOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              </h3>
               {currentUser.certificates && currentUser.certificates.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {currentUser.certificates.map((cert, index) => (
@@ -412,7 +423,15 @@ const ProfilePage = () => {
 
             {/* ================= EXPERIENCE ================= */}
             <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Work Experience</h3>
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Work Experience
+                <button
+                  onClick={() => setIsAddExperienceOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              </h3>
               {currentUser.experience && currentUser.experience.length > 0 ? (
                 <div className="space-y-4">
                   {currentUser.experience.map((exp, index) => (
@@ -441,6 +460,19 @@ const ProfilePage = () => {
             </div>
 
           </div>
+
+          {isAddExperienceOpen && (
+            <AddExperience
+              onClose={() => setIsAddExperienceOpen(false)}
+              onAdd={(newExperience) =>
+                setCurrentUser((prev) => ({
+                  ...prev,
+                  experiences: [...(prev.experiences || []), newExperience],
+                }))
+              }
+              onRefresh={fetchExperiences}
+            />
+          )}
 
 
         </>
