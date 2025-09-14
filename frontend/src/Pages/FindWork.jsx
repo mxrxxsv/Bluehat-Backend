@@ -165,11 +165,8 @@ const FindWork = () => {
         category: selectedCategory,
       };
 
-      // const response = await createJob(jobData);
-      // const jobCreated = response.data?.data || response.data;
-      // setJobPosts((prev) => [jobCreated, ...prev]);
-
       await createJob(jobData);
+      
       // Refresh job list to include the new job
       await fetchJobs(false);
 
