@@ -63,6 +63,7 @@ router.put(
   uploadUserMiddleware,
   updatePortfolio
 );
+
 router.delete(
   "/portfolio/:id",
   authenticateToken,

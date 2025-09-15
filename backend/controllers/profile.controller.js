@@ -753,7 +753,7 @@ const deletePortfolio = async (req, res) => {
       });
     }
 
-    // ✅ Validate parameters
+    // ✅ Validate parameters with Joi
     const { error, value } = paramIdSchema.validate(req.params, {
       abortEarly: false,
       stripUnknown: true,
@@ -771,10 +771,11 @@ const deletePortfolio = async (req, res) => {
       });
     }
 
+    // ✅ Sanitize input
     const { id: portfolioId } = sanitizeInput(value);
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
-
+    // ✅ Find worker by credentialId
+    const worker = await Worker.findOne({ credentialId: req.user.id });
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -785,7 +786,6 @@ const deletePortfolio = async (req, res) => {
 
     // ✅ Find portfolio item
     const portfolioItem = worker.portfolio.id(portfolioId);
-
     if (!portfolioItem) {
       return res.status(404).json({
         success: false,
@@ -807,34 +807,42 @@ const deletePortfolio = async (req, res) => {
     }
 
     // ✅ Remove from portfolio array
-    portfolioItem.remove();
+    portfolioItem.deleteOne();
     await worker.save();
 
     const processingTime = Date.now() - startTime;
 
+    // ✅ Logging
     logger.info("Portfolio item deleted successfully", {
-      userId: req.user._id,
+      userId: req.user.id,
       workerId: worker._id,
-      portfolioId: portfolioId,
+      portfolioId,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Portfolio item deleted successfully",
       code: "PORTFOLIO_DELETED",
+      data: { deletedId: portfolioId },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (err) {
-    return handleProfileError(err, res, "Delete portfolio", req);
+    console.error("Delete portfolio error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      code: "INTERNAL_ERROR",
+    });
   }
 };
+
 
 // ✅ CERTIFICATE CONTROLLERS
 const uploadCertificate = async (req, res) => {
