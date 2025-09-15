@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate } from "../api/profile";
+import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
@@ -178,6 +178,20 @@ const ProfilePage = () => {
       console.error("Failed to delete certificate:", err.response?.data || err.message);
     }
   };
+
+  const handleDeleteExperience = async (id) => {
+    console.log("Deleting experience ID:", id);
+    try {
+      await deleteExperience(id);
+      setCurrentUser((prev) => ({
+        ...prev,
+        experience: prev.experience.filter((e) => e._id !== id),
+      }));
+    } catch (err) {
+      console.error("Failed to delete experience:", err.response?.data || err.message);
+    }
+  };
+
 
 
 
@@ -485,23 +499,35 @@ const ProfilePage = () => {
               </h3>
               {currentUser.experience && currentUser.experience.length > 0 ? (
                 <div className="space-y-4">
-                  {currentUser.experience.map((exp, index) => (
+                  {currentUser.experience.map((exp) => (
                     <div
-                      key={index}
-                      className="shadow-sm p-4 rounded-md text-left bg-white"
+                      key={exp._id}
+                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
                     >
-                      <h4 className="text-lg font-semibold text-gray-800">
-                        {exp.position || "Unknown Position"}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {exp.companyName || "Unknown Company"}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {exp.startYear} – {exp.endYear || "Present"}
-                      </p>
-                      <p className="text-gray-700 mt-2 text-sm">
-                        {exp.responsibilities || "No details provided."}
-                      </p>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {exp.position || "Unknown Position"}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {exp.companyName || "Unknown Company"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {exp.startYear} – {exp.endYear || "Present"}
+                        </p>
+                        <p className="text-gray-700 mt-2 text-sm">
+                          {exp.responsibilities || "No details provided."}
+                        </p>
+                      </div>
+
+                      {/* ✅ Delete button at bottom */}
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleDeleteExperience(exp._id)}
+                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -1177,8 +1177,8 @@ const deleteExperience = async (req, res) => {
 
     const { id: experienceId } = sanitizeInput(value);
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
-
+    // ✅ Find worker
+    const worker = await Worker.findOne({ credentialId: req.user.id });
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -1189,7 +1189,6 @@ const deleteExperience = async (req, res) => {
 
     // ✅ Find experience
     const experience = worker.experience.id(experienceId);
-
     if (!experience) {
       return res.status(404).json({
         success: false,
@@ -1198,8 +1197,8 @@ const deleteExperience = async (req, res) => {
       });
     }
 
-    // ✅ Remove from experience array
-    experience.remove();
+    // ✅ Remove experience entry
+    experience.deleteOne();
     await worker.save();
 
     const processingTime = Date.now() - startTime;
@@ -1207,17 +1206,18 @@ const deleteExperience = async (req, res) => {
     logger.info("Experience deleted successfully", {
       userId: req.user._id,
       workerId: worker._id,
-      experienceId: experienceId,
+      experienceId,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Experience deleted successfully",
       code: "EXPERIENCE_DELETED",
+      data: { deletedId: experienceId },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
