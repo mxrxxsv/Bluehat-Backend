@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture } from "../api/profile";
+import { uploadProfilePicture, removeProfilePicture, deletePortfolio } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
@@ -152,6 +152,20 @@ const ProfilePage = () => {
       setUploading(false);
     }
   };
+
+  const handleDeletePortfolio = async (id) => {
+    console.log("Deleting portfolio ID:", id);
+    try {
+      await deletePortfolio(id);
+      setCurrentUser((prev) => ({
+        ...prev,
+        portfolio: prev.portfolio.filter((p) => p._id !== id),
+      }));
+    } catch (err) {
+      console.error("Failed to delete portfolio:", err.response?.data || err.message);
+    }
+  };
+
 
   if (loading) {
     return <p className="text-center mt-40 text-gray-500">Loading user profile...</p>;
@@ -320,11 +334,12 @@ const ProfilePage = () => {
 
               {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {currentUser.portfolio.map((item, index) => (
+                  {currentUser.portfolio.map((item) => (
                     <div
-                      key={index}
-                      className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition"
+                      key={item._id}
+                      className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
                     >
+                      {/* Image Section */}
                       <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
                         <img
                           src={
@@ -336,14 +351,29 @@ const ProfilePage = () => {
                           className="w-full h-full object-cover rounded-md"
                         />
                       </div>
-                      <h4 className="text-lg font-semibold text-gray-800 mt-3">
-                        {item.projectTitle || "Untitled Project"}
-                      </h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {item.description || "No description provided."}
-                      </p>
+
+                      {/* Content Section */}
+                      <div className="mt-3 flex-1">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {item.projectTitle || "Untitled Project"}
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {item.description || "No description provided."}
+                        </p>
+                      </div>
+
+                      {/* Delete Button at Bottom */}
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={() => handleDeletePortfolio(item._id)}
+                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
+
                 </div>
 
               ) : (
