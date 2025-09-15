@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture, deletePortfolio } from "../api/profile";
+import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
@@ -165,6 +165,20 @@ const ProfilePage = () => {
       console.error("Failed to delete portfolio:", err.response?.data || err.message);
     }
   };
+
+  const handleDeleteCertificate = async (id) => {
+    console.log("Deleting certificate ID:", id);
+    try {
+      await deleteCertificate(id);
+      setCurrentUser((prev) => ({
+        ...prev,
+        certificates: prev.certificates.filter((c) => c._id !== id),
+      }));
+    } catch (err) {
+      console.error("Failed to delete certificate:", err.response?.data || err.message);
+    }
+  };
+
 
 
   if (loading) {
@@ -414,7 +428,7 @@ const ProfilePage = () => {
                   {currentUser.certificates.map((cert, index) => (
                     <div
                       key={index}
-                      className="shadow-sm p-3 rounded-md bg-white text-left"
+                      className="shadow-sm p-3 rounded-md bg-white text-left flex flex-col justify-between"
                     >
                       <img
                         src={
@@ -425,16 +439,23 @@ const ProfilePage = () => {
                         alt="Certificate"
                         className="w-full h-40 object-cover rounded-md"
                       />
-                      {/* <h4 className="text-md font-semibold text-gray-800 mt-3">
-                        {cert.title || "Untitled Certificate"}
-                      </h4>
-                      <p className="text-sm text-gray-600">{cert.issuer || "Unknown Issuer"}</p> */}
+
+                      {/* Delete Button */}
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleDeleteCertificate(cert._id)}
+                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-gray-500">No certificates uploaded yet.</p>
               )}
+
             </div>
 
             {isAddCertificateOpen && (

@@ -944,6 +944,7 @@ const deleteCertificate = async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // ✅ Only workers can delete certificates
     if (req.user.userType !== "worker") {
       return res.status(403).json({
         success: false,
@@ -952,7 +953,7 @@ const deleteCertificate = async (req, res) => {
       });
     }
 
-    // ✅ Validate parameters
+    // ✅ Validate ID param
     const { error, value } = paramIdSchema.validate(req.params, {
       abortEarly: false,
       stripUnknown: true,
@@ -972,8 +973,8 @@ const deleteCertificate = async (req, res) => {
 
     const { id: certificateId } = sanitizeInput(value);
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
-
+    // ✅ Find worker by credentialId (same as portfolio)
+    const worker = await Worker.findOne({ credentialId: req.user.id });
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -982,9 +983,8 @@ const deleteCertificate = async (req, res) => {
       });
     }
 
-    // ✅ Find certificate
+    // ✅ Find the certificate in subdocument
     const certificate = worker.certificates.id(certificateId);
-
     if (!certificate) {
       return res.status(404).json({
         success: false,
@@ -993,47 +993,55 @@ const deleteCertificate = async (req, res) => {
       });
     }
 
-    // ✅ Delete from Cloudinary
-    if (certificate.public_id) {
+    // ✅ Delete from Cloudinary if available
+    if (certificate.image?.public_id) {
       try {
-        await cloudinary.uploader.destroy(certificate.public_id);
+        await cloudinary.uploader.destroy(certificate.image.public_id);
       } catch (deleteError) {
-        logger.warn("Failed to delete certificate from Cloudinary", {
-          publicId: certificate.public_id,
+        logger.warn("Failed to delete certificate image from Cloudinary", {
+          publicId: certificate.image.public_id,
           error: deleteError.message,
         });
       }
     }
 
-    // ✅ Remove from certificates array
-    certificate.remove();
+    // ✅ Remove certificate subdoc and save
+    certificate.deleteOne();
     await worker.save();
 
     const processingTime = Date.now() - startTime;
 
+    // ✅ Logging success
     logger.info("Certificate deleted successfully", {
       userId: req.user._id,
       workerId: worker._id,
-      certificateId: certificateId,
+      certificateId,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Certificate deleted successfully",
       code: "CERTIFICATE_DELETED",
+      data: { deletedId: certificateId },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (err) {
-    return handleProfileError(err, res, "Delete certificate", req);
+    console.error("Delete certificate error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      code: "INTERNAL_ERROR",
+    });
   }
 };
+
 
 // ✅ EXPERIENCE CONTROLLERS
 const addExperience = async (req, res) => {
