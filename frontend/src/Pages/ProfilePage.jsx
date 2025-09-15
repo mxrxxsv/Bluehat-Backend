@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience } from "../api/profile";
+import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience, removeSkillCategory } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
@@ -192,6 +192,23 @@ const ProfilePage = () => {
     }
   };
 
+  const handleDeleteSkillCategory = async (id) => {
+  console.log("Deleting skill category ID:", id);
+  try {
+    await removeSkillCategory(id);
+    setCurrentUser((prev) => ({
+      ...prev,
+      skillsByCategory: prev.skillsByCategory.filter(
+        (s) => s.skillCategoryId._id !== id
+      ),
+    }));
+  } catch (err) {
+    console.error(
+      "Failed to delete skill category:",
+      err.response?.data || err.message
+    );
+  }
+};
 
 
 
@@ -320,13 +337,20 @@ const ProfilePage = () => {
             {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {currentUser.skillsByCategory.map((skill, index) => (
-                  <span
+                  <div
                     key={index}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm"
+                    className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
                   >
-                    {skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}
-                  </span>
+                    <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
+                    <button
+                      onClick={() => handleDeleteSkillCategory(skill.skillCategoryId._id)}
+                      className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
+
               </div>
             ) : (
               <p className="text-gray-500">No skills added yet.</p>

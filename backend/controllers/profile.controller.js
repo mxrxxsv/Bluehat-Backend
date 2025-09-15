@@ -1371,7 +1371,8 @@ const removeSkillCategory = async (req, res) => {
 
     const { id: skillCategoryId } = sanitizeInput(value);
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
+    // ✅ Use req.user.id (consistent with portfolio & certificate)
+    const worker = await Worker.findOne({ credentialId: req.user.id });
 
     if (!worker) {
       return res.status(404).json({
@@ -1400,7 +1401,7 @@ const removeSkillCategory = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Skill category removed successfully", {
-      userId: req.user._id,
+      userId: req.user.id, // ✅ updated for consistency
       workerId: worker._id,
       skillCategoryId: skillCategoryId,
       ip: req.ip,
@@ -1422,6 +1423,7 @@ const removeSkillCategory = async (req, res) => {
     return handleProfileError(err, res, "Remove skill category", req);
   }
 };
+
 
 // ✅ GET PROFILE CONTROLLERS
 const getProfile = async (req, res) => {
