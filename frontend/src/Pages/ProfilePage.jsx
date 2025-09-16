@@ -34,6 +34,9 @@ const ProfilePage = () => {
   const [isAddCertificateOpen, setIsAddCertificateOpen] = useState(false);
   const [isAddExperienceOpen, setIsAddExperienceOpen] = useState(false);
 
+  const [isEditMode, setIsEditMode] = useState(false);
+
+
 
   // ✅ Load user
   useEffect(() => {
@@ -193,22 +196,22 @@ const ProfilePage = () => {
   };
 
   const handleDeleteSkillCategory = async (id) => {
-  console.log("Deleting skill category ID:", id);
-  try {
-    await removeSkillCategory(id);
-    setCurrentUser((prev) => ({
-      ...prev,
-      skillsByCategory: prev.skillsByCategory.filter(
-        (s) => s.skillCategoryId._id !== id
-      ),
-    }));
-  } catch (err) {
-    console.error(
-      "Failed to delete skill category:",
-      err.response?.data || err.message
-    );
-  }
-};
+    console.log("Deleting skill category ID:", id);
+    try {
+      await removeSkillCategory(id);
+      setCurrentUser((prev) => ({
+        ...prev,
+        skillsByCategory: prev.skillsByCategory.filter(
+          (s) => s.skillCategoryId._id !== id
+        ),
+      }));
+    } catch (err) {
+      console.error(
+        "Failed to delete skill category:",
+        err.response?.data || err.message
+      );
+    }
+  };
 
 
 
@@ -302,37 +305,31 @@ const ProfilePage = () => {
         </>
       ) : (
         <>
-          {/* Portfolio Section */}
+          {/* Credential Section */}
 
           <div className="bg-white shadow-md rounded-lg p-4 mb-8">
 
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setIsEditMode((prev) => !prev)}
+                className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+              >
+                {isEditMode ? "Done" : "Edit"}
+              </button>
+            </div>
+
             {/* ================= SKILLS ================= */}
-            {/* <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left">Skills</h3>
-              {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.skillsByCategory.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm"
-                    >
-                      {skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No skills added yet.</p>
-              )}
-            </div> */}
 
             <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
               Skills
-              <button
-                onClick={() => setIsAddSkillOpen(true)}
-                className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-              >
-                + Add
-              </button>
+              {isEditMode && (
+                <button
+                  onClick={() => setIsAddSkillOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              )}
             </h3>
             {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -342,12 +339,14 @@ const ProfilePage = () => {
                     className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
                   >
                     <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
-                    <button
-                      onClick={() => handleDeleteSkillCategory(skill.skillCategoryId._id)}
-                      className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                    >
-                      ✕
-                    </button>
+                    {isEditMode && (
+                      <button
+                        onClick={() => handleDeleteSkillCategory(skill.skillCategoryId._id)}
+                        className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -376,12 +375,14 @@ const ProfilePage = () => {
             <div className="mb-8 mt-4">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
                 Portfolio
-                <button
-                  onClick={() => setIsAddPortfolioOpen(true)}
-                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                >
-                  + Add
-                </button>
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddPortfolioOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
               </h3>
 
               {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
@@ -415,14 +416,16 @@ const ProfilePage = () => {
                       </div>
 
                       {/* Delete Button at Bottom */}
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          onClick={() => handleDeletePortfolio(item._id)}
-                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      {isEditMode && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            onClick={() => handleDeletePortfolio(item._id)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -454,12 +457,15 @@ const ProfilePage = () => {
             <div className="mb-8 mt-4">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
                 Certificates
-                <button
-                  onClick={() => setIsAddCertificateOpen(true)}
-                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                >
-                  + Add
-                </button>
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddCertificateOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
+
               </h3>
               {currentUser.certificates && currentUser.certificates.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -479,14 +485,16 @@ const ProfilePage = () => {
                       />
 
                       {/* Delete Button */}
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => handleDeleteCertificate(cert._id)}
-                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      {isEditMode && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => handleDeleteCertificate(cert._id)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -514,12 +522,14 @@ const ProfilePage = () => {
             <div className="mb-8">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
                 Work Experience
-                <button
-                  onClick={() => setIsAddExperienceOpen(true)}
-                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                >
-                  + Add
-                </button>
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddExperienceOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
               </h3>
               {currentUser.experience && currentUser.experience.length > 0 ? (
                 <div className="space-y-4">
@@ -544,14 +554,16 @@ const ProfilePage = () => {
                       </div>
 
                       {/* ✅ Delete button at bottom */}
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => handleDeleteExperience(exp._id)}
-                          className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      {isEditMode && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => handleDeleteExperience(exp._id)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
