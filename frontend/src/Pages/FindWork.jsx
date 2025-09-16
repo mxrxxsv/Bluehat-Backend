@@ -14,6 +14,7 @@ import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
 import AddressInput from "../components/AddressInput";
 import PortfolioSetup from "../components/PortfolioSetup";
+import IDSetup from "../components/IDSetup";
 
 const currentUser = {
   avatar:
@@ -44,6 +45,9 @@ const FindWork = () => {
   // ✅ NEW: Draft and confirm modal state
   const [draft, setDraft] = useState(null);
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
+
+  const [showIdSetup, setShowIdSetup] = useState(false);
+
 
   // ✅ NEW: Reset form helper
   const resetForm = () => {
@@ -166,7 +170,7 @@ const FindWork = () => {
       };
 
       await createJob(jobData);
-      
+
       // Refresh job list to include the new job
       await fetchJobs(false);
 
@@ -202,6 +206,10 @@ const FindWork = () => {
 
 
           setShowPortfolioSetup(shouldShowModal);
+
+          if (!userData.idPicture || !userData.selfie) {
+            setShowIdSetup(true);
+          }
         } else {
           setShowPortfolioSetup(false);
         }
@@ -423,8 +431,11 @@ const FindWork = () => {
           </div>
         </div>
       )}
+      
+      {/* ID Setup Modal */}
+      {showIdSetup && <IDSetup onClose={() => setShowIdSetup(false)} />}
 
-      {/* 👇 Add this */}
+      {/* Show Portfolio Setup */}
       {showPortfolioSetup && (
         <PortfolioSetup onClose={() => setShowPortfolioSetup(false)} />
       )}
