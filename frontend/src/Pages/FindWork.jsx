@@ -304,7 +304,7 @@ const FindWork = () => {
                     {/* </div> */}
 
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                      <Clock size={16} /> Just now
+                      {/* <Clock size={16} /> Just now */}
                     </span>
                   </div>
                   <p className="text-gray-700 mt-1 text-left flex items-center gap-2">

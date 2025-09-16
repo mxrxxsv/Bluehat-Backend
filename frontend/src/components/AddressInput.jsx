@@ -84,7 +84,7 @@ const AddressInput = ({ value, onChange }) => {
       >
         <option value="">Select Region</option>
         {regions.map((r) => (
-          <option key={r.code} value={r.code}>
+          <option key={r.code} value={r.code} className="text-black">
             {r.name}
           </option>
         ))}
@@ -99,7 +99,7 @@ const AddressInput = ({ value, onChange }) => {
       >
         <option value="">Select Province</option>
         {provinces.map((p) => (
-          <option key={p.code} value={p.code}>
+          <option key={p.code} value={p.code} className="text-black">
             {p.name}
           </option>
         ))}
@@ -114,7 +114,7 @@ const AddressInput = ({ value, onChange }) => {
       >
         <option value="">Select City/Municipality</option>
         {cities.map((c) => (
-          <option key={c.code} value={c.code}>
+          <option key={c.code} value={c.code} className="text-black">
             {c.name}
           </option>
         ))}
@@ -129,7 +129,7 @@ const AddressInput = ({ value, onChange }) => {
       >
         <option value="">Select Barangay</option>
         {barangays.map((b) => (
-          <option key={b.code} value={b.code}>
+          <option key={b.code} value={b.code} className="text-black">
             {b.name}
           </option>
         ))}
