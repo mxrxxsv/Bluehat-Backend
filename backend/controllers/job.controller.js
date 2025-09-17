@@ -286,7 +286,6 @@ const isContentAppropriate = (text) => {
 const optimizeJobForResponse = (job) => {
   let clientName = "Anonymous Client";
 
-  // Handle different job structures (aggregation vs populate)
   const client = job.client || job.clientId;
 
   if (client && client.firstName) {
@@ -307,7 +306,9 @@ const optimizeJobForResponse = (job) => {
     }
   }
 
-  // ✅ OPTIMIZED: Return only what frontend needs
+  // Extract credentialId from populated clientId
+  const credentialId = client?.credentialId;
+
   return {
     id: job._id,
     description: job.description,
@@ -318,25 +319,26 @@ const optimizeJobForResponse = (job) => {
     updatedAt: job.updatedAt,
     category: {
       id: job.category?._id || job.category,
-      name:
-        job.categoryName || job.category?.categoryName || "Unknown Category",
+      name: job.category?.categoryName || "Unknown Category",
     },
     client: {
-      name: clientName, // ✅ Decrypted client name
-      profilePicture: client?.profilePicture?.url || null,
-      isVerified: true, // ✅ All clients are verified at this point
+      id: client._id,
+      credentialId, // ✅ now returns the proper credentialId
+      name: clientName,
+      profilePicture: client?.profilePicture?.url || client?.profilePicture || null,
+      isVerified: true,
     },
     hiredWorker: job.hiredWorker
       ? {
         id: job.hiredWorker._id,
-        name:
-          `${job.hiredWorker.firstName || ""} ${job.hiredWorker.lastName || ""
-            }`.trim() || "Unknown Worker",
+        name: `${job.hiredWorker.firstName || ""} ${job.hiredWorker.lastName || ""}`.trim() || "Unknown Worker",
         profilePicture: job.hiredWorker.profilePicture?.url || null,
       }
       : null,
   };
 };
+
+
 
 const handleJobError = (
   error,
@@ -527,7 +529,7 @@ const getAllJobs = async (req, res) => {
       category: job.category
         ? { id: job.category._id, name: job.category.categoryName }
         : null,
-      clientId: job.clientId?._id, 
+      clientId: job.clientId?._id,
       client: job.clientId
         ? {
           name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(job.clientId.lastName)}`,
@@ -989,20 +991,13 @@ const getJobById = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate parameters
+    // Validate parameters
     const { error, value } = paramIdSchema.validate(req.params, {
       abortEarly: false,
       stripUnknown: true,
     });
 
     if (error) {
-      logger.warn("Get job by ID param validation failed", {
-        errors: error.details,
-        params: req.params,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
       return res.status(400).json({
         success: false,
         message: "Invalid job ID",
@@ -1016,59 +1011,29 @@ const getJobById = async (req, res) => {
 
     const { id } = sanitizeInput(value);
 
-    const job = await Job.findOne({
-      _id: id,
-      isDeleted: false,
-    })
+    const job = await Job.findOne({ _id: id, isDeleted: false })
       .populate("category", "categoryName")
       .populate({
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        select: "_id firstName lastName profilePicture credentialId",
         populate: {
           path: "credentialId",
           match: { isVerified: true, isBlocked: { $ne: true } },
-          select: "email",
+          select: "_id email", // include _id to get the credentialId
         },
+        options: { lean: true },
       })
       .populate("hiredWorker", "firstName lastName profilePicture")
-      .lean(); // ✅ Performance optimization
+      .lean();
 
-    if (!job || !job.clientId?.credentialId) {
-      logger.warn("Job not found or client not verified", {
-        jobId: id,
-        jobExists: !!job,
-        clientVerified: !!job?.clientId?.credentialId,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
+    // Map clientId to client for frontend
+    if (job.clientId) job.client = job.clientId;
 
-      return res.status(404).json({
-        success: false,
-        message: "Job not found or client not verified",
-        code: "JOB_NOT_FOUND",
-      });
-    }
 
-    const processingTime = Date.now() - startTime;
 
-    // ✅ Optimize single job for response
     const optimizedJob = optimizeJobForResponse(job);
 
-    logger.info("Job retrieved successfully", {
-      jobId: id,
-      clientId: job.clientId._id,
-      category: job.category?.categoryName,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    // ✅ Set cache headers for public endpoint
-    res.set({
-      "Cache-Control": "public, max-age=600", // 10 minutes cache for single job
-      ETag: `"job-${job._id}-${job.updatedAt}"`,
-    });
+    const processingTime = Date.now() - startTime;
 
     res.status(200).json({
       success: true,
@@ -1082,20 +1047,10 @@ const getJobById = async (req, res) => {
     });
   } catch (err) {
     const processingTime = Date.now() - startTime;
-
-    logger.error("Get job by ID failed", {
-      error: err.message,
-      stack: err.stack,
-      jobId: req.params?.id,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
     return handleJobError(err, res, "Get job by ID", req);
   }
 };
+
 
 // Create a job (only verified clients) with content filtering
 const postJob = async (req, res) => {

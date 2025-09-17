@@ -6,8 +6,11 @@ const helmet = require("helmet");
 const cors = require("cors");
 const mongoSanitize = require("express-mongo-sanitize");
 const connectDb = require("./db/connectDb");
-const { authLimiter, verifyLimiter } = require("./utils/rateLimit");
+const { authLimiter } = require("./utils/rateLimit");
+const http = require("http");
+const { Server } = require("socket.io");
 
+// Routes
 const verRoute = require("./routes/ver.route");
 const adminRoute = require("./routes/admin.route");
 const adminTaskRoute = require("./routes/adminTask.route");
@@ -20,6 +23,8 @@ const profileRoute = require("./routes/profile.route");
 const clientManagementRoute = require("./routes/clientManagement.route");
 const workerManagementRoute = require("./routes/workerManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification.route");
+const messageRoute = require("./routes/message.route");
+
 const allowedOrigins = [process.env.FRONTEND_URL];
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -42,7 +47,8 @@ app.use(
     },
   })
 );
-// 2) CORS — only allow your front-end origins
+
+// 2) CORS
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -62,13 +68,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(mongoSanitize());
 
-// 5) Rate limiting (apply globally)
+// 4) Rate limiting
 app.use(authLimiter);
 
-// 6) Health check
+// 5) Health check
 app.get("/healthz", (req, res) => res.sendStatus(200));
 
-// 7) Routes
+// 6) Routes
 app.use("/ver", verRoute);
 app.use("/admin", adminRoute);
 app.use("/admin-tasks", adminTaskRoute);
@@ -81,12 +87,14 @@ app.use("/profile", profileRoute);
 app.use("/id-verification", userIDVerificationRoute);
 app.use("/client-management", clientManagementRoute);
 app.use("/worker-management", workerManagementRoute);
-// 8) 404 handler
+app.use("/messages", messageRoute);
+
+// 7) 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Not Found" });
 });
 
-// 9) Centralized error handler
+// 8) Centralized error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
@@ -95,21 +103,105 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start after DB is connected
+// Create HTTP server
+const server = http.createServer(app);
+
+// =====================
+// Socket.IO Setup
+// =====================
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
+});
+
+// Track online users: Map<credentialId, Set<socketId>>
+const userSockets = new Map();
+
+io.on("connection", (socket) => {
+  console.log(`🔌 Socket connected: ${socket.id}`);
+
+  // Register a credentialId for this socket (client must emit after login)
+  socket.on("registerUser", (credentialId) => {
+    if (!credentialId) return;
+    const cred = String(credentialId);
+    if (!userSockets.has(cred)) userSockets.set(cred, new Set());
+    userSockets.get(cred).add(socket.id);
+    socket.data.credentialId = cred;
+    console.log(`✅ Registered user ${cred} on socket ${socket.id}`);
+  });
+
+  // Join a conversation room
+  socket.on("joinConversation", (conversationId) => {
+    if (!conversationId) return;
+    const room = `conversation:${conversationId}`;
+    socket.join(room);
+    console.log(`📥 ${socket.id} joined room ${room}`);
+  });
+
+  // Optional: leave conversation
+  socket.on("leaveConversation", (conversationId) => {
+    if (!conversationId) return;
+    const room = `conversation:${conversationId}`;
+    socket.leave(room);
+    console.log(`📤 ${socket.id} left room ${room}`);
+  });
+
+  // When client emits a sent message, broadcast it
+  socket.on("sendMessage", (msg) => {
+    try {
+      const convId = msg.conversationId;
+      if (!convId) return;
+
+      const room = `conversation:${convId}`;
+      console.log(`💬 Message in ${room}:`, msg);
+
+      // Broadcast to everyone in the room except sender
+      socket.to(room).emit("receiveMessage", msg);
+
+      // Also send to recipient if they’re online but not currently in room
+      const recipientCred = msg.toCredentialId ? String(msg.toCredentialId) : null;
+      if (recipientCred && userSockets.has(recipientCred)) {
+        userSockets.get(recipientCred).forEach((sockId) => {
+          if (sockId !== socket.id) {
+            io.to(sockId).emit("receiveMessage", msg);
+          }
+        });
+      }
+    } catch (err) {
+      console.error("socket sendMessage error:", err);
+    }
+  });
+
+  // Cleanup on disconnect
+  socket.on("disconnect", () => {
+    const cred = socket.data?.credentialId;
+    if (cred && userSockets.has(cred)) {
+      const set = userSockets.get(cred);
+      set.delete(socket.id);
+      if (set.size === 0) userSockets.delete(cred);
+    }
+    console.log(`❌ Socket disconnected: ${socket.id}`);
+  });
+});
+
+// =====================
+// Start after DB connect
+// =====================
 connectDb()
   .then(() => {
-    const server = app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server listening on port ${PORT}`);
     });
 
-    // 10) Graceful shutdown
     const shutdown = () => {
       console.log("👋 Shutting down...");
       server.close(() => {
         console.log("HTTP server closed.");
         process.exit(0);
       });
-      // force kill after 10s
+      io.close();
       setTimeout(() => process.exit(1), 10000);
     };
     process.on("SIGINT", shutdown);
