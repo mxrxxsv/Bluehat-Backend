@@ -15,6 +15,7 @@ const ChatPage = () => {
     const location = useLocation();
 
     const [contactNames, setContactNames] = useState({});
+    const [contactProfiles, setContactProfiles] = useState({});
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [showModal, setShowModal] = useState(false);
@@ -157,11 +158,12 @@ const ChatPage = () => {
 
     // ---------- fetch display names ----------
     useEffect(() => {
-        const fetchNames = async () => {
+
+        const fetchProfiles = async () => {
             const toFetch = [];
             for (const conv of conversations) {
                 const otherCred = idToString(conv.other?.credentialId);
-                if (otherCred && !contactNames[otherCred]) toFetch.push(otherCred);
+                if (otherCred && !contactProfiles[otherCred]) toFetch.push(otherCred);
             }
             if (!toFetch.length) return;
 
@@ -171,18 +173,26 @@ const ChatPage = () => {
                         .then((r) => ({
                             credId,
                             name: r?.data?.data?.user?.fullName || "Unnamed",
+                            profilePicture: r?.data?.data?.user?.profilePicture || null,
                         }))
-                        .catch(() => ({ credId, name: "Unnamed" }))
+                        .catch(() => ({ credId, name: "Unnamed", profilePicture: null }))
                 )
             );
 
-            const map = {};
-            for (const r of results) map[r.credId] = r.name;
-            setContactNames((prev) => ({ ...prev, ...map }));
+            const namesMap = {};
+            const profilesMap = {};
+            for (const r of results) {
+                namesMap[r.credId] = r.name;
+                profilesMap[r.credId] = r.profilePicture;
+            }
+
+            setContactNames((prev) => ({ ...prev, ...namesMap }));
+            setContactProfiles((prev) => ({ ...prev, ...profilesMap }));
         };
 
-        fetchNames();
+        fetchProfiles();
     }, [conversations]);
+
 
     // ---------- select/create conversation ----------
     useEffect(() => {
@@ -310,15 +320,20 @@ const ChatPage = () => {
                     <ul className="space-y-2 font-medium">
                         {conversations.map((conv) => {
                             const otherCred = idToString(conv?.other?.credentialId);
-                            const name =
-                                contactNames[idToString(conv.other?.credentialId)] || "Unnamed";
+                            const name = contactNames[otherCred] || "Unnamed";
+                            const profile = contactProfiles[otherCred]?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+
                             return (
                                 <li key={conv._id}>
                                     <button
                                         onClick={() => setSelectedContactId(otherCred)}
-                                        className={`flex items-center w-full p-3 text-gray-900 rounded-lg border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm ${selectedContactId === otherCred ? "bg-gray-100" : ""
-                                            }`}
+                                        className={`flex items-center w-full p-3 text-gray-900 rounded-lg border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
                                     >
+                                        <img
+                                            src={profile}
+                                            alt={name}
+                                            className="w-8 h-8 rounded-full mr-2 object-cover"
+                                        />
                                         {name}
                                     </button>
                                 </li>
@@ -387,8 +402,8 @@ const ChatPage = () => {
 
                                         <div
                                             className={`inline-block leading-1.5 p-4 ${isMe
-                                                    ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end"
-                                                    : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"
+                                                ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end"
+                                                : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"
                                                 }`}
                                         >
                                             <p
