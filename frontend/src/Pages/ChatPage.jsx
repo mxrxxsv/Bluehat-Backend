@@ -218,6 +218,26 @@ const ChatPage = () => {
                 return;
             }
 
+            // Find existing conversation metadata
+            const existingConv = conversations.find(
+                (c) => idToString(c.other?.credentialId) === selectedContactId
+            );
+
+            if (existingConv) {
+                setCurrentConversationId(idToString(existingConv._id));
+                // Fetch messages for this conversation
+                try {
+                    const msgsRes = await getMessages(existingConv._id);
+                    const msgs = Array.isArray(msgsRes?.data?.data) ? msgsRes.data.data : [];
+                    setMessages(msgs);
+                } catch (err) {
+                    console.error("Failed to fetch messages:", err);
+                    setMessages([]);
+                }
+                return;
+            }
+
+            // Create or get conversation from backend
             try {
                 const res = await createOrGetConversation({
                     participantCredentialId: selectedContactId,
@@ -227,28 +247,26 @@ const ChatPage = () => {
                 const conv = res?.data?.data;
                 if (!conv?._id) return;
 
-                const convId = idToString(conv._id);
-                setCurrentConversationId(convId);
+                setCurrentConversationId(idToString(conv._id));
 
-                const msgsRes = await getMessages(convId);
+                const msgsRes = await getMessages(conv._id);
                 const msgs = Array.isArray(msgsRes?.data?.data) ? msgsRes.data.data : [];
                 setMessages(msgs);
 
-                // Mark this conversation as read locally
-                setConversations((prev) =>
-                    prev.map((c) =>
-                        idToString(c._id) === convId
-                            ? { ...c, unread: 0 }
-                            : c
-                    )
-                );
+                // Add conversation metadata to conversations state
+                setConversations((prev) => {
+                    if (prev.some(c => idToString(c._id) === idToString(conv._id))) return prev;
+                    return [...prev, conv];
+                });
 
             } catch (err) {
                 console.error("Load conversation failed:", err);
             }
         };
+
         initConversation();
     }, [selectedContactId]);
+
 
     // ---------- join socket room when conversation changes ----------
     useEffect(() => {

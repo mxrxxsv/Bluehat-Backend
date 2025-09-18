@@ -5,7 +5,7 @@ const Client = require("../models/Client");
 const Worker = require("../models/Worker");
 const Joi = require("joi");
 const mongoose = require("mongoose");
-const { decryptAES128 } = require("../utils/encipher"); 
+const { decryptAES128 } = require("../utils/encipher");
 
 const createConversationSchema = Joi.object({
   participantCredentialId: Joi.string().required(), // the other user's credential id
@@ -17,7 +17,7 @@ const sendMessageSchema = Joi.object({
   toCredentialId: Joi.string().optional(),
   toUserType: Joi.string().optional(), // for creating conversation if needed
   content: Joi.string().allow("").optional(),
-  type: Joi.string().valid("text","image","file").default("text")
+  type: Joi.string().valid("text", "image", "file").default("text")
 });
 
 // ================= GET CONVERSATIONS =================
@@ -58,28 +58,59 @@ exports.createOrGetConversation = async (req, res) => {
   try {
     const { error, value } = createConversationSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({ success: false, message: "Invalid payload", errors: error.details });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+        errors: error.details
+      });
     }
 
     const myId = req.user._id || req.user.id;
     const otherId = value.participantCredentialId;
 
-    // Find existing conversation with both participants
-    let conversation = await Conversation.findOne({
-      participants: {
-        $all: [
-          { $elemMatch: { credentialId: myId } },
-          { $elemMatch: { credentialId: otherId } }
-        ]
-      }
-    });
-
-    if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [
+    // --- Determine proper order ---
+    const participantsOrdered = myId.toString() < otherId.toString()
+      ? [
           { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId },
           { credentialId: otherId, userType: value.participantUserType }
         ]
+      : [
+          { credentialId: otherId, userType: value.participantUserType },
+          { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId }
+        ];
+
+    // ✅ Initialize unreadCounts with 0 for each participant
+    const initialUnreadCounts = {};
+    participantsOrdered.forEach(p => {
+      initialUnreadCounts[p.credentialId.toString()] = 0;
+    });
+
+    // ✅ Find existing OR create new
+    let conversation = await Conversation.findOneAndUpdate(
+      {
+        $and: [
+          { participants: { $elemMatch: { credentialId: myId } } },
+          { participants: { $elemMatch: { credentialId: otherId } } }
+        ]
+      },
+      {
+        $setOnInsert: {
+          participants: participantsOrdered,
+          lastMessage: "",
+          lastSender: null,
+          unreadCounts: initialUnreadCounts
+        }
+      },
+      { new: true, upsert: true }
+    );
+
+    // ✅ Safety fallback (rare)
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: participantsOrdered,
+        lastMessage: "",
+        lastSender: null,
+        unreadCounts: initialUnreadCounts
       });
     }
 
@@ -89,6 +120,7 @@ exports.createOrGetConversation = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal error" });
   }
 };
+
 
 // ================= SEND MESSAGE =================
 exports.sendMessage = async (req, res) => {
@@ -109,13 +141,13 @@ exports.sendMessage = async (req, res) => {
       if (!value.toCredentialId) return res.status(400).json({ success: false, message: "toCredentialId is required when conversationId is not provided" });
 
       conversation = await Conversation.findOne({
-        participants: {
-          $all: [
-            { $elemMatch: { credentialId: senderCredentialId } },
-            { $elemMatch: { credentialId: value.toCredentialId } }
-          ]
-        }
+        $and: [
+          { participants: { $elemMatch: { credentialId: senderCredentialId } } },
+          { participants: { $elemMatch: { credentialId: value.toCredentialId } } }
+        ]
       });
+
+
 
       if (!conversation) {
         conversation = await Conversation.create({
