@@ -174,6 +174,43 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Edit message
+  socket.on("editMessage", (updatedMsg) => {
+    try {
+      const convId = updatedMsg.conversationId;
+      if (!convId) return;
+      const room = `conversation:${convId}`;
+      console.log(`✏️ Edited message in ${room}:`, updatedMsg);
+
+      // Broadcast to everyone in the room
+      socket.to(room).emit("editMessage", updatedMsg);
+
+      // Optional: also send to sender so the echo updates if needed
+      socket.emit("editMessage", updatedMsg);
+    } catch (err) {
+      console.error("socket editMessage error:", err);
+    }
+  });
+
+  // Delete message
+  socket.on("deleteMessage", (deletedMsg) => {
+    try {
+      const convId = deletedMsg.conversationId;
+      if (!convId) return;
+      const room = `conversation:${convId}`;
+      console.log(`🗑️ Deleted message in ${room}:`, deletedMsg);
+
+      // Broadcast to everyone in the room
+      socket.to(room).emit("deleteMessage", deletedMsg);
+
+      // Optional: also send to sender so the UI updates immediately
+      socket.emit("deleteMessage", deletedMsg);
+    } catch (err) {
+      console.error("socket deleteMessage error:", err);
+    }
+  });
+
+
   // Cleanup on disconnect
   socket.on("disconnect", () => {
     const cred = socket.data?.credentialId;
