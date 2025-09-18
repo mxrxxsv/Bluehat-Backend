@@ -10,9 +10,14 @@ import {
 import { useParams, useLocation } from "react-router-dom";
 import { checkAuth } from "../api/auth.jsx";
 
+
+
 const ChatPage = () => {
     const { contactId } = useParams();
     const location = useLocation();
+
+    const messagesEndRef = useRef(null);
+
 
     const [contactNames, setContactNames] = useState({});
     const [contactProfiles, setContactProfiles] = useState({});
@@ -33,6 +38,16 @@ const ChatPage = () => {
     const [loading, setLoading] = useState(true);
 
     const [currentUser, setCurrentUser] = useState(null);
+
+    const scrollToBottom = () => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     // ---------- Helpers ----------
     const idToString = (id) => {
@@ -307,6 +322,10 @@ const ChatPage = () => {
         setShowModal(false);
     };
 
+
+
+
+
     return (
         <>
             {/* SIDEBAR */}
@@ -388,6 +407,13 @@ const ChatPage = () => {
                                     key={index}
                                     className={`flex items-start gap-2.5 mb-4 ${isMe ? "justify-end" : ""}`}
                                 >
+                                    {!isMe && (
+                                        <img
+                                            src={contactProfiles[idToString(msg?.sender?.credentialId)]?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                                            alt={contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                    )}
                                     <div className={`flex flex-col gap-1 max-w-[320px] ${isMe ? "items-end" : "items-start"}`}>
                                         <div className="flex items-center space-x-2">
                                             <span
@@ -397,7 +423,7 @@ const ChatPage = () => {
                                                     ? "You"
                                                     : contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
                                             </span>
-                                            
+
                                         </div>
 
 
@@ -413,18 +439,21 @@ const ChatPage = () => {
                                             >
                                                 {msg.content}
                                             </p>
-                                            
+
                                         </div>
                                         <span className="text-[12px] font-normal text-gray-500">
-                                                {msg.createdAt
-                                                    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                    : ""}
-                                            </span>
+                                            {msg.createdAt
+                                                ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                : ""}
+                                        </span>
                                     </div>
                                 </div>
 
                             );
                         })}
+
+                        {/* Scroll anchor */}
+                        <div ref={messagesEndRef}></div>
                     </div>
 
                     {/* INPUT */}
