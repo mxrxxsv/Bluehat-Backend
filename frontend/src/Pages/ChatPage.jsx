@@ -397,8 +397,9 @@ const ChatPage = () => {
                                                     ? "You"
                                                     : contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
                                             </span>
-                                            <span className="text-sm font-normal text-gray-500">{msg.time}</span>
+                                            
                                         </div>
+
 
                                         <div
                                             className={`inline-block leading-1.5 p-4 ${isMe
@@ -412,7 +413,13 @@ const ChatPage = () => {
                                             >
                                                 {msg.content}
                                             </p>
+                                            
                                         </div>
+                                        <span className="text-[12px] font-normal text-gray-500">
+                                                {msg.createdAt
+                                                    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                    : ""}
+                                            </span>
                                     </div>
                                 </div>
 
