@@ -6,6 +6,8 @@ import {
     getMessages,
     sendMessageREST,
     getUserInfo,
+    updateMessageREST,
+    deleteMessageREST
 } from "../api/message.jsx";
 import { useParams, useLocation } from "react-router-dom";
 import { checkAuth } from "../api/auth.jsx";
@@ -38,6 +40,12 @@ const ChatPage = () => {
     const [loading, setLoading] = useState(true);
 
     const [currentUser, setCurrentUser] = useState(null);
+
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editContent, setEditContent] = useState("");
+    const [messageMenuOpen, setMessageMenuOpen] = useState(null);
+
+
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
@@ -281,6 +289,25 @@ const ChatPage = () => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedContactId || !currentConversationId) return;
 
+        if (editingMessageId) {
+            // Editing existing message
+            try {
+                const res = await updateMessageREST(editingMessageId, { content: newMessage });
+                const updatedMessage = res?.data?.data;
+                setMessages((prev) =>
+                    prev.map((m) => (idToString(m._id) === idToString(editingMessageId) ? updatedMessage : m))
+                );
+                socket.current.emit("editMessage", updatedMessage);
+            } catch (err) {
+                console.error("Failed to update message:", err);
+            } finally {
+                setEditingMessageId(null);
+                setEditContent("");
+                setNewMessage("");
+            }
+            return;
+        }
+
         try {
             const msgData = {
                 toCredentialId: selectedContactId,
@@ -309,6 +336,38 @@ const ChatPage = () => {
             console.error("Send message failed:", err);
         }
     };
+
+    // ---------- Update and Delete handler ---------- 
+
+    // Update message
+    const handleUpdateMessage = async (messageId) => {
+        if (!editContent.trim()) return;
+        try {
+            const res = await updateMessageREST(messageId, { content: editContent });
+            const updatedMessage = res?.data?.data;
+            setMessages((prev) =>
+                prev.map((m) => (idToString(m._id) === idToString(messageId) ? updatedMessage : m))
+            );
+            setEditingMessageId(null);
+            setEditContent("");
+            socket.current.emit("editMessage", updatedMessage);
+        } catch (err) {
+            console.error("Failed to update message:", err);
+        }
+    };
+
+    // Delete message
+    const handleDeleteMessage = async (messageId) => {
+        try {
+            await deleteMessageREST(messageId);
+            setMessages((prev) => prev.filter((m) => idToString(m._id) !== idToString(messageId)));
+            socket.current.emit("deleteMessage", { _id: messageId, conversationId: currentConversationId });
+        } catch (err) {
+            console.error("Failed to delete message:", err);
+        }
+    };
+
+
 
     // ---------- click outside ----------
     useEffect(() => {
@@ -433,39 +492,86 @@ const ChatPage = () => {
                                         />
                                     )}
                                     <div className={`flex flex-col gap-1 max-w-[320px] ${isMe ? "items-end" : "items-start"}`}>
-                                        <div className="flex items-center space-x-2">
-                                            <span
-                                                className={`text-sm font-semibold ${isMe ? "text-black" : "text-gray-900"}`}
-                                            >
-                                                {isMe
-                                                    ? "You"
-                                                    : contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
+                                        <div className="flex items-center justify-between space-x-2">
+                                            <span className={`text-sm font-semibold ${isMe ? "text-black" : "text-gray-900"}`}>
+                                                {isMe ? "You" : contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
                                             </span>
 
+                                            {/* Three-dot menu */}
+                                            {isMe && (
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() => setMessageMenuOpen(messageMenuOpen === index ? null : index)}
+                                                        className="text-gray-400 hover:text-gray-600 px-2"
+                                                    >
+                                                        &#x22EE; {/* Vertical ellipsis */}
+                                                    </button>
+                                                    {messageMenuOpen === index && (
+                                                        <div className="absolute right-0 top-6 bg-white shadow-lg rounded-md z-50">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingMessageId(msg._id);
+                                                                    setEditContent(msg.content);
+                                                                    setNewMessage(msg.content);
+                                                                    setMessageMenuOpen(null);
+                                                                }}
+                                                                className="block px-4 py-2 hover:bg-gray-100 w-full text-left cursor-pointer"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMessage(msg._id)}
+                                                                className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-600 cursor-pointer"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
+                                        {/* Message Content / Edit Input */}
+                                        <div className={`inline-block leading-1.5 p-4 ${isMe ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end" : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"}`}>
+                                            {editingMessageId === msg._id ? (
+                                                <div className="flex items-center gap-2">
+                                                    {/* <input
+                                                        type="text"
+                                                        value={editContent}
+                                                        onChange={(e) => setEditContent(e.target.value)}
+                                                        className="px-2 py-1 rounded-md flex-1 outline-none text-sm"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleUpdateMessage(msg._id)}
+                                                        className="text-sky-500 font-semibold text-sm"
+                                                    >
+                                                        Save
+                                                    </button> */}
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingMessageId(null); 
+                                                            setEditContent("");         
+                                                            setNewMessage("");          
+                                                        }}
+                                                        className="text-white font-semibold text-sm"
+                                                    >
+                                                        Cancel
+                                                    </button>
 
-                                        <div
-                                            className={`inline-block leading-1.5 p-4 ${isMe
-                                                ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end"
-                                                : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"
-                                                }`}
-                                        >
-                                            <p
-                                                className={`text-sm font-normal text-left ${isMe ? "text-white" : "text-gray-900"
-                                                    }`}
-                                            >
-                                                {msg.content}
-                                            </p>
-
+                                                </div>
+                                            ) : (
+                                                <p className={`text-sm font-normal ${isMe ? "text-white" : "text-gray-900"}`}>
+                                                    {msg.content}
+                                                </p>
+                                            )}
                                         </div>
+
                                         <span className="text-[12px] font-normal text-gray-500">
-                                            {msg.createdAt
-                                                ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                : ""}
+                                            {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                                         </span>
                                     </div>
                                 </div>
+
 
                             );
                         })}
@@ -481,28 +587,21 @@ const ChatPage = () => {
                                 type="text"
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type your message..."
+                                placeholder={editingMessageId ? "Edit your message..." : "Type your message..."}
                                 className="flex-1 px-4 py-2 border-none outline-none rounded-[30px]"
                             />
+
                             <button
                                 type="submit"
-                                className="ml-2 p-2.5 text-sm font-medium text-white bg-sky-600 rounded-full border hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 flex items-center justify-center"
+                                className="ml-2 p-2.5 text-sm font-medium text-white bg-sky-600 rounded-full border hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 flex items-center justify-center cursor-pointer"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    stroke="currentColor"
-                                    className="w-6 h-6"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-                                    />
-                                </svg>
+                                {editingMessageId ? "Save" : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                                    </svg>
+                                )}
                             </button>
+
                         </form>
                     </div>
                 </div>
