@@ -11,7 +11,7 @@ export const createOrGetConversation = (data) => API.post("/conversations", data
 
 // ================= MESSAGES =================
 export const getMessages = (conversationId) => API.get(`/conversation/${conversationId}/messages`);
-export const sendMessageREST = (data) => API.post("/", data);
+export const sendMessageREST = (data) => API.post("/messages", data);
 
 // Update message
 export const updateMessageREST = (messageId, data) => API.put(`/message/${messageId}`, data);

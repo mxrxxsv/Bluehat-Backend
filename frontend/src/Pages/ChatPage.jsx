@@ -118,6 +118,20 @@ const ChatPage = () => {
             });
         });
 
+        // Listen for editMessage
+        socket.current.on("editMessage", (updatedMsg) => {
+            setMessages((prev) =>
+                prev.map((m) => (idToString(m._id) === idToString(updatedMsg._id) ? updatedMsg : m))
+            );
+        });
+
+        // Listen for deleteMessage
+        socket.current.on("deleteMessage", (deleted) => {
+            setMessages((prev) =>
+                prev.filter((m) => idToString(m._id) !== idToString(deleted._id))
+            );
+        });
+
         return () => {
             socket.current.disconnect();
         };
@@ -253,23 +267,36 @@ const ChatPage = () => {
                 });
 
                 const conv = res?.data?.data;
-                if (!conv?._id) return;
 
-                setCurrentConversationId(idToString(conv._id));
+                // ✅ Validate response
+                if (!conv || !conv._id) {
+                    console.error("Failed to create or fetch conversation:", res);
+                    return; // stop further execution
+                }
 
-                const msgsRes = await getMessages(conv._id);
-                const msgs = Array.isArray(msgsRes?.data?.data) ? msgsRes.data.data : [];
-                setMessages(msgs);
+                const convId = idToString(conv._id);
+                setCurrentConversationId(convId);
+
+                // Fetch messages safely
+                try {
+                    const msgsRes = await getMessages(convId);
+                    const msgs = Array.isArray(msgsRes?.data?.data) ? msgsRes.data.data : [];
+                    setMessages(msgs);
+                } catch (msgErr) {
+                    console.error("Failed to fetch messages:", msgErr);
+                    setMessages([]);
+                }
 
                 // Add conversation metadata to conversations state
                 setConversations((prev) => {
-                    if (prev.some(c => idToString(c._id) === idToString(conv._id))) return prev;
+                    if (prev.some(c => idToString(c._id) === convId)) return prev;
                     return [...prev, conv];
                 });
 
             } catch (err) {
                 console.error("Load conversation failed:", err);
             }
+
         };
 
         initConversation();
@@ -309,26 +336,33 @@ const ChatPage = () => {
         }
 
         try {
+            if (!currentConversationId) {
+                console.warn("Cannot send message: conversationId is null");
+                return;
+            }
+
             const msgData = {
                 toCredentialId: selectedContactId,
                 content: newMessage,
-                conversationId: currentConversationId,
+                conversationId: currentConversationId, // now guaranteed valid
             };
 
             const saved = await sendMessageREST(msgData);
+
             const sent = saved?.data?.data?.message;
             if (!sent) return;
 
-            const optimistic = { ...sent, _id: Date.now().toString() };
-            setMessages((prev) => [...prev, optimistic]);
+            // Use the backend message directly
+            setMessages((prev) => [...prev, sent]);
 
             setConversations((prevConvs) =>
                 prevConvs.map((c) =>
                     idToString(c._id) === idToString(currentConversationId)
-                        ? { ...c, lastMessage: optimistic }
+                        ? { ...c, lastMessage: sent }
                         : c
                 )
             );
+
 
             socket.current.emit("sendMessage", sent);
             setNewMessage("");
@@ -549,9 +583,9 @@ const ChatPage = () => {
                                                     </button> */}
                                                     <button
                                                         onClick={() => {
-                                                            setEditingMessageId(null); 
-                                                            setEditContent("");         
-                                                            setNewMessage("");          
+                                                            setEditingMessageId(null);
+                                                            setEditContent("");
+                                                            setNewMessage("");
                                                         }}
                                                         className="text-white font-semibold text-sm"
                                                     >
@@ -565,10 +599,15 @@ const ChatPage = () => {
                                                 </p>
                                             )}
                                         </div>
+                                        <div className="flex flex-row gap-2">
 
-                                        <span className="text-[12px] font-normal text-gray-500">
-                                            {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
-                                        </span>
+                                            <span className="text-[12px] font-normal text-gray-500">
+                                                {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                                            </span>
+                                            {msg.updatedAt && new Date(msg.updatedAt) > new Date(msg.createdAt) && (
+                                                <span className="text-[12px] text-gray-400 italic">edited</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

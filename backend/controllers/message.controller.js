@@ -45,13 +45,19 @@ exports.getMessages = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid conversation id" });
     }
 
-    const messages = await Message.find({ conversationId }).sort({ createdAt: 1 }).lean();
+    // Fetch messages that are NOT deleted
+    const messages = await Message.find({ 
+      conversationId, 
+      deleted: { $ne: true } // exclude deleted messages
+    }).sort({ createdAt: 1 }).lean();
+
     return res.status(200).json({ success: true, data: messages });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Internal error" });
   }
 };
+
 
 // ================= CREATE OR GET CONVERSATION =================
 exports.createOrGetConversation = async (req, res) => {
