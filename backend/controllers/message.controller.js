@@ -71,13 +71,13 @@ exports.createOrGetConversation = async (req, res) => {
     // --- Determine proper order ---
     const participantsOrdered = myId.toString() < otherId.toString()
       ? [
-          { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId },
-          { credentialId: otherId, userType: value.participantUserType }
-        ]
+        { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId },
+        { credentialId: otherId, userType: value.participantUserType }
+      ]
       : [
-          { credentialId: otherId, userType: value.participantUserType },
-          { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId }
-        ];
+        { credentialId: otherId, userType: value.participantUserType },
+        { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId }
+      ];
 
     // ✅ Initialize unreadCounts with 0 for each participant
     const initialUnreadCounts = {};
@@ -163,8 +163,11 @@ exports.sendMessage = async (req, res) => {
       conversationId: conversation._id,
       sender: { credentialId: senderCredentialId, userType },
       content: value.content || "",
-      type: value.type || "text"
+      type: value.type || "text",
+      edited: false,   
+      deleted: false   
     });
+
 
     // Update conversation lastMessage + unread counts
     conversation.lastMessage = value.content || (value.type === "text" ? "" : `[${value.type}]`);
@@ -234,6 +237,95 @@ exports.getUserInfo = async (req, res) => {
         userType,
       },
     });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+
+// ================= UPDATE MESSAGE =================
+exports.updateMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ success: false, message: "Invalid message ID" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ success: false, message: "Message not found" });
+
+    // Only sender can edit
+    if (message.sender.credentialId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to edit this message" });
+    }
+
+    // Only text messages can be updated
+    if (message.type !== "text") {
+      return res.status(400).json({ success: false, message: "Only text messages can be edited" });
+    }
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: "Message content required" });
+    }
+
+    // Update message
+    message.content = content;
+    message.edited = true; // mark as edited
+    await message.save();
+
+    // Update conversation lastMessage if this message was the last one
+    const conversation = await Conversation.findById(message.conversationId);
+    if (conversation && conversation.lastSender.toString() === userId.toString()) {
+      conversation.lastMessage = content;
+      await conversation.save();
+    }
+
+    return res.status(200).json({ success: true, data: message });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ================= DELETE MESSAGE (Soft Delete) =================
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ success: false, message: "Invalid message ID" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ success: false, message: "Message not found" });
+
+    // Only sender can delete
+    if (message.sender.credentialId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to delete this message" });
+    }
+
+    // Soft delete
+    message.content = "[Message deleted]";
+    message.deleted = true;
+    await message.save();
+
+    // Update conversation lastMessage if this message was the last one
+    const conversation = await Conversation.findById(message.conversationId);
+    if (conversation && conversation.lastSender.toString() === userId.toString()) {
+      const lastMsg = await Message.findOne({ conversationId: conversation._id })
+        .sort({ createdAt: -1 })
+        .lean();
+      conversation.lastMessage = lastMsg ? lastMsg.content : "";
+      conversation.lastSender = lastMsg ? lastMsg.sender.credentialId : null;
+      await conversation.save();
+    }
+
+    return res.status(200).json({ success: true, message: "Message deleted successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Internal server error" });

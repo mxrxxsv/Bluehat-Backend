@@ -13,7 +13,9 @@ const MessageSchema = new mongoose.Schema(
       url: String,
       public_id: String
     },
-    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "Credential" }]
+    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "Credential" }],
+    edited: { type: Boolean, default: false },   
+    deleted: { type: Boolean, default: false }   
   },
   { timestamps: true }
 );
