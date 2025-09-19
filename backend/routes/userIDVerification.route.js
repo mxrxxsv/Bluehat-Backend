@@ -6,6 +6,8 @@ const {
   uploadSelfie,
   getVerificationStatus,
   getPendingVerifications,
+  approveVerification,
+  rejectVerification,
 } = require("../controllers/userIDVerification.controller");
 const verifyToken = require("../middleware/verifyToken");
 const verifyAdmin = require("../middleware/verifyAdmin");
@@ -141,12 +143,12 @@ const validateUploadRequest = (req, res, next) => {
   next();
 };
 
-// ==================== WORKER ROUTES ====================
+// ==================== USER ROUTES (WORKERS & CLIENTS) ====================
 
 /**
  * @route   POST /id-verification/upload-id-picture
- * @desc    Upload ID picture for verification (Workers only)
- * @access  Private (Authenticated workers)
+ * @desc    Upload ID picture for verification
+ * @access  Private (Authenticated users - Workers & Clients)
  * @body    multipart/form-data: { image: File, userId: String }
  */
 router.post(
@@ -161,8 +163,8 @@ router.post(
 
 /**
  * @route   POST /id-verification/upload-selfie
- * @desc    Upload selfie picture for verification (Workers only)
- * @access  Private (Authenticated workers)
+ * @desc    Upload selfie picture for verification
+ * @access  Private (Authenticated users - Workers & Clients)
  * @body    multipart/form-data: { image: File, userId: String }
  */
 router.post(
@@ -177,7 +179,7 @@ router.post(
 
 /**
  * @route   GET /id-verification/status/:userId
- * @desc    Get worker's ID verification status and documents
+ * @desc    Get user's ID verification status and documents
  * @access  Private (Authenticated users)
  * @params  userId: String (MongoDB ObjectId)
  */
@@ -192,9 +194,9 @@ router.get(
 
 /**
  * @route   GET /id-verification/admin/pending
- * @desc    Get all workers with pending ID verifications (Admin only)
+ * @desc    Get all users with pending ID verifications (Admin only)
  * @access  Private (Admin only)
- * @query   page: number, limit: number, sortBy: string, order: string
+ * @query   page: number, limit: number, userType: string, sortBy: string, order: string
  */
 router.get(
   "/admin/pending",
@@ -205,44 +207,30 @@ router.get(
 
 /**
  * @route   POST /id-verification/admin/approve/:userId
- * @desc    Approve worker's ID verification (Admin only)
+ * @desc    Approve user's ID verification (Admin only)
  * @access  Private (Admin only)
- * @params  userId: String (Worker's credential ID)
+ * @params  userId: String (User's credential ID)
  * @body    { notes?: string }
  */
 router.post(
   "/admin/approve/:userId",
   adminRateLimit,
   verifyAdmin,
-  async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: "Approve verification endpoint not implemented yet",
-      code: "NOT_IMPLEMENTED",
-      note: "This endpoint will be implemented when admin approval functionality is added to the controller",
-    });
-  }
+  approveVerification
 );
 
 /**
  * @route   POST /id-verification/admin/reject/:userId
- * @desc    Reject worker's ID verification (Admin only)
+ * @desc    Reject user's ID verification (Admin only)
  * @access  Private (Admin only)
- * @params  userId: String (Worker's credential ID)
+ * @params  userId: String (User's credential ID)
  * @body    { notes?: string, requireResubmission?: boolean }
  */
 router.post(
   "/admin/reject/:userId",
   adminRateLimit,
   verifyAdmin,
-  async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: "Reject verification endpoint not implemented yet",
-      code: "NOT_IMPLEMENTED",
-      note: "This endpoint will be implemented when admin rejection functionality is added to the controller",
-    });
-  }
+  rejectVerification
 );
 
 /**
@@ -257,9 +245,10 @@ router.get(
   async (req, res) => {
     try {
       const Worker = require("../models/Worker");
+      const Client = require("../models/Client");
 
-      // Get verification statistics
-      const stats = await Worker.aggregate([
+      // Get verification statistics for workers
+      const workerStats = await Worker.aggregate([
         {
           $group: {
             _id: "$verificationStatus",
@@ -268,8 +257,18 @@ router.get(
         },
       ]);
 
-      // Format statistics
-      const formattedStats = {
+      // Get verification statistics for clients
+      const clientStats = await Client.aggregate([
+        {
+          $group: {
+            _id: "$verificationStatus",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Format statistics for workers
+      const formattedWorkerStats = {
         not_submitted: 0,
         pending: 0,
         approved: 0,
@@ -277,42 +276,138 @@ router.get(
         requires_resubmission: 0,
       };
 
-      stats.forEach((stat) => {
-        if (formattedStats.hasOwnProperty(stat._id)) {
-          formattedStats[stat._id] = stat.count;
+      workerStats.forEach((stat) => {
+        if (formattedWorkerStats.hasOwnProperty(stat._id)) {
+          formattedWorkerStats[stat._id] = stat.count;
+        }
+      });
+
+      // Format statistics for clients
+      const formattedClientStats = {
+        not_submitted: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        requires_resubmission: 0,
+      };
+
+      clientStats.forEach((stat) => {
+        if (formattedClientStats.hasOwnProperty(stat._id)) {
+          formattedClientStats[stat._id] = stat.count;
         }
       });
 
       // Calculate totals
-      const total = Object.values(formattedStats).reduce(
+      const totalWorkers = Object.values(formattedWorkerStats).reduce(
         (sum, count) => sum + count,
         0
       );
-      const submitted =
-        formattedStats.pending +
-        formattedStats.approved +
-        formattedStats.rejected +
-        formattedStats.requires_resubmission;
+      const totalClients = Object.values(formattedClientStats).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+
+      const submittedWorkers =
+        formattedWorkerStats.pending +
+        formattedWorkerStats.approved +
+        formattedWorkerStats.rejected +
+        formattedWorkerStats.requires_resubmission;
+
+      const submittedClients =
+        formattedClientStats.pending +
+        formattedClientStats.approved +
+        formattedClientStats.rejected +
+        formattedClientStats.requires_resubmission;
+
+      // Combined statistics
+      const combinedStats = {
+        not_submitted:
+          formattedWorkerStats.not_submitted +
+          formattedClientStats.not_submitted,
+        pending: formattedWorkerStats.pending + formattedClientStats.pending,
+        approved: formattedWorkerStats.approved + formattedClientStats.approved,
+        rejected: formattedWorkerStats.rejected + formattedClientStats.rejected,
+        requires_resubmission:
+          formattedWorkerStats.requires_resubmission +
+          formattedClientStats.requires_resubmission,
+      };
+
+      const totalUsers = totalWorkers + totalClients;
+      const totalSubmitted = submittedWorkers + submittedClients;
 
       res.status(200).json({
         success: true,
         message: "ID verification statistics retrieved successfully",
         data: {
-          byStatus: formattedStats,
-          summary: {
-            totalWorkers: total,
-            submitted: submitted,
-            notSubmitted: formattedStats.not_submitted,
-            pendingReview: formattedStats.pending,
-            approved: formattedStats.approved,
-            rejected:
-              formattedStats.rejected + formattedStats.requires_resubmission,
-            submissionRate:
-              total > 0 ? ((submitted / total) * 100).toFixed(2) + "%" : "0%",
-            approvalRate:
-              submitted > 0
-                ? ((formattedStats.approved / submitted) * 100).toFixed(2) + "%"
-                : "0%",
+          combined: {
+            byStatus: combinedStats,
+            summary: {
+              totalUsers: totalUsers,
+              totalSubmitted: totalSubmitted,
+              totalNotSubmitted: combinedStats.not_submitted,
+              totalPending: combinedStats.pending,
+              totalApproved: combinedStats.approved,
+              totalRejected:
+                combinedStats.rejected + combinedStats.requires_resubmission,
+              submissionRate:
+                totalUsers > 0
+                  ? ((totalSubmitted / totalUsers) * 100).toFixed(2) + "%"
+                  : "0%",
+              approvalRate:
+                totalSubmitted > 0
+                  ? ((combinedStats.approved / totalSubmitted) * 100).toFixed(
+                      2
+                    ) + "%"
+                  : "0%",
+            },
+          },
+          workers: {
+            byStatus: formattedWorkerStats,
+            summary: {
+              totalWorkers: totalWorkers,
+              submitted: submittedWorkers,
+              notSubmitted: formattedWorkerStats.not_submitted,
+              pendingReview: formattedWorkerStats.pending,
+              approved: formattedWorkerStats.approved,
+              rejected:
+                formattedWorkerStats.rejected +
+                formattedWorkerStats.requires_resubmission,
+              submissionRate:
+                totalWorkers > 0
+                  ? ((submittedWorkers / totalWorkers) * 100).toFixed(2) + "%"
+                  : "0%",
+              approvalRate:
+                submittedWorkers > 0
+                  ? (
+                      (formattedWorkerStats.approved / submittedWorkers) *
+                      100
+                    ).toFixed(2) + "%"
+                  : "0%",
+            },
+          },
+          clients: {
+            byStatus: formattedClientStats,
+            summary: {
+              totalClients: totalClients,
+              submitted: submittedClients,
+              notSubmitted: formattedClientStats.not_submitted,
+              pendingReview: formattedClientStats.pending,
+              approved: formattedClientStats.approved,
+              rejected:
+                formattedClientStats.rejected +
+                formattedClientStats.requires_resubmission,
+              submissionRate:
+                totalClients > 0
+                  ? ((submittedClients / totalClients) * 100).toFixed(2) + "%"
+                  : "0%",
+              approvalRate:
+                submittedClients > 0
+                  ? (
+                      (formattedClientStats.approved / submittedClients) *
+                      100
+                    ).toFixed(2) + "%"
+                  : "0%",
+            },
           },
         },
       });
@@ -339,25 +434,25 @@ router.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "ID Verification service is healthy",
-    service: "Worker ID Verification API",
-    version: "1.0.0",
+    service: "ID Verification API",
+    version: "2.0.0",
     timestamp: new Date().toISOString(),
     endpoints: {
       public: ["GET /health - Health check"],
-      worker: [
+      user: [
         "POST /upload-id-picture - Upload ID picture",
         "POST /upload-selfie - Upload selfie picture",
         "GET /status/:userId - Get verification status",
       ],
       admin: [
         "GET /admin/pending - Get pending verifications",
-        "GET /admin/statistics - Get verification statistics",
         "POST /admin/approve/:userId - Approve verification",
         "POST /admin/reject/:userId - Reject verification",
+        "GET /admin/statistics - Get verification statistics",
       ],
     },
     features: {
-      userType: "Workers only",
+      supportedUserTypes: ["Workers", "Clients"],
       fileTypes: ["JPEG", "JPG", "PNG", "WebP", "GIF"],
       maxFileSize: "10MB",
       storage: "Cloudinary",
@@ -373,6 +468,14 @@ router.get("/health", (req, res) => {
         status: "60 per minute",
         admin: "100 per minute",
       },
+      adminFeatures: [
+        "View pending verifications",
+        "Approve/Reject documents",
+        "Filter by user type",
+        "Pagination support",
+        "Resubmission tracking",
+        "Statistics dashboard",
+      ],
     },
   });
 });
