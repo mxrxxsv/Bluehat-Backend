@@ -37,16 +37,17 @@ const workerDetailsLimiter = rateLimit({
 
 /**
  * @route   GET /workers
- * @desc    Get all verified workers with pagination and filtering
+ * @desc    Get all ID-verified workers with pagination and filtering
  * @access  Public
- * @query   page, limit, skills, status, city, province, sortBy, order, search
+ * @query   page, limit, skills, status, city, province, sortBy, order, search, includeUnverified
  */
 router.get("/", workerListLimiter, getAllWorkers);
 
 /**
  * @route   GET /workers/:id
- * @desc    Get single worker details by ID
+ * @desc    Get single ID-verified worker details by ID
  * @access  Public
+ * @query   includeUnverified (boolean) - Admin override to see unverified workers
  */
 router.get("/:id", workerDetailsLimiter, getWorkerById);
 
@@ -59,28 +60,41 @@ router.get("/:id", workerDetailsLimiter, getWorkerById);
  */
 router.get("/health", (req, res) => {
   const healthCheck = {
-    service: "Worker API",
+    service: "ID-Verified Worker API",
     status: "Healthy",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || "development",
-    version: process.env.npm_package_version || "1.0.0",
+    version: process.env.npm_package_version || "2.0.0",
     endpoints: [
-      "GET / - Get all verified workers with pagination and filtering",
-      "GET /:id - Get worker details by ID",
+      "GET / - Get all ID-verified workers with pagination and filtering",
+      "GET /:id - Get ID-verified worker details by ID",
       "GET /health - Health check",
     ],
     features: {
+      idVerificationRequired:
+        "Only workers with approved ID verification are shown",
       pagination: "12 workers per page (configurable)",
       filtering: "Filter by skills, status, city, province",
-      search: "Search by email",
-      sorting: "Sort by createdAt, rating, firstName, lastName",
+      search: "Search by email (limited due to encryption)",
+      sorting: "Sort by createdAt, rating, firstName, lastName, verifiedAt",
       encryption: "Sensitive data decryption supported",
-      verification: "Only verified workers returned",
+      verification: "Dual verification (Account + ID documents)",
+      adminOverride: "includeUnverified query param for admin use",
+    },
+    verificationLevels: {
+      accountVerification: "Credential.isVerified = true",
+      idVerification: "Worker.verificationStatus = 'approved'",
+      bothRequired: "Both must be true to appear in public listing",
     },
     rateLimits: {
       workerList: "30 per minute",
       workerDetails: "60 per minute",
+    },
+    statistics: {
+      verificationTracking: "Tracks both account and ID verification rates",
+      workStatusFiltering: "Only counts verified workers in availability stats",
+      ratingCalculation: "Only includes ratings from verified workers",
     },
   };
 
@@ -89,6 +103,7 @@ router.get("/health", (req, res) => {
     data: healthCheck,
     meta: {
       timestamp: new Date().toISOString(),
+      note: "This API now requires ID verification for worker visibility",
     },
   });
 });
