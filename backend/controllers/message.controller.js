@@ -6,6 +6,7 @@ const Worker = require("../models/Worker");
 const Joi = require("joi");
 const mongoose = require("mongoose");
 const { decryptAES128 } = require("../utils/encipher");
+const xss = require("xss"); 
 
 const createConversationSchema = Joi.object({
   participantCredentialId: Joi.string().required(), // the other user's credential id
@@ -15,8 +16,8 @@ const createConversationSchema = Joi.object({
 const sendMessageSchema = Joi.object({
   conversationId: Joi.string().optional().allow(""),
   toCredentialId: Joi.string().optional(),
-  toUserType: Joi.string().optional(), // for creating conversation if needed
-  content: Joi.string().allow("").optional(),
+  toUserType: Joi.string().optional(), 
+  content: Joi.string().max(100).allow("").optional(),
   type: Joi.string().valid("text", "image", "file").default("text")
 });
 
@@ -165,10 +166,15 @@ exports.sendMessage = async (req, res) => {
       }
     }
 
+    // === sanitize content ===
+    let rawContent = value.content || "";
+
+    const cleanContent = xss(rawContent);
+
     const message = await Message.create({
       conversationId: conversation._id,
       sender: { credentialId: senderCredentialId, userType },
-      content: value.content || "",
+      content: cleanContent,
       type: value.type || "text",
       edited: false,   
       deleted: false   
@@ -176,7 +182,7 @@ exports.sendMessage = async (req, res) => {
 
 
     // Update conversation lastMessage + unread counts
-    conversation.lastMessage = value.content || (value.type === "text" ? "" : `[${value.type}]`);
+    conversation.lastMessage = cleanContent || (value.type === "text" ? "" : `[${value.type}]`);
     conversation.lastSender = senderCredentialId;
 
     conversation.participants.forEach((p) => {
