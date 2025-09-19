@@ -1533,6 +1533,9 @@ const checkAuth = async (req, res) => {
           skillsByCategory: user.skillsByCategory || [],
           experience: user.experience || [],
           certificates: user.certificates || [],
+          idPictureId: user.idPictureId,
+          idPictureUrl: user.idPictureUrl,
+          verified: user.verificationStatus,
         }),
       },
       meta: {
