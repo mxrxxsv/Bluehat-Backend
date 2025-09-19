@@ -630,6 +630,7 @@ const ChatPage = () => {
                                 type="text"
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
+                                maxLength={100}
                                 placeholder={editingMessageId ? "Edit your message..." : "Type your message..."}
                                 className="flex-1 px-4 py-2 border-none outline-none rounded-[30px]"
                             />
