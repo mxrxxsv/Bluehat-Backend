@@ -189,6 +189,7 @@ const FindWork = () => {
       try {
         const res = await checkAuth();
         const userData = res.data?.data;
+        
         setUser(userData);
 
         if (userData?.userType === "worker") {
@@ -207,9 +208,10 @@ const FindWork = () => {
 
           setShowPortfolioSetup(shouldShowModal);
 
-          if (!userData.idPicture || !userData.selfie) {
+          if (!userData.idPictureId && !userData.selfiePictureId) {
             setShowIdSetup(true);
           }
+
         } else {
           setShowPortfolioSetup(false);
         }
@@ -431,7 +433,7 @@ const FindWork = () => {
           </div>
         </div>
       )}
-      
+
       {/* ID Setup Modal */}
       {showIdSetup && <IDSetup onClose={() => setShowIdSetup(false)} />}
 

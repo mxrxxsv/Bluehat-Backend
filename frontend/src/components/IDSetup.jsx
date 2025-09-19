@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Upload, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { X, Upload, CheckCircle, AlertCircle, Info, Loader2 } from "lucide-react";
 import {
   uploadIDPicture,
   uploadSelfie,
@@ -14,22 +14,22 @@ const IDSetup = ({ onClose }) => {
   const [idPreview, setIdPreview] = useState(null);
   const [selfiePreview, setSelfiePreview] = useState(null);
   const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [idLoading, setIdLoading] = useState(false);
+  const [selfieLoading, setSelfieLoading] = useState(false);
 
-  // ✅ Fetch logged-in user
+
+  const [idUploaded, setIdUploaded] = useState(false);
+  const [selfieUploaded, setSelfieUploaded] = useState(false);
+
   useEffect(() => {
     checkAuth()
       .then((res) => {
         setCurrentUser(res.data.data);
-        console.log("Fetched user:", res.data.data);
       })
-      .catch(() => {
-        setCurrentUser(null);
-      })
+      .catch(() => setCurrentUser(null))
       .finally(() => setLoading(false));
   }, []);
 
-  // ✅ Fetch verification status if user exists
   useEffect(() => {
     const fetchStatus = async () => {
       if (!currentUser?._id) return;
@@ -61,35 +61,39 @@ const IDSetup = ({ onClose }) => {
   };
 
   const handleUpload = async (type) => {
+    const userId = currentUser?.id;
+    if (!userId) {
+      // alert("User ID is missing. Please log in again.");
+      return;
+    }
+
     try {
-      setLoading(true);
-      const userId = currentUser?.id;
-
-      if (!userId) {
-        alert("User ID is missing. Please log in again.");
-        return;
-      }
-
       if (type === "id" && idFile) {
-        await uploadIDPicture(userId, idFile);
+        setIdLoading(true);
+        const res = await uploadIDPicture(userId, idFile);
+        if (res?.success) setIdUploaded(true);
       } else if (type === "selfie" && selfieFile) {
-        await uploadSelfie(userId, selfieFile);
+        setSelfieLoading(true);
+        const res = await uploadSelfie(userId, selfieFile);
+        if (res?.success) setSelfieUploaded(true);
       }
 
-      // Refresh verification status
-      const res = await getVerificationStatus(userId);
-      setStatus(res.data || res);
+      const statusRes = await getVerificationStatus(userId);
+      setStatus(statusRes.data || statusRes);
     } catch (err) {
       console.error("Upload failed:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Upload failed. Please try again.");
+      // alert(err.response?.data?.message || "Upload failed. Please try again.");
     } finally {
-      setLoading(false);
+      setIdLoading(false);
+      setSelfieLoading(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6">
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -121,18 +125,14 @@ const IDSetup = ({ onClose }) => {
           </div>
         )}
 
-        {/* Upload ID */}
+        {/* ID Upload */}
         <div className="mb-8">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Step 1: Government-issued ID
           </label>
           <label className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
             {idPreview ? (
-              <img
-                src={idPreview}
-                alt="ID Preview"
-                className="h-40 object-contain rounded-lg"
-              />
+              <img src={idPreview} alt="ID Preview" className="h-40 object-contain rounded-lg" />
             ) : (
               <>
                 <Upload className="w-8 h-8 text-gray-500 mb-2" />
@@ -148,32 +148,27 @@ const IDSetup = ({ onClose }) => {
           </label>
           <button
             onClick={() => handleUpload("id")}
-            disabled={!idFile || loading}
-            className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={!idFile || idLoading || idUploaded}
+            className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Upload size={16} />
-            Upload ID
+            {idLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload size={16} />}
+            {idUploaded ? "ID Uploaded" : "Upload ID"}
           </button>
+
         </div>
 
-        {/* Upload Selfie */}
+        {/* Selfie Upload */}
         <div className="mb-8">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Step 2: Upload Selfie
           </label>
           <label className="border-2 border-dashed border-gray-300 rounded-full w-40 h-40 mx-auto flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer overflow-hidden">
             {selfiePreview ? (
-              <img
-                src={selfiePreview}
-                alt="Selfie Preview"
-                className="object-cover w-full h-full"
-              />
+              <img src={selfiePreview} alt="Selfie Preview" className="object-cover w-full h-full" />
             ) : (
               <div className="flex flex-col items-center justify-center text-center">
                 <Upload className="w-6 h-6 text-gray-500 mb-2" />
-                <p className="text-xs text-gray-500">
-                  Upload or take a selfie
-                </p>
+                <p className="text-xs text-gray-500">Upload or take a selfie</p>
               </div>
             )}
             <input
@@ -186,11 +181,11 @@ const IDSetup = ({ onClose }) => {
           </label>
           <button
             onClick={() => handleUpload("selfie")}
-            disabled={!selfieFile || loading}
-            className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={!selfieFile || selfieLoading || selfieUploaded}
+            className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Upload size={16} />
-            Upload Selfie
+            {selfieLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload size={16} />}
+            {selfieUploaded ? "Selfie Uploaded" : "Upload Selfie"}
           </button>
         </div>
 
@@ -204,6 +199,7 @@ const IDSetup = ({ onClose }) => {
             <li>Verification usually takes 24–48 hours.</li>
           </ul>
         </div>
+
       </div>
     </div>
   );
