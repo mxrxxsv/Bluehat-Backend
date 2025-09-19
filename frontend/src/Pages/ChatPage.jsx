@@ -442,7 +442,7 @@ const ChatPage = () => {
             {/* SIDEBAR */}
             <aside
                 ref={sidebarRef}
-                className={`absolute top-55 md:top-48 left-0 z-40 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                className={`absolute top-55 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                     } sm:translate-x-0 overflow-clip h-full md:h-[500px]`}
                 aria-label="Sidebar"
             >
@@ -456,7 +456,11 @@ const ChatPage = () => {
                             return (
                                 <li key={conv._id}>
                                     <button
-                                        onClick={() => setSelectedContactId(otherCred)}
+                                        onClick={() => {
+                                            setSelectedContactId(otherCred);
+                                            setIsSidebarOpen(false); 
+                                        }}
+
                                         className={`flex items-center w-full p-3 text-gray-900 rounded-lg border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
                                     >
                                         <img
