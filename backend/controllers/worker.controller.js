@@ -86,6 +86,7 @@ const getAllWorkers = async (req, res) => {
     const sortOrder = order === "asc" ? 1 : -1;
 
     // Build aggregation pipeline
+    // Build aggregation pipeline
     const pipeline = [
       // Join with credentials to get verified workers only
       {
@@ -101,12 +102,12 @@ const getAllWorkers = async (req, res) => {
         $match: {
           "credential.userType": "worker",
           "credential.isBlocked": { $ne: true },
-          "credential.isVerified": true, // Only verified workers
-          blocked: { $ne: true }, // Not blocked in worker model
+          blocked: { $ne: true },
+          verificationStatus: "approved",
         },
       },
 
-      // Join with skill categories to get skill names
+      // Join with skill categories
       {
         $lookup: {
           from: "skillcategories",
@@ -116,12 +117,37 @@ const getAllWorkers = async (req, res) => {
         },
       },
 
-      // Add computed fields
+      // Flatten skills into an array of names
       {
         $addFields: {
+          skills: {
+            $map: {
+              input: "$skillsByCategory",
+              as: "sbc",
+              in: {
+                skillCategoryId: "$$sbc.skillCategoryId",
+                categoryName: {
+                  $arrayElemAt: [
+                    {
+                      $map: {
+                        input: {
+                          $filter: {
+                            input: "$skillsData",
+                            cond: { $eq: ["$$this._id", "$$sbc.skillCategoryId"] }
+                          }
+                        },
+                        as: "cat",
+                        in: "$$cat.categoryName"
+                      }
+                    },
+                    0
+                  ]
+                }
+              }
+            }
+          },
           email: "$credential.email",
           isVerified: "$credential.isVerified",
-          skills: "$skillsData.name",
           averageRating: {
             $cond: {
               if: { $gt: ["$totalRatings", 0] },
@@ -129,8 +155,9 @@ const getAllWorkers = async (req, res) => {
               else: 0,
             },
           },
-        },
-      },
+        }
+      }
+
     ];
 
     // Add search filter
@@ -139,7 +166,7 @@ const getAllWorkers = async (req, res) => {
         $match: {
           $or: [
             { email: { $regex: search, $options: "i" } },
-            // Note: Can't search encrypted fields directly
+            { biography: { $regex: search, $options: "i" } }, // allow search in bio
           ],
         },
       });
@@ -148,7 +175,7 @@ const getAllWorkers = async (req, res) => {
     // Add status filter
     if (status !== "all") {
       pipeline.push({
-        $match: { status: status },
+        $match: { status },
       });
     }
 
@@ -162,12 +189,7 @@ const getAllWorkers = async (req, res) => {
       });
     }
 
-    // Add location filters (will be applied after decryption)
-    const locationFilters = {};
-    if (city) locationFilters.city = city;
-    if (province) locationFilters.province = province;
-
-    // Project only needed fields for list view
+    // Project only needed fields
     pipeline.push({
       $project: {
         credentialId: 1,
@@ -185,9 +207,10 @@ const getAllWorkers = async (req, res) => {
         email: 1,
         isVerified: 1,
         createdAt: 1,
-        biography: 1, // Include for search/filter purposes
+        biography: 1, // keep biography in projection
       },
     });
+
 
     // Get total count for pagination
     const totalCountPipeline = [...pipeline, { $count: "total" }];
@@ -249,23 +272,32 @@ const getAllWorkers = async (req, res) => {
         }
 
         if (includeWorker) {
+
+          // Decrypt skills category names
+          if (worker.skills && worker.skills.length > 0) {
+            worker.skills = worker.skills.map((s) => ({
+              skillCategoryId: s.skillCategoryId,
+         
+              categoryName: s.categoryName || null,
+            }));
+          }
+
           // Format the worker data for list view
           const formattedWorker = {
             _id: worker._id,
             credentialId: worker.credentialId,
             profilePicture: worker.profilePicture,
-            fullName: `${worker.firstName} ${worker.lastName}${
-              worker.suffixName ? ` ${worker.suffixName}` : ""
-            }`,
+            fullName: `${worker.firstName} ${worker.lastName}${worker.suffixName ? ` ${worker.suffixName}` : ""
+              }`,
             firstName: worker.firstName,
             lastName: worker.lastName,
             suffixName: worker.suffixName,
             sex: worker.sex,
-            location: `${worker.address?.city || "N/A"}, ${
-              worker.address?.province || "N/A"
-            }`,
+            location: `${worker.address?.city || "N/A"}, ${worker.address?.province || "N/A"
+              }`,
             address: worker.address,
             skills: worker.skills || [],
+            biography: worker.biography,
             status: worker.status,
             rating: worker.averageRating,
             totalRatings: worker.totalRatings,
@@ -332,21 +364,21 @@ const getAllWorkers = async (req, res) => {
     const statistics =
       statsAggregation.length > 0
         ? {
-            total: statsAggregation[0].total,
-            available: statsAggregation[0].available,
-            working: statsAggregation[0].working,
-            notAvailable: statsAggregation[0].notAvailable,
-            averageRating: parseFloat(
-              (statsAggregation[0].averageRating || 0).toFixed(2)
-            ),
-          }
+          total: statsAggregation[0].total,
+          available: statsAggregation[0].available,
+          working: statsAggregation[0].working,
+          notAvailable: statsAggregation[0].notAvailable,
+          averageRating: parseFloat(
+            (statsAggregation[0].averageRating || 0).toFixed(2)
+          ),
+        }
         : {
-            total: 0,
-            available: 0,
-            working: 0,
-            notAvailable: 0,
-            averageRating: 0,
-          };
+          total: 0,
+          available: 0,
+          working: 0,
+          notAvailable: 0,
+          averageRating: 0,
+        };
 
     const processingTime = Date.now() - startTime;
 
@@ -498,7 +530,16 @@ const getWorkerById = async (req, res) => {
         $addFields: {
           email: "$credential.email",
           isVerified: "$credential.isVerified",
-          skills: "$skillsData.name",
+          skills: {
+            $map: {
+              input: "$skillsData",
+              as: "skill",
+              in: {
+                skillCategoryId: "$$skill._id",
+                categoryName: "$$skill.name"
+              }
+            }
+          },
           averageRating: {
             $cond: {
               if: { $gt: ["$totalRatings", 0] },
@@ -568,13 +609,21 @@ const getWorkerById = async (req, res) => {
       });
     }
 
+    // Decrypt skills category names
+    if (worker.skills && worker.skills.length > 0) {
+      worker.skills = worker.skills.map((s) => ({
+        skillCategoryId: s.skillCategoryId,
+        categoryName: s.categoryName ? decryptAES128(s.categoryName) : null,
+      }));
+    }
+
+
     // Format the response
     const formattedWorker = {
       _id: worker._id,
       credentialId: worker.credentialId,
-      fullName: `${worker.firstName} ${
-        worker.middleName ? worker.middleName + " " : ""
-      }${worker.lastName}${worker.suffixName ? " " + worker.suffixName : ""}`,
+      fullName: `${worker.firstName} ${worker.middleName ? worker.middleName + " " : ""
+        }${worker.lastName}${worker.suffixName ? " " + worker.suffixName : ""}`,
       firstName: worker.firstName,
       middleName: worker.middleName,
       lastName: worker.lastName,

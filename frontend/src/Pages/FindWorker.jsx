@@ -12,6 +12,7 @@ import workers from "../Objects/workers";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
 import profile from '../assets/worker.png';
+import { getWorkers } from "../api/worker";
 
 
 const rainbowColors = [
@@ -25,6 +26,11 @@ const rainbowColors = [
 ];
 
 const FindWorker = () => {
+
+  const [workers, setWorkers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [filtering, setFiltering] = useState({
     search: "",
     location: "",
@@ -41,6 +47,39 @@ const FindWorker = () => {
     return initialState;
   });
 
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        setLoading(true);
+
+        const query = {
+          search: filtering.search?.length >= 2 ? filtering.search : undefined,
+          city: filtering.location || undefined,
+          skills: filtering.selectedSkills.length > 0
+            ? filtering.selectedSkills.join(",")
+            : undefined,
+          status: "all",
+          sortBy: "rating",
+          order: "desc",
+          page: 1,
+          limit: 12,
+        };
+
+        const data = await getWorkers(query);
+        setWorkers(data.workers || []);
+        console.log("Fetched workers:", data.workers);
+      } catch (err) {
+        setError(err.message || "Failed to fetch workers");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+
+    fetchWorkers();
+  }, [filtering]);
+
   const handleCollapseToggle = (categoryId) => {
     setCollapsedCategories((prev) => ({
       ...prev,
@@ -55,7 +94,7 @@ const FindWorker = () => {
       : 0;
 
     const matchesSearch =
-      worker.name.toLowerCase().includes(filtering.search.toLowerCase()) ||
+      worker.fullName.toLowerCase().includes(filtering.search.toLowerCase()) ||
       worker.skills.some((s) =>
         s.toLowerCase().includes(filtering.search.toLowerCase())
       ) ||
@@ -253,16 +292,29 @@ const FindWorker = () => {
                       <div className="flex flex-col justify-between h-full mr-4" />
                       <div className="flex items-start gap-4 flex-1 text-[#252525]">
                         <img
-                          src={profile}
-                          alt={worker.name}
-                          className="w-20 h-20 md:w-22 md:h-22 rounded-full object-cover border pt-3"
+                          src={worker.profilePicture.url}
+                          alt={worker.fullName}
+                          className="w-20 h-20 md:w-22 md:h-22 rounded-full object-cover border"
                         />
                         <div className="flex flex-col justify-between h-full">
                           <h2 className="text-[14px] md:text-xl font-semibold text-left">
-                            {worker.name}
+                            {worker.fullName}
                           </h2>
+
+                          {/* ✅ Status section */}
+                          <p
+                            className={`text-xs font-medium mt-0.5 text-left ${worker.status === "available"
+                                ? "text-green-600"
+                                : worker.status === "working"
+                                  ? "text-red-500"
+                                  : "text-gray-500"
+                              }`}
+                          >
+                            ● {worker.status || "Offline"}
+                          </p>
+
                           <p className="text-sm text-gray-700 mt-1 text-left">
-                            {worker.description}
+                            {worker.biography || "4th Year BSIT Student from Cabiao, Nueva Ecija."}
                           </p>
                           <p className="text-sm text-gray-700 text-left flex items-center gap-1">
                             <MapPin className="w-4 h-4 text-gray-500" />
@@ -271,26 +323,24 @@ const FindWorker = () => {
                           <div className="flex flex-wrap gap-2 mt-3">
                             {worker.skills.slice(0, 3).map((skill, index) => (
                               <span
-                                key={index}
+                                key={skill.skillCategoryId || index}
                                 className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
                               >
-                                {skill}
+                                {skill.categoryName}
                               </span>
                             ))}
+
                             {worker.skills.length > 3 && (
                               <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
                                 +{worker.skills.length - 3} more
                               </span>
                             )}
                           </div>
-
                         </div>
                       </div>
 
                       <div className="absolute top-4 right-4">
-                        <p className="text-yellow-500 font-semibold text-sm">
-                          ⭐ {avgRating}
-                        </p>
+                        <p className="text-yellow-500 font-semibold text-sm">⭐ {avgRating}</p>
                       </div>
 
                       <button
@@ -300,14 +350,11 @@ const FindWorker = () => {
                         }}
                         className="flex items-center text-[14px] md:text-sm gap-1 absolute bottom-2 md:bottom-4 right-1.5 bg-[#55b3f3] text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-400 shadow-md cursor-pointer"
                       >
-                        {isBookmark[worker.id] ? (
-                          <BookmarkCheck size={16} />
-                        ) : (
-                          <Bookmark size={16} />
-                        )}
+                        {isBookmark[worker.id] ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                         Save
                       </button>
                     </div>
+
                   </Link>
                 );
               })}
