@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import workers from "../Objects/workers";
-import profile from '../assets/worker.png';
-import { getWorkerById } from "../api/worker";
-import education from '../Objects/educations';
-import certificates from '../Objects/certificates';
 import { ArrowLeft } from "lucide-react";
+import { getWorkerById } from "../api/worker";
+
 
 const WorkerPortfolio = () => {
-  // const { id } = useParams();
-  // const navigate = useNavigate();
-  // const worker = workers.find((w) => w.id.toString() === id);
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -57,7 +51,7 @@ const WorkerPortfolio = () => {
     return "⭐️".repeat(rating) + "☆".repeat(5 - rating);
   };
 
-  const reviews = worker?.reviews || []; // fallback empty array
+  const reviews = worker?.reviews || []; 
 
   const averageRating =
     reviews.length > 0
@@ -104,51 +98,70 @@ const WorkerPortfolio = () => {
             <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
               Message
             </button>
-            <button className="px-4 py-2 bg-gray-500 text-white shadow-md rounded-[14px] hover:bg-gray-400 hover:shadow-lg cursor-pointer">
+            {/* <button className="px-4 py-2 bg-gray-500 text-white shadow-md rounded-[14px] hover:bg-gray-400 hover:shadow-lg cursor-pointer">
               Save
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
 
       {/* Skills Section */}
-      <div className="flex flex-wrap gap-2 mt-3">
-        {(worker.skills || []).slice(0, 3).map((skill, index) => (
-          <span
-            key={skill.skillCategoryId || index}
-            className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
-          >
-            {skill.categoryName || "Unnamed Skill"}
-          </span>
-        ))}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">Skills</h2>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {(worker.skills || []).slice(0, 3).map((skill, index) => (
+            <span
+              key={skill.skillCategoryId || index}
+              className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+            >
+              {skill.categoryName || "Unnamed Skill"}
+            </span>
+          ))}
 
-        {worker.skillsByCategory && worker.skillsByCategory.length > 3 && (
-          <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
-            +{worker.skillsByCategory.length - 3} more
-          </span>
-        )}
+          {worker.skillsByCategory && worker.skillsByCategory.length > 3 && (
+            <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
+              +{worker.skillsByCategory.length - 3} more
+            </span>
+          )}
+        </div>
       </div>
 
 
-      {/* Work Experience Section */}
+      {/* Portfolio Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">Work Experience</h2>
-        <div className="space-y-4">
-          {(worker.experience || []).map((exp, index) => (
+        <h2 className="text-xl font-semibold mb-2 text-left">Portfolio</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {worker.portfolio.map((item) => (
             <div
-              key={exp._id || index}
-              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+              key={item._id}
+              className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
             >
-              <h3 className="font-semibold text-lg">{exp.companyName || exp.company}</h3>
-              <p className="text-sm text-gray-500">
-                {exp.startYear || exp.years} • {exp.position}
-              </p>
-              <p className="mt-1 text-gray-700">{exp.description || exp.responsibilities}</p>
+              {/* Image Section */}
+              <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                <img
+                  src={
+                    item.image?.url
+                      ? item.image.url
+                      : "https://via.placeholder.com/300x200?text=No+Image"
+                  }
+                  alt={item.projectTitle || "Portfolio Project"}
+                  className="w-full h-full object-cover rounded-md"
+                />
+              </div>
+
+              {/* Content Section */}
+              <div className="mt-3 flex-1">
+                <h4 className="text-lg font-semibold text-gray-800">
+                  {item.projectTitle || "Untitled Project"}
+                </h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  {item.description || "No description provided."}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       </div>
-
 
       {/* Certificates Section */}
       <div>
@@ -174,6 +187,25 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
+
+      {/* Work Experience Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">Work Experience</h2>
+        <div className="space-y-4">
+          {(worker.experience || []).map((exp, index) => (
+            <div
+              key={exp._id || index}
+              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+            >
+              <h3 className="font-semibold text-lg">{exp.companyName || exp.company}</h3>
+              <p className="text-sm text-gray-500">
+                {exp.startYear || exp.years} • {exp.position}
+              </p>
+              <p className="mt-1 text-gray-700">{exp.description || exp.responsibilities}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
 
       {/* Education */}
