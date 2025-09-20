@@ -21,8 +21,8 @@ const JobDetails = () => {
       try {
         const res = await getJobById(id);
         const jobData = res.data.data || res.data;
-        console.log("Fetched job:", jobData); // ✅ log the data
-        setJob(jobData); // ✅ update state
+        console.log("Fetched job:", jobData); 
+        setJob(jobData); 
       } catch (err) {
         console.error("❌ Error fetching job:", err);
         setError("Job not found.");
