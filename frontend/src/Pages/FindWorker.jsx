@@ -93,12 +93,15 @@ const FindWorker = () => {
       worker.reviews.length
       : 0;
 
-    const matchesSearch =
-      worker.fullName.toLowerCase().includes(filtering.search.toLowerCase()) ||
-      worker.skills.some((s) =>
-        s.toLowerCase().includes(filtering.search.toLowerCase())
-      ) ||
-      worker.location.toLowerCase().includes(filtering.search.toLowerCase());
+    const matchesSearch = filtering.search
+      ? worker.fullName.toLowerCase().includes(filtering.search.toLowerCase()) ||
+      worker.skills.some((s) => {
+        const skillName = typeof s === "string" ? s : s.categoryName;
+        return skillName.toLowerCase().includes(filtering.search.toLowerCase());
+      }) ||
+      worker.location.toLowerCase().includes(filtering.search.toLowerCase())
+      : true;
+
 
     const matchesLocation = filtering.location
       ? worker.location.toLowerCase().includes(filtering.location.toLowerCase())
@@ -106,9 +109,13 @@ const FindWorker = () => {
 
     const matchesSkills = filtering.selectedSkills.length
       ? filtering.selectedSkills.every((skill) =>
-        worker.skills.some((s) => s.toLowerCase() === skill.toLowerCase())
+        worker.skills.some((s) => {
+          const skillName = typeof s === "string" ? s : s.categoryName;
+          return skillName.toLowerCase() === skill.toLowerCase();
+        })
       )
       : true;
+
 
     const matchesRating = filtering.rating
       ? avgRating >= Number(filtering.rating)
@@ -304,10 +311,10 @@ const FindWorker = () => {
                           {/* ✅ Status section */}
                           <p
                             className={`text-xs font-medium mt-0.5 text-left ${worker.status === "available"
-                                ? "text-green-600"
-                                : worker.status === "working"
-                                  ? "text-red-500"
-                                  : "text-gray-500"
+                              ? "text-green-600"
+                              : worker.status === "working"
+                                ? "text-red-500"
+                                : "text-gray-500"
                               }`}
                           >
                             ● {worker.status || "Offline"}
