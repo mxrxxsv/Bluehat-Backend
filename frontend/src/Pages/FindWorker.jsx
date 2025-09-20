@@ -283,12 +283,12 @@ const FindWorker = () => {
                     worker.reviews.reduce((sum, r) => sum + r.rating, 0) /
                     worker.reviews.length
                   ).toFixed(1)
-                  : "No rating";
+                  : "0";
 
                 return (
                   <Link
-                    to={`/worker/${worker.id}`}
-                    key={worker.id}
+                    to={`/worker/${worker._id}`}
+                    key={worker._id}
                     className="w-full py-4"
                   >
                     <div

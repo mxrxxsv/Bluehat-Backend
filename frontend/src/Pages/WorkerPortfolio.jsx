@@ -1,34 +1,77 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import workers from "../Objects/workers";
 import profile from '../assets/worker.png';
+import { getWorkerById } from "../api/worker";
 import education from '../Objects/educations';
 import certificates from '../Objects/certificates';
 import { ArrowLeft } from "lucide-react";
 
 const WorkerPortfolio = () => {
+  // const { id } = useParams();
+  // const navigate = useNavigate();
+  // const worker = workers.find((w) => w.id.toString() === id);
+
   const { id } = useParams();
   const navigate = useNavigate();
-  const worker = workers.find((w) => w.id.toString() === id);
 
+  const [worker, setWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchWorker = async () => {
+      try {
+        setLoading(true);
+        const data = await getWorkerById(id);
+        setWorker(data.worker);
+        console.log(data);
+      } catch (err) {
+        setError(err.message || "Failed to fetch worker");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorker();
+  }, [id]);
+
+  const { region, province, city, barangay, street } = worker?.address || {};
+
+  const calculateAge = (dobString) => {
+    if (!dobString) return null;
+    const dob = new Date(dobString);
+    const diffMs = Date.now() - dob.getTime();
+    const ageDate = new Date(diffMs);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
+
+  if (loading) return <p>Loading worker details...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
   if (!worker) return <p>Worker not found.</p>;
+
+
 
   const renderStars = (rating) => {
     return "⭐️".repeat(rating) + "☆".repeat(5 - rating);
   };
 
+  const reviews = worker?.reviews || []; // fallback empty array
+
   const averageRating =
-    worker.reviews.length > 0
+    reviews.length > 0
       ? (
-        worker.reviews.reduce((sum, r) => sum + r.rating, 0) /
-        worker.reviews.length
+        reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       ).toFixed(1)
-      : "No ratings";
+      : "0";
+
 
   return (
     <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30 bg-white">
       {/* Top Section: Profile Picture and Basic Info */}
 
-       {/* Back Button */}
+      {/* Back Button */}
       <div className="mb-4">
         <button
           onClick={() => navigate(-1)}
@@ -40,21 +83,21 @@ const WorkerPortfolio = () => {
 
       <div className="flex items-start gap-6">
         <img
-          // src={worker.profileImage || "/default-profile.png"}
-          src={profile}
-          alt={worker.name}
+          src={worker?.profilePicture?.url}
+          alt={worker?.fullName || "Worker"}
           className="w-32 h-32 object-cover rounded-full border"
         />
+
         <div className="flex-1 space-y-1 text-left">
-          <h1 className="text-3xl font-bold">{worker.name}</h1>
-          <p className="text-gray-700">{worker.description}</p>
+          <h1 className="text-3xl font-bold">{worker?.fullName}</h1>
+          <p className="text-gray-700">{worker?.biography}</p>
           <p className="text-sm text-gray-500 flex flex-row"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
           </svg>
-            {worker.location}</p>
+            {`${barangay}, ${city}, ${province}`}</p>
           <p className="text-sm text-gray-500">
-            Age: {worker.age} •  Gender: {worker.gender}
+            Age:  {`${calculateAge(worker.dateOfBirth)} years old`} •  Gender: {worker?.sex}
           </p>
 
           <div className="mt-3 flex gap-2">
@@ -69,48 +112,55 @@ const WorkerPortfolio = () => {
       </div>
 
       {/* Skills Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">Skills</h2>
-        <div className="flex flex-wrap gap-2">
-          {worker.skills.map((skill, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-[#55b3f3] shadow-sm text-[#f4f6f6] text-[14px] rounded-full"
-            >
-              {skill}
-            </span>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {(worker.skills || []).slice(0, 3).map((skill, index) => (
+          <span
+            key={skill.skillCategoryId || index}
+            className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+          >
+            {skill.categoryName || "Unnamed Skill"}
+          </span>
+        ))}
+
+        {worker.skillsByCategory && worker.skillsByCategory.length > 3 && (
+          <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
+            +{worker.skillsByCategory.length - 3} more
+          </span>
+        )}
       </div>
+
 
       {/* Work Experience Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">
-          Work Experience
-        </h2>
+        <h2 className="text-xl font-semibold mb-2 text-left">Work Experience</h2>
         <div className="space-y-4">
-          {worker.experience.map((exp, index) => (
-            <div key={index} className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm">
-              <h3 className="font-semibold text-lg">{exp.company}</h3>
+          {(worker.experience || []).map((exp, index) => (
+            <div
+              key={exp._id || index}
+              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+            >
+              <h3 className="font-semibold text-lg">{exp.companyName || exp.company}</h3>
               <p className="text-sm text-gray-500">
-                {exp.years} • {exp.position}
+                {exp.startYear || exp.years} • {exp.position}
               </p>
-              <p className="mt-1 text-gray-700">{exp.description}</p>
+              <p className="mt-1 text-gray-700">{exp.description || exp.responsibilities}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Certificate */}
+
+      {/* Certificates Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">
-          Certificates
-        </h2>
+        <h2 className="text-xl font-semibold mb-2 text-left">Certificates</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {certificates.map((cert, index) => (
-            <div key={index} className="shadow p-2 rounded-md bg-white shadow-sm">
+          {(worker.certificates || []).map((cert, index) => (
+            <div
+              key={cert._id || index}
+              className="shadow p-2 rounded-md bg-white shadow-sm"
+            >
               <img
-                src={cert.image}
+                src={cert.url || cert.image}
                 alt={cert.title || `Certificate ${index + 1}`}
                 className="w-full h-auto rounded-md"
               />
@@ -125,8 +175,9 @@ const WorkerPortfolio = () => {
       </div>
 
 
+
       {/* Education */}
-      <div>
+      {/* <div>
         <h2 className="text-xl font-semibold mb-2 text-left">
           Education
         </h2>
@@ -141,7 +192,7 @@ const WorkerPortfolio = () => {
           ))}
         </div>
 
-      </div>
+      </div> */}
 
       {/* Reviews Section */}
       <div>
@@ -153,16 +204,16 @@ const WorkerPortfolio = () => {
         </div>
 
         <div className="space-y-2">
-          {worker.reviews.map((review, index) => (
+          {(worker.reviews || []).map((review, index) => (
             <div
               key={index}
               className="flex items-start gap-4 p-4 rounded-md text-left bg-white shadow-sm"
             >
               <img
-                // src={review.clientImage || "/default-client.png"}
-                src={profile}
-                alt={review.clientName}
-                className="w-12 h-12 rounded-full object-cover border"
+              // src={review.clientImage || "/default-client.png"}
+              // src={profile}
+              // alt={review.clientName}
+              // className="w-12 h-12 rounded-full object-cover border"
               />
               <div>
                 <p className="font-semibold">{review.clientName}</p>

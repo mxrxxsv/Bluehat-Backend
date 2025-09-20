@@ -288,7 +288,7 @@ const getAllWorkers = async (req, res) => {
           if (worker.skills && worker.skills.length > 0) {
             worker.skills = worker.skills.map((s) => ({
               skillCategoryId: s.skillCategoryId,
-         
+
               categoryName: s.categoryName || null,
             }));
           }
@@ -586,10 +586,8 @@ const getWorkerById = async (req, res) => {
         $match: {
           "credential.userType": "worker",
           "credential.isBlocked": { $ne: true },
-          "credential.isVerified": true,
           blocked: { $ne: true },
-          // 🔥 CRITICAL: Only show ID-verified workers (unless admin override)
-          ...(includeUnverified ? {} : { verificationStatus: "approved" }),
+          verificationStatus: "approved",
         },
       },
       {
@@ -655,11 +653,27 @@ const getWorkerById = async (req, res) => {
           isVerified: "$credential.isVerified",
           skills: {
             $map: {
-              input: "$skillsData",
-              as: "skill",
+              input: "$skillsByCategory",
+              as: "sbc",
               in: {
-                skillCategoryId: "$$skill._id",
-                categoryName: "$$skill.name"
+                skillCategoryId: "$$sbc.skillCategoryId",
+                categoryName: {
+                  $arrayElemAt: [
+                    {
+                      $map: {
+                        input: {
+                          $filter: {
+                            input: "$skillsData",
+                            cond: { $eq: ["$$this._id", { $toObjectId: "$$sbc.skillCategoryId" }] }
+                          }
+                        },
+                        as: "cat",
+                        in: "$$cat.categoryName"
+                      }
+                    },
+                    0
+                  ]
+                }
               }
             }
           },
@@ -680,7 +694,7 @@ const getWorkerById = async (req, res) => {
           },
           idPictureData: { $arrayElemAt: ["$idPicture", 0] },
           selfieData: { $arrayElemAt: ["$selfie", 0] },
-        },
+        }
       },
       {
         $project: {
@@ -744,7 +758,8 @@ const getWorkerById = async (req, res) => {
     if (worker.skills && worker.skills.length > 0) {
       worker.skills = worker.skills.map((s) => ({
         skillCategoryId: s.skillCategoryId,
-        categoryName: s.categoryName ? decryptAES128(s.categoryName) : null,
+
+        categoryName: s.categoryName || null,
       }));
     }
 
