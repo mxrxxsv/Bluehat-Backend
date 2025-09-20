@@ -240,8 +240,8 @@ const Sidebar = () => {
 
             {/* Verification */}
             <li>
-              <a
-                href="#"
+              <Link
+                to="/verification"
                 className="flex items-center p-2 text-gray-900 rounded-lg  group hover:border-blue-300 hover:border-l-4"
               >
                 <svg
@@ -256,7 +256,7 @@ const Sidebar = () => {
                 <span className="flex-1 ms-3 whitespace-nowrap">
                   Verification
                 </span>
-              </a>
+              </Link>
             </li>
 
             {/* Advertisement */}
