@@ -8,6 +8,7 @@ import ProtectedRoute from "./Components/ProtectedRoute";
 import JobPending from "./Pages/JobPending";
 import ClientManagement from "./Pages/ClientManagement";
 import WorkerManagement from "./Pages/WorkerManagement";
+import Verification from "./Pages/Verification";
 
 function App() {
   const location = useLocation();
@@ -72,6 +73,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <WorkerManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/verification"
+            element={
+              <ProtectedRoute>
+                <Verification />
               </ProtectedRoute>
             }
           />
