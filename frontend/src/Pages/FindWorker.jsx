@@ -340,10 +340,10 @@ const FindWorker = () => {
                       </div>
 
                       <div className="absolute top-4 right-4">
-                        <p className="text-yellow-500 font-semibold text-sm">⭐ {avgRating}</p>
+                        <p className="text-yellow-500 font-semibold text-sm">⭐ {avgRating || 0}</p>
                       </div>
 
-                      <button
+                      {/* <button
                         onClick={(e) => {
                           e.preventDefault();
                           handleBookmarkClick(worker.id);
@@ -352,7 +352,7 @@ const FindWorker = () => {
                       >
                         {isBookmark[worker.id] ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                         Save
-                      </button>
+                      </button> */}
                     </div>
 
                   </Link>
