@@ -8,22 +8,11 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import workers from "../Objects/workers";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
-import profile from '../assets/worker.png';
 import { getWorkers } from "../api/worker";
 
 
-const rainbowColors = [
-  "#FF595E",
-  "#FFCA3A",
-  "#8AC926",
-  "#1982C4",
-  "#6A4C93",
-  "#FF8C42",
-  "#6DC6FF",
-];
 
 const FindWorker = () => {
 
@@ -309,7 +298,7 @@ const FindWorker = () => {
                           </h2>
 
                           {/* ✅ Status section */}
-                          <p
+                          {/* <p
                             className={`text-xs font-medium mt-0.5 text-left ${worker.status === "available"
                               ? "text-green-600"
                               : worker.status === "working"
@@ -318,7 +307,7 @@ const FindWorker = () => {
                               }`}
                           >
                             ● {worker.status || "Offline"}
-                          </p>
+                          </p> */}
 
                           <p className="text-sm text-gray-700 mt-1 text-left">
                             {worker.biography || "4th Year BSIT Student from Cabiao, Nueva Ecija."}
@@ -346,9 +335,21 @@ const FindWorker = () => {
                         </div>
                       </div>
 
-                      <div className="absolute top-4 right-4">
-                        <p className="text-yellow-500 font-semibold text-sm">⭐ {avgRating || 0}</p>
+                      <div className="absolute top-4 right-4 px-3 py-1">
+                        <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4 text-yellow-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
+                          </svg>
+                          <span className="mt-0.5">{avgRating || 0}</span>
+                        </p>
                       </div>
+
+
 
                       {/* <button
                         onClick={(e) => {
@@ -360,6 +361,30 @@ const FindWorker = () => {
                         {isBookmark[worker.id] ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                         Save
                       </button> */}
+
+                      <p
+                        className={`
+                                    absolute bottom-2 md:bottom-4 right-2
+                                    inline-flex items-center gap-2
+                                    text-xs md:text-[12px] font-semibold
+                                    px-2 py-1.5 rounded-full
+                                    shadow-md
+                                    transition-colors duration-200
+                                    ${worker.status === "available" ? "bg-green-100 text-green-800" : ""}
+                                    ${worker.status === "working" ? "bg-red-100 text-red-700" : ""}
+                                    ${!worker.status || worker.status === "not available" ? "bg-gray-200 text-gray-600" : ""}
+                                  `}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full 
+                          ${worker.status === "available" ? "bg-green-500" : ""}
+                          ${worker.status === "working" ? "bg-red-500" : ""}
+                          ${!worker.status || worker.status === "not available" ? "bg-gray-400" : ""}
+                        `}
+                        ></span>
+                        {worker.status ? worker.status.charAt(0).toUpperCase() + worker.status.slice(1) : "not available"}
+                      </p>
+
                     </div>
 
                   </Link>

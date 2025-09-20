@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { getWorkerById } from "../api/worker";
+import { checkAuth } from "../api/auth";
 
 
 const WorkerPortfolio = () => {
@@ -12,6 +13,8 @@ const WorkerPortfolio = () => {
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const fetchWorker = async () => {
@@ -29,6 +32,19 @@ const WorkerPortfolio = () => {
 
     fetchWorker();
   }, [id]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await checkAuth();
+        setCurrentUser(userData.data.data);
+      } catch (err) {
+        setError(err.message || "Failed to fetch user");
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const { region, province, city, barangay, street } = worker?.address || {};
 
@@ -51,7 +67,7 @@ const WorkerPortfolio = () => {
     return "⭐️".repeat(rating) + "☆".repeat(5 - rating);
   };
 
-  const reviews = worker?.reviews || []; 
+  const reviews = worker?.reviews || [];
 
   const averageRating =
     reviews.length > 0
@@ -82,22 +98,28 @@ const WorkerPortfolio = () => {
           className="w-32 h-32 object-cover rounded-full border"
         />
 
-        <div className="flex-1 space-y-1 text-left">
-          <h1 className="text-3xl font-bold">{worker?.fullName}</h1>
+        <div className="flex-1 space-y-1 text-left mt-5">
+          <h1 className="text-sm md:text-3xl font-bold">{worker?.fullName}</h1>
           <p className="text-gray-700">{worker?.biography}</p>
-          <p className="text-sm text-gray-500 flex flex-row"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-          </svg>
-            {`${barangay}, ${city}, ${province}`}</p>
-          <p className="text-sm text-gray-500">
-            Age:  {`${calculateAge(worker.dateOfBirth)} years old`} •  Gender: {worker?.sex}
+          <p className="text-[12px] md:text-sm text-gray-500 flex flex-row">
+            {/* <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+            </svg> */}
+            <span className="font-bold pr-1">Location:</span> {`${barangay}, ${city}, ${province}`}</p>
+          <p className="text-[12px] md:text-sm text-gray-500">
+            <span className="font-bold">Age:</span>  {`${calculateAge(worker.dateOfBirth)} years old`} <br />
+            <span className="font-bold">Gender:</span> {worker?.sex}
           </p>
 
           <div className="mt-3 flex gap-2">
-            <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
-              Message
-            </button>
+
+            {currentUser?.userType === 'client' && (
+              <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
+                Message
+              </button>
+            )}
+
             {/* <button className="px-4 py-2 bg-gray-500 text-white shadow-md rounded-[14px] hover:bg-gray-400 hover:shadow-lg cursor-pointer">
               Save
             </button> */}
@@ -230,9 +252,17 @@ const WorkerPortfolio = () => {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-semibold text-left">Ratings & Reviews</h2>
-          <span className="text-yellow-500 font-semibold text-sm">
-            ⭐ {averageRating} / 5
-          </span>
+          <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4 text-yellow-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
+                          </svg>
+                          <span className="mt-0.5">{averageRating} / 5</span>
+                        </p>
         </div>
 
         <div className="space-y-2">
