@@ -118,12 +118,12 @@ const Verification = () => {
   const formatDate = (dateString) =>
     dateString
       ? new Date(dateString).toLocaleString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
       : "N/A";
 
   useEffect(() => {
@@ -259,7 +259,7 @@ const Verification = () => {
                         {formatDate(worker.idVerificationSubmittedAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
+                        {/* <button
                           onClick={() => {
                             setSelectedWorker(worker);
                             setShowModal(true);
@@ -268,6 +268,16 @@ const Verification = () => {
                         >
                           <Eye className="h-4 w-4" />
                           View Details
+                        </button> */}
+                        <button
+                          onClick={() => {
+                            setSelectedWorker(worker);
+                            setShowModal(true);
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-[#55b3f3] text-white rounded hover:bg-sky-600 transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          View
                         </button>
                       </td>
                     </tr>
