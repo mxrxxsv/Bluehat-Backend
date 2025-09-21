@@ -98,7 +98,7 @@ const WorkerManagement = () => {
             total: 0,
             blocked: 0,
             active: 0,
-            verified: 0,
+            approved: 0,
             pending: 0,
           }
         );
@@ -274,22 +274,30 @@ const WorkerManagement = () => {
   };
 
   const getVerificationBadge = (worker) => {
-    if (worker.isVerified) {
+    if (worker.verificationStatus === "approved") {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <UserCheck className="w-3 h-3 mr-1" />
           Verified
         </span>
       );
+    } else if (worker.verificationStatus === "rejected") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <UserX className="w-3 h-3 mr-1" />
+          Rejected
+        </span>
+      );
     } else {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          <UserX className="w-3 h-3 mr-1" />
+          <AlertTriangle className="w-3 h-3 mr-1" />
           Pending
         </span>
       );
     }
   };
+
 
   const getRatingDisplay = (rating) => {
     if (!rating || rating === 0) return "No ratings";
@@ -344,7 +352,7 @@ const WorkerManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-600">Verified</p>
-                <p className="text-2xl font-bold text-purple-800">{statistics.verified}</p>
+                <p className="text-2xl font-bold text-purple-800">{statistics.approved}</p>
               </div>
               <Shield className="w-8 h-8 text-purple-500" />
             </div>

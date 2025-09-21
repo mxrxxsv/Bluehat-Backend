@@ -140,10 +140,11 @@ const getWorkers = async (req, res) => {
           contactNumber: 1,
           dateOfBirth: 1,
           maritalStatus: 1,
-          isVerified: 1, // ✅ Worker specific field
+          verificationStatus: 1,
+          isVerified: 1,
           verifiedAt: 1,
-          skills: 1, // ✅ Worker specific field
-          experience: 1, // ✅ Worker specific field
+          skills: 1,
+          experience: 1,
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
@@ -250,11 +251,14 @@ const getWorkers = async (req, res) => {
           active: {
             $sum: { $cond: [{ $ne: ["$cred.isBlocked", true] }, 1, 0] },
           },
-          verified: {
-            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+          approved: {
+            $sum: { $cond: [{ $eq: ["$verificationStatus", "approved"] }, 1, 0] },
           },
-          unverified: {
-            $sum: { $cond: [{ $ne: ["$isVerified", true] }, 1, 0] },
+          pending: {
+            $sum: { $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0] },
+          },
+          rejected: {
+            $sum: { $cond: [{ $eq: ["$verificationStatus", "rejected"] }, 1, 0] },
           },
         },
       },
@@ -263,13 +267,14 @@ const getWorkers = async (req, res) => {
     const statistics =
       statsAggregation.length > 0
         ? {
-            total: statsAggregation[0].total,
-            blocked: statsAggregation[0].blocked,
-            active: statsAggregation[0].active,
-            verified: statsAggregation[0].verified,
-            unverified: statsAggregation[0].unverified,
-          }
-        : { total: 0, blocked: 0, active: 0, verified: 0, unverified: 0 };
+          total: statsAggregation[0].total,
+          blocked: statsAggregation[0].blocked,
+          active: statsAggregation[0].active,
+          approved: statsAggregation[0].approved,
+          pending: statsAggregation[0].pending,
+          rejected: statsAggregation[0].rejected,
+        }
+        : { total: 0, blocked: 0, active: 0, approved: 0, pending: 0, rejected: 0 };
 
     const processingTime = Date.now() - startTime;
 
@@ -389,6 +394,7 @@ const getWorkerDetails = async (req, res) => {
           contactNumber: 1,
           dateOfBirth: 1,
           maritalStatus: 1,
+          verificationStatus: 1,
           isVerified: 1,
           verifiedAt: 1,
           skills: 1,
