@@ -194,6 +194,7 @@ const FindWork = () => {
 
         if (userData?.userType === "worker") {
 
+          const biography = typeof userData.biography === "string" ? userData.biography.trim() : "";
           const portfolios = Array.isArray(userData.portfolio) ? userData.portfolio : [];
           const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
           const skills = Array.isArray(userData.skillsByCategory) ? userData.skillsByCategory : [];
@@ -203,7 +204,8 @@ const FindWork = () => {
             portfolios.length === 0 ||
             certificates.length === 0 ||
             skills.length === 0 ||
-            experiences.length === 0;
+            experiences.length === 0 ||
+            biography.length === 0;
 
 
           setShowPortfolioSetup(shouldShowModal);
