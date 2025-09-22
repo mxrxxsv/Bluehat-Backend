@@ -342,7 +342,7 @@ const ProfilePage = () => {
         <>
           {/* Credential Section */}
 
-          <div className="bg-white shadow-md rounded-lg p-4 mb-8">
+          <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
 
             <div className="flex justify-end mb-4">
               <button
