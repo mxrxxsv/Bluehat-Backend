@@ -309,10 +309,10 @@ const FindWorker = () => {
                             ● {worker.status || "Offline"}
                           </p> */}
 
-                          <p className="text-sm text-gray-700 mt-1 text-left">
+                          <p className="text-[12px] md:text-sm text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-4">
                             {worker.biography || "4th Year BSIT Student from Cabiao, Nueva Ecija."}
                           </p>
-                          <p className="text-sm text-gray-700 text-left flex items-center gap-1">
+                          <p className="text-[12px] md:text-sm text-gray-700 text-left flex items-center gap-1 mt-1">
                             <MapPin className="w-4 h-4 text-gray-500" />
                             {worker.location}
                           </p>
@@ -320,7 +320,7 @@ const FindWorker = () => {
                             {worker.skills.slice(0, 3).map((skill, index) => (
                               <span
                                 key={skill.skillCategoryId || index}
-                                className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+                                className="text-[#f4f6f6] text-[12px] md:text-sm  font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
                               >
                                 {skill.categoryName}
                               </span>
@@ -367,7 +367,7 @@ const FindWorker = () => {
                                     absolute bottom-2 md:bottom-4 right-2
                                     inline-flex items-center gap-2
                                     text-xs md:text-[12px] font-semibold
-                                    px-2 py-1.5 rounded-full
+                                    px-2 py-1.5 rounded-full 
                                     shadow-md
                                     transition-colors duration-200
                                     ${worker.status === "available" ? "bg-green-100 text-green-800" : ""}
