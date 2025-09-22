@@ -8,6 +8,7 @@ import AddSkill from "../components/AddSkill";
 import AddCertificate from "../components/AddCertificate";
 import AddExperience from "../components/AddExperience";
 import BiographyModal from "../components/BiographyModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 
 const formatAddress = (address) => {
@@ -39,7 +40,9 @@ const ProfilePage = () => {
 
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
 
-
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteAction, setDeleteAction] = useState(null);
+  const [deleteItemName, setDeleteItemName] = useState("");
 
 
   // ✅ Load user
@@ -230,6 +233,13 @@ const ProfilePage = () => {
     }
   };
 
+  const confirmDelete = (action, name = "this") => {
+    setDeleteAction(() => action);
+    setDeleteItemName(name);
+    setIsDeleteModalOpen(true);
+  };
+
+
 
 
   if (loading) {
@@ -366,7 +376,7 @@ const ProfilePage = () => {
                     <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
                     {isEditMode && (
                       <button
-                        onClick={() => handleDeleteSkillCategory(skill.skillCategoryId._id)}
+                        onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
                         className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                       >
                         ✕
@@ -444,7 +454,7 @@ const ProfilePage = () => {
                       {isEditMode && (
                         <div className="mt-4 flex justify-end">
                           <button
-                            onClick={() => handleDeletePortfolio(item._id)}
+                            onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -513,7 +523,7 @@ const ProfilePage = () => {
                       {isEditMode && (
                         <div className="mt-3 flex justify-end">
                           <button
-                            onClick={() => handleDeleteCertificate(cert._id)}
+                            onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -582,7 +592,7 @@ const ProfilePage = () => {
                       {isEditMode && (
                         <div className="mt-3 flex justify-end">
                           <button
-                            onClick={() => handleDeleteExperience(exp._id)}
+                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -625,6 +635,21 @@ const ProfilePage = () => {
         />
 
       )}
+
+
+      {/* Modal for confirming deletions */}
+      {isDeleteModalOpen && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={() => {
+            if (deleteAction) deleteAction();
+            setIsDeleteModalOpen(false);
+          }}
+          itemName={deleteItemName}
+        />
+      )}
+
 
 
       {/* Modal for profile picture */}
