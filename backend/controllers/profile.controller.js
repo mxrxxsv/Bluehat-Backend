@@ -428,7 +428,7 @@ const updateWorkerBiography = async (req, res) => {
     const sanitizedData = sanitizeInput(value);
 
     const worker = await Worker.findOneAndUpdate(
-      { credentialId: req.user._id },
+      { credentialId: req.user.id },
       { biography: sanitizedData.biography },
       { new: true, runValidators: true }
     );
@@ -444,8 +444,8 @@ const updateWorkerBiography = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Worker biography updated successfully", {
-      userId: req.user._id,
-      workerId: worker._id,
+      userId: req.user.id,
+      workerId: worker.id,
       biographyLength: sanitizedData.biography.length,
       ip: req.ip,
       userAgent: req.get("User-Agent"),

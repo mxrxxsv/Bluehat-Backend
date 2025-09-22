@@ -4,6 +4,7 @@ import {
     uploadCertificate,
     addExperience,
     addSkillCategory,
+    updateWorkerBiography
 } from "../api/profile";
 import DropzoneFileInput from "./DropzoneFileInput";
 import { checkAuth } from "../api/auth";
@@ -35,6 +36,9 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
 
     const [skills, setSkills] = useState([]);
     const [skillCategory, setSkillCategory] = useState([]);
+
+    const [biography, setBiography] = useState("");
+
 
 
     useEffect(() => {
@@ -163,7 +167,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     Complete Your Profile
                 </h2>
                 <p className="text-center text-sm text-gray-500 mb-6">
-                    Step {step} of 4
+                    Step {step} of 5
                 </p>
                 {error && (
                     <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
@@ -172,8 +176,37 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     <p className="text-blue-500 text-sm mb-4 text-center">Uploading...</p>
                 )}
 
-                {/* STEP 1: Portfolio */}
+                {/* STEP 1: Biography */}
                 {step === 1 && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-700">Add Your Biography</h3>
+                        <textarea
+                            placeholder="Tell clients about yourself..."
+                            value={biography}
+                            onChange={(e) => setBiography(e.target.value)}
+                            className="w-full border rounded-lg p-2 border-gray-300 min-h-[120px]"
+                        />
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => {
+                                    if (!biography.trim()) return;
+                                    handleUpload(updateWorkerBiography, { biography }, () => {
+                                        // console.log("Biography saved:", biography);
+                                        setStep(2);
+                                    }, 2000);
+                                }}
+                                disabled={loading}
+                                className="px-4 py-2 bg-[#00a6f4] text-white rounded-lg hover:bg-blue-400 cursor-pointer disabled:opacity-50"
+                            >
+                                Save Biography
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* STEP 2: Portfolio */}
+                {step === 2 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Portfolio</h3>
                         <input
@@ -211,8 +244,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     </div>
                 )}
 
-                {/* STEP 2: Certificates */}
-                {step === 2 && (
+                {/* STEP 3: Certificates */}
+                {step === 3 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">
                             Upload Certificates
@@ -249,8 +282,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     </div>
                 )}
 
-                {/* STEP 3: Experience */}
-                {step === 3 && (
+                {/* STEP 4: Experience */}
+                {step === 4 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Experience</h3>
                         <input
@@ -335,8 +368,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     </div>
                 )}
 
-                {/* STEP 4: Skills */}
-                {step === 4 && (
+                {/* STEP 5: Skills */}
+                {step === 5 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Skills</h3>
 
@@ -355,8 +388,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                                         }
                                     }}
                                     className={`px-3 py-1 rounded-full text-xs font-medium ${skillCategory.includes(skill._id)
-                                            ? "bg-blue-500 text-white shadow"
-                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                        ? "bg-blue-500 text-white shadow"
+                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                         }`}
                                 >
                                     {skill.name || skill.categoryName}
@@ -401,7 +434,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                         Previous
                     </button>
 
-                    {step < 4 ? (
+                    {step < 5 ? (
                         <button
                             onClick={() => setStep(step + 1)}
                             className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-blue-300 cursor-pointer"

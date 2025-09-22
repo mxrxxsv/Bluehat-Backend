@@ -1536,6 +1536,7 @@ const checkAuth = async (req, res) => {
           idPictureId: user.idPictureId,
           idPictureUrl: user.idPictureUrl,
           verified: user.verificationStatus,
+          biogrqphy: user.biography,
         }),
       },
       meta: {
