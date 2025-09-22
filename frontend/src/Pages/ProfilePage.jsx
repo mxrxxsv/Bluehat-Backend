@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience, removeSkillCategory } from "../api/profile";
+import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience, removeSkillCategory, updateWorkerBiography } from "../api/profile";
 import { getAllJobs } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
 import AddCertificate from "../components/AddCertificate";
 import AddExperience from "../components/AddExperience";
+import BiographyModal from "../components/BiographyModal";
 
 
 const formatAddress = (address) => {
@@ -35,6 +36,9 @@ const ProfilePage = () => {
   const [isAddExperienceOpen, setIsAddExperienceOpen] = useState(false);
 
   const [isEditMode, setIsEditMode] = useState(false);
+
+  const [isBioModalOpen, setIsBioModalOpen] = useState(false);
+
 
 
 
@@ -110,6 +114,19 @@ const ProfilePage = () => {
       console.error("Failed to refresh experiences:", err);
     }
   };
+
+  const handleSaveBiography = async (newBio) => {
+    try {
+      await updateWorkerBiography({ biography: newBio });
+      const res = await checkAuth();
+      setCurrentUser(res.data.data); // refresh state from server
+      setIsBioModalOpen(false);
+    } catch (err) {
+      console.error("Failed to update biography:", err);
+    }
+  };
+
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -223,7 +240,7 @@ const ProfilePage = () => {
     return <p className="text-center mt-40 text-red-500">User not authenticated.</p>;
   }
 
-  const { userType, fullName, image, address } = currentUser;
+  const { userType, fullName, image, address, biography } = currentUser;
 
   return (
     <div className="max-w-6xl mx-auto p-6 mt-[100px]">
@@ -246,8 +263,16 @@ const ProfilePage = () => {
           <span className="text-xs px-2 py-1 rounded-full bg-[#5eb6f3] text-white mt-2 inline-block">
             {userType === "client" ? "Client" : "Freelancer"}
           </span>
+
+          <p className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer" onClick={() => setIsBioModalOpen(true)} >
+            {biography || "No biography provided."}
+          </p>
+
+
         </div>
       </div>
+
+
 
       {/* Content Based on Role */}
       {userType === "client" ? (
@@ -590,6 +615,17 @@ const ProfilePage = () => {
 
         </>
       )}
+
+      {/* Modal for editing biography */}
+      {isBioModalOpen && (
+        <BiographyModal
+          biography={biography}
+          onClose={() => setIsBioModalOpen(false)}
+          onSave={handleSaveBiography}
+        />
+
+      )}
+
 
       {/* Modal for profile picture */}
       {isModalOpen && (
