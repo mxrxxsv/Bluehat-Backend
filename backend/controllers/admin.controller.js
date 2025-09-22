@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 
 const Admin = require("../models/Admin");
+const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 const logger = require("../utils/logger");
 const {
   generateAdminToken,
@@ -18,12 +19,12 @@ const adminSignupSchema = Joi.object({
   firstName: Joi.string()
     .trim()
     .min(2)
-    .max(50)
+    .max(128)
     .pattern(/^[a-zA-Z\s]+$/)
     .required()
     .messages({
       "string.min": "First name must be at least 2 characters",
-      "string.max": "First name cannot exceed 50 characters",
+      "string.max": "First name cannot exceed 128 characters",
       "string.pattern.base": "First name can only contain letters and spaces",
       "any.required": "First name is required",
     }),
@@ -31,12 +32,12 @@ const adminSignupSchema = Joi.object({
   lastName: Joi.string()
     .trim()
     .min(2)
-    .max(50)
+    .max(128)
     .pattern(/^[a-zA-Z\s]+$/)
     .required()
     .messages({
       "string.min": "Last name must be at least 2 characters",
-      "string.max": "Last name cannot exceed 50 characters",
+      "string.max": "Last name cannot exceed 128 characters",
       "string.pattern.base": "Last name can only contain letters and spaces",
       "any.required": "Last name is required",
     }),
@@ -44,12 +45,12 @@ const adminSignupSchema = Joi.object({
   userName: Joi.string()
     .trim()
     .min(3)
-    .max(30)
+    .max(128)
     .pattern(/^[a-zA-Z0-9_.-]+$/)
     .required()
     .messages({
       "string.min": "Username must be at least 3 characters",
-      "string.max": "Username cannot exceed 30 characters",
+      "string.max": "Username cannot exceed 128 characters",
       "string.pattern.base":
         "Username can only contain letters, numbers, dots, hyphens, and underscores",
       "any.required": "Username is required",
@@ -106,7 +107,7 @@ const getAllAdminsSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().trim().max(100).optional(),
   sortBy: Joi.string()
-    .valid("firstName", "lastName", "userName", "createdAt", "lastLogin")
+    .valid("firstName", "lastName", "createdAt", "lastLogin")
     .default("createdAt"),
   order: Joi.string().valid("asc", "desc").default("desc"),
 });
@@ -191,6 +192,26 @@ const handleAdminError = (
   });
 };
 
+// Helper function to find admin by encrypted username
+const findAdminByUsername = async (plainUsername) => {
+  // Get all admins and decrypt usernames to find match
+  const allAdmins = await Admin.find({}).select("+password +code");
+
+  for (const admin of allAdmins) {
+    try {
+      const decryptedUsername = decryptAES128(admin.userName);
+      if (decryptedUsername.toLowerCase() === plainUsername.toLowerCase()) {
+        return admin;
+      }
+    } catch (decryptError) {
+      // Skip this admin if decryption fails
+      continue;
+    }
+  }
+
+  return null;
+};
+
 // ==================== CONTROLLER FUNCTIONS ====================
 
 // Admin Signup
@@ -198,7 +219,7 @@ const signup = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate input data
+    // Validate input data
     const { error, value } = adminSignupSchema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
@@ -223,14 +244,12 @@ const signup = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize input to prevent XSS
+    // Sanitize input to prevent XSS
     const sanitizedData = sanitizeInput(value);
     const { firstName, lastName, userName, password, code } = sanitizedData;
 
-    // ✅ Check for existing admin
-    const existingAdmin = await Admin.findOne({
-      userName: { $regex: new RegExp(`^${userName}$`, "i") },
-    });
+    // Check for existing admin by username (decrypt and compare)
+    const existingAdmin = await findAdminByUsername(userName);
 
     if (existingAdmin) {
       logger.warn("Admin signup attempted with existing username", {
@@ -247,24 +266,29 @@ const signup = async (req, res) => {
       });
     }
 
-    // ✅ Hash password and code
+    // Encrypt sensitive data
+    const firstNameEnc = encryptAES128(firstName);
+    const lastNameEnc = encryptAES128(lastName);
+    const userNameEnc = encryptAES128(userName.toLowerCase());
+
+    // Hash password and code
     const [hashedPassword, hashedCode] = await Promise.all([
       bcrypt.hash(password, SALT_RATE),
       bcrypt.hash(code, SALT_RATE),
     ]);
 
-    // ✅ Create admin
+    // Create admin
     const newAdmin = new Admin({
-      firstName,
-      lastName,
-      userName: userName.toLowerCase(),
+      firstName: firstNameEnc,
+      lastName: lastNameEnc,
+      userName: userNameEnc,
       password: hashedPassword,
       code: hashedCode,
     });
 
     await newAdmin.save();
 
-    // ✅ Generate JWT token
+    // Generate JWT token
     const token = generateAdminToken(newAdmin._id);
     setAdminTokenCookie(res, token);
 
@@ -272,9 +296,9 @@ const signup = async (req, res) => {
 
     logger.info("Admin signup successful", {
       adminId: newAdmin._id,
-      userName: newAdmin.userName,
-      firstName: newAdmin.firstName,
-      lastName: newAdmin.lastName,
+      userName: userName,
+      firstName: firstName,
+      lastName: lastName,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
@@ -285,16 +309,6 @@ const signup = async (req, res) => {
       success: true,
       message: "Admin account created successfully",
       code: "ADMIN_CREATED",
-      data: {
-        admin: {
-          id: newAdmin._id,
-          firstName: newAdmin.firstName,
-          lastName: newAdmin.lastName,
-          userName: newAdmin.userName,
-          role: "admin",
-          createdAt: newAdmin.createdAt,
-        },
-      },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
@@ -322,7 +336,7 @@ const login = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate input data
+    // Validate input data
     const { error, value } = adminLoginSchema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
@@ -347,14 +361,12 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize input to prevent XSS
+    // Sanitize input to prevent XSS
     const sanitizedData = sanitizeInput(value);
     const { userName, password, code } = sanitizedData;
 
-    // ✅ Find admin (include password and code fields)
-    const admin = await Admin.findOne({
-      userName: { $regex: new RegExp(`^${userName}$`, "i") },
-    }).select("+password +code");
+    // Find admin by username (decrypt and compare)
+    const admin = await findAdminByUsername(userName);
 
     if (!admin) {
       logger.warn("Admin login failed - admin not found", {
@@ -371,7 +383,7 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ Verify password and code
+    // Verify password and code
     const [isPasswordMatch, isCodeMatch] = await Promise.all([
       bcrypt.compare(password, admin.password),
       bcrypt.compare(code, admin.code),
@@ -380,7 +392,7 @@ const login = async (req, res) => {
     if (!isPasswordMatch || !isCodeMatch) {
       logger.warn("Admin login failed - invalid credentials", {
         adminId: admin._id,
-        userName: admin.userName,
+        userName: userName,
         passwordMatch: isPasswordMatch,
         codeMatch: isCodeMatch,
         ip: req.ip,
@@ -395,21 +407,26 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ Generate JWT token
+    // Generate JWT token
     const token = generateAdminToken(admin._id);
     setAdminTokenCookie(res, token);
 
-    // ✅ Update last login
+    // Update last login
     admin.lastLogin = new Date();
     await admin.save();
+
+    // Decrypt admin data for response
+    const decryptedFirstName = decryptAES128(admin.firstName);
+    const decryptedLastName = decryptAES128(admin.lastName);
+    const decryptedUserName = decryptAES128(admin.userName);
 
     const processingTime = Date.now() - startTime;
 
     logger.info("Admin login successful", {
       adminId: admin._id,
-      userName: admin.userName,
-      firstName: admin.firstName,
-      lastName: admin.lastName,
+      userName: decryptedUserName,
+      firstName: decryptedFirstName,
+      lastName: decryptedLastName,
       lastLogin: admin.lastLogin,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
@@ -424,8 +441,8 @@ const login = async (req, res) => {
       data: {
         admin: {
           id: admin._id,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
+          firstName: decryptedFirstName,
+          lastName: decryptedLastName,
           role: "admin",
         },
       },
@@ -456,7 +473,7 @@ const getAdminProfile = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Verify admin authentication
+    // Verify admin authentication
     if (!req.admin || !req.admin._id) {
       logger.warn("Unauthorized admin profile access attempt", {
         ip: req.ip,
@@ -471,7 +488,7 @@ const getAdminProfile = async (req, res) => {
       });
     }
 
-    // ✅ Get fresh admin data
+    // Get fresh admin data
     const admin = await Admin.findById(req.admin._id).select("-password -code");
 
     if (!admin) {
@@ -489,11 +506,16 @@ const getAdminProfile = async (req, res) => {
       });
     }
 
+    // Decrypt admin data
+    const decryptedFirstName = decryptAES128(admin.firstName);
+    const decryptedLastName = decryptAES128(admin.lastName);
+    const decryptedUserName = decryptAES128(admin.userName);
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Admin profile retrieved", {
       adminId: admin._id,
-      userName: admin.userName,
+      userName: decryptedUserName,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
@@ -507,11 +529,9 @@ const getAdminProfile = async (req, res) => {
       data: {
         admin: {
           id: admin._id,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          userName: admin.userName,
+          firstName: decryptedFirstName,
+          lastName: decryptedLastName,
           role: "admin",
-          createdAt: admin.createdAt,
           lastLogin: admin.lastLogin,
         },
       },
@@ -542,7 +562,7 @@ const logout = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Clear admin token cookie
+    // Clear admin token cookie
     res.clearCookie("adminToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -553,7 +573,6 @@ const logout = async (req, res) => {
 
     logger.info("Admin logout successful", {
       adminId: req.admin?._id,
-      userName: req.admin?.userName,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
@@ -591,7 +610,7 @@ const checkAuth = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Verify admin authentication
+    // Verify admin authentication
     if (!req.admin || !req.admin._id) {
       return res.status(401).json({
         success: false,
@@ -601,7 +620,7 @@ const checkAuth = async (req, res) => {
       });
     }
 
-    // ✅ Get fresh admin data
+    // Get fresh admin data
     const admin = await Admin.findById(req.admin._id).select("-password -code");
 
     if (!admin) {
@@ -620,11 +639,16 @@ const checkAuth = async (req, res) => {
       });
     }
 
+    // Decrypt admin data
+    const decryptedFirstName = decryptAES128(admin.firstName);
+    const decryptedLastName = decryptAES128(admin.lastName);
+    const decryptedUserName = decryptAES128(admin.userName);
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Admin auth check successful", {
       adminId: admin._id,
-      userName: admin.userName,
+      userName: decryptedUserName,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
@@ -639,9 +663,8 @@ const checkAuth = async (req, res) => {
       data: {
         admin: {
           id: admin._id,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          userName: admin.userName,
+          firstName: decryptedFirstName,
+          lastName: decryptedLastName,
           role: "admin",
           lastLogin: admin.lastLogin,
         },
@@ -668,12 +691,12 @@ const checkAuth = async (req, res) => {
   }
 };
 
-// Get All Admins (Super Admin only)
+// Get All Admins (Super Admin only) - HIDE USERNAME FOR SECURITY
 const getAllAdmins = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate query parameters
+    // Validate query parameters
     const { error, value } = getAllAdminsSchema.validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
@@ -699,7 +722,7 @@ const getAllAdmins = async (req, res) => {
       });
     }
 
-    // ✅ Verify admin authentication
+    // Verify admin authentication
     if (!req.admin || !req.admin._id) {
       logger.warn("Unauthorized get all admins attempt", {
         ip: req.ip,
@@ -718,43 +741,114 @@ const getAllAdmins = async (req, res) => {
     const { page, limit, search, sortBy, order } = sanitizedQuery;
     const skip = (page - 1) * limit;
 
-    // ✅ Build search query
-    let searchQuery = {};
-    if (search) {
-      searchQuery = {
-        $or: [
-          { firstName: { $regex: search, $options: "i" } },
-          { lastName: { $regex: search, $options: "i" } },
-          { userName: { $regex: search, $options: "i" } },
-        ],
-      };
+    // Get all admins (we need to decrypt before filtering)
+    const allAdmins = await Admin.find({}).select("-password -code").lean();
+
+    // Decrypt all admin data for filtering and sorting
+    const decryptedAdmins = [];
+    let successfulDecryptions = 0;
+    let failedDecryptions = 0;
+
+    for (const admin of allAdmins) {
+      try {
+        const decryptedAdmin = {
+          ...admin,
+          firstName: decryptAES128(admin.firstName),
+          lastName: decryptAES128(admin.lastName),
+          userName: decryptAES128(admin.userName), // Decrypt for filtering but won't expose
+        };
+        decryptedAdmins.push(decryptedAdmin);
+        successfulDecryptions++;
+      } catch (decryptError) {
+        logger.error("Failed to decrypt admin data", {
+          adminId: admin._id,
+          error: decryptError.message,
+        });
+        failedDecryptions++;
+        // Skip this admin or use fallback
+        continue;
+      }
     }
 
-    // ✅ Build sort object
-    const sortObject = {};
-    sortObject[sortBy] = order === "asc" ? 1 : -1;
+    // Apply search filter after decryption (can still search by name)
+    let filteredAdmins = decryptedAdmins;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredAdmins = decryptedAdmins.filter(
+        (admin) =>
+          admin.firstName.toLowerCase().includes(searchLower) ||
+          admin.lastName.toLowerCase().includes(searchLower)
+        // 🔒 REMOVED: userName search for security
+        // admin.userName.toLowerCase().includes(searchLower)
+      );
+    }
 
-    const [admins, totalCount] = await Promise.all([
-      Admin.find(searchQuery)
-        .select("-password -code")
-        .sort(sortObject)
-        .skip(skip)
-        .limit(limit)
-        .lean(), // ✅ Performance optimization
+    // Apply sorting (exclude userName from sortBy options)
+    const allowedSortFields = [
+      "firstName",
+      "lastName",
+      "createdAt",
+      "lastLogin",
+    ];
+    const safeSortBy = allowedSortFields.includes(sortBy)
+      ? sortBy
+      : "createdAt";
 
-      Admin.countDocuments(searchQuery),
-    ]);
+    filteredAdmins.sort((a, b) => {
+      let aValue = a[safeSortBy];
+      let bValue = b[safeSortBy];
+
+      // Handle different data types
+      if (safeSortBy === "createdAt" || safeSortBy === "lastLogin") {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      } else if (typeof aValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (order === "asc") {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      }
+    });
+
+    // Apply pagination
+    const totalCount = filteredAdmins.length;
+    const paginatedAdmins = filteredAdmins.slice(skip, skip + limit);
+
+    // 🔒 Format response data WITHOUT USERNAME
+    const formattedAdmins = paginatedAdmins.map((admin) => ({
+      _id: admin._id,
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      // 🚫 REMOVED: userName (security credential)
+      fullName: `${admin.firstName} ${admin.lastName}`,
+      // 🆔 ADDED: Display ID for admin management
+      adminId: `AD${admin._id.toString().slice(-6).toUpperCase()}`,
+      createdAt: admin.createdAt,
+      updatedAt: admin.updatedAt,
+      lastLogin: admin.lastLogin,
+      // 🕒 ADDED: Account age for management context
+      accountAge: Math.floor(
+        (Date.now() - new Date(admin.createdAt).getTime()) /
+          (1000 * 60 * 60 * 24)
+      ),
+    }));
 
     const processingTime = Date.now() - startTime;
 
     logger.info("Get all admins successful", {
       requestingAdminId: req.admin._id,
-      totalAdmins: admins.length,
+      totalAdmins: formattedAdmins.length,
       totalCount,
+      successfulDecryptions,
+      failedDecryptions,
       page,
       limit,
       search: search || "none",
-      sortBy,
+      sortBy: safeSortBy,
       order,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
@@ -762,7 +856,7 @@ const getAllAdmins = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    // ✅ Set cache headers
+    // Set cache headers
     res.set({
       "Cache-Control": "private, max-age=300", // 5 minutes for admin data
       "X-Total-Count": totalCount.toString(),
@@ -773,7 +867,7 @@ const getAllAdmins = async (req, res) => {
       message: "Admins retrieved successfully",
       code: "ADMINS_RETRIEVED",
       data: {
-        admins,
+        admins: formattedAdmins,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -784,13 +878,19 @@ const getAllAdmins = async (req, res) => {
         },
         filters: {
           search: search || null,
-          sortBy,
+          sortBy: safeSortBy,
           order,
+          availableSort: ["firstName", "lastName", "createdAt", "lastLogin"],
         },
       },
       meta: {
+        successfulDecryptions,
+        failedDecryptions,
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
+        note: "Username hidden for security - search limited to names only",
+        securityNote:
+          "Login credentials (username) are not exposed in admin listings",
       },
     });
   } catch (err) {

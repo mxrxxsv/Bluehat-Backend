@@ -7,13 +7,13 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       required: [true, "First name is required"],
       trim: true,
-      maxlength: 50,
+      maxlength: 128,
     },
     lastName: {
       type: String,
       required: [true, "Last name is required"],
       trim: true,
-      maxlength: 50,
+      maxlength: 128,
     },
     userName: {
       type: String,
@@ -22,7 +22,7 @@ const AdminSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       minlength: [4, "Username must be at least 4 characters"],
-      maxlength: [30, "Username can't exceed 30 characters"],
+      maxlength: [128, "Username can't exceed 128 characters"],
     },
     password: {
       type: String,
@@ -33,6 +33,9 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       required: [true, "Admin code is required"],
       select: false,
+    },
+    lastLogin: {
+      type: Date,
     },
   },
   { timestamps: true }
