@@ -309,7 +309,7 @@ const FindWorker = () => {
                             ● {worker.status || "Offline"}
                           </p> */}
 
-                          <p className="text-[12px] md:text-sm text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
+                          <p className="text-[12px] md:text-sm text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-4">
                             {worker.biography || "4th Year BSIT Student from Cabiao, Nueva Ecija."}
                           </p>
                           <p className="text-[12px] md:text-sm text-gray-700 text-left flex items-center gap-1 mt-1">
