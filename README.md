@@ -42,7 +42,7 @@ The system is built with a **React + Vite** frontend and a **Node.js/Express** b
 
 **Frontend:**  
 - React + Vite  
-- Tailwind CSS (or other styling framework)  
+- Tailwind CSS
 
 **Backend:**  
 - Node.js + Express  
