@@ -47,6 +47,6 @@ The system is built with a **React + Vite** frontend and a **Node.js/Express** b
 **Backend:**  
 - Node.js + Express  
 - MongoDB / Mongoose  
-- Nodemailer (Email handling)  
+- Nodemailer 
 
 
