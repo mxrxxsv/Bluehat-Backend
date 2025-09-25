@@ -115,7 +115,6 @@ const WorkerManagement = () => {
       });
       setWorkers([]);
 
-      // Show user-friendly error
       alert(
         `Error loading workers: ${error.response?.data?.message || error.message
         }`
