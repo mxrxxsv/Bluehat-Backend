@@ -15,7 +15,7 @@ const JobDetails = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  // ✅ Fetch job by ID
+  // Fetch job by ID
   useEffect(() => {
     const fetchJob = async () => {
       try {
@@ -34,7 +34,7 @@ const JobDetails = () => {
     fetchJob();
   }, [id]);
 
-  // ✅ Fetch current user
+  // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -79,7 +79,7 @@ const JobDetails = () => {
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2">
               <img
-                src={job.client?.profilePicture?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                src={job.client?.profilePicture || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
               />
@@ -125,6 +125,9 @@ const JobDetails = () => {
               {job.category?.name || "Uncategorized"}
             </span>
           </div>
+
+          </div>
+      </article>
           
           {/* Bottom Action Button */}
           <div className="flex justify-end md:mt-5">
@@ -155,8 +158,7 @@ const JobDetails = () => {
               </p>
             )}
           </div>
-        </div>
-      </article>
+        
     </div>
   );
 };
