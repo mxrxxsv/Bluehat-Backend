@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Clock, MapPin, Briefcase, ArrowLeft } from "lucide-react";
+import { Clock, MapPin, Briefcase, ArrowLeft, X } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { getJobById } from "../api/jobs";
+import { applyToJob } from "../api/jobApplication"; 
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -15,14 +16,22 @@ const JobDetails = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [coverLetter, setCoverLetter] = useState("");
+  const [proposedPrice, setProposedPrice] = useState("");
+  const [durationValue, setDurationValue] = useState("");
+  const [durationUnit, setDurationUnit] = useState("days");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
   // Fetch job by ID
   useEffect(() => {
     const fetchJob = async () => {
       try {
         const res = await getJobById(id);
         const jobData = res.data.data || res.data;
-        console.log("Fetched job:", jobData); 
-        setJob(jobData); 
+        setJob(jobData);
       } catch (err) {
         console.error("❌ Error fetching job:", err);
         setError("Job not found.");
@@ -30,7 +39,6 @@ const JobDetails = () => {
         setLoadingJob(false);
       }
     };
-
     fetchJob();
   }, [id]);
 
@@ -49,16 +57,55 @@ const JobDetails = () => {
         setLoadingUser(false);
       }
     };
-
     fetchUser();
   }, []);
+
+  const handleSubmitApplication = async (e) => {
+    e.preventDefault();
+    console.log("🚀 Submit clicked");
+    console.log("📤 Payload:", {
+  coverLetter,
+  proposedPrice: Number(proposedPrice),
+  estimatedDuration: { value: Number(durationValue), unit: durationUnit },
+});
+
+    if (!job?.id) return;
+    
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await applyToJob(job.id, {
+        coverLetter,
+        proposedPrice: Number(proposedPrice),
+        estimatedDuration: { value: Number(durationValue), unit: durationUnit },
+      });
+
+      // Close modal and redirect to chat
+      setShowModal(false);
+      if (job.client?.credentialId?._id) {
+        navigate(`/chat/${job.client.credentialId._id}`, {
+          state: { clientName: job.client.name },
+        });
+      }
+    } catch (err) {
+      console.error("❌ Error applying:", err);
+      setSubmitError(err.response?.data?.message || "Failed to apply.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loadingJob) {
     return <p className="text-center mt-10">Loading job...</p>;
   }
 
   if (error || !job) {
-    return <p className="text-center text-red-500 mt-10">{error || "Job not found."}</p>;
+    return (
+      <p className="text-center text-red-500 mt-10">
+        {error || "Job not found."}
+      </p>
+    );
   }
 
   return (
@@ -73,13 +120,17 @@ const JobDetails = () => {
         </button>
       </div>
 
+      {/* Job Card */}
       <article className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
-
         <div className="rounded-xl p-4 bg-white transition-all">
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2">
               <img
-                src={job.client?.profilePicture || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                src={
+                  job.client?.profilePicture ||
+                  job.client?.profilePicture?.url ||
+                  "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                }
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
               />
@@ -88,15 +139,14 @@ const JobDetails = () => {
               </span>
             </div>
             <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-              {/* <Clock size={16} /> */}
               {new Date(job.createdAt).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
               })}
             </span>
-
           </div>
+
           <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5">
               <Briefcase size={20} className="text-blue-400" />
@@ -113,7 +163,9 @@ const JobDetails = () => {
           <div className="flex justify-between mt-3 items-center text-sm text-gray-600 ">
             <span className="flex items-center gap-1 ">
               <MapPin size={16} />
-              <span className="overflow-hidden max-w-45 md:max-w-full text-left md:mt-0">{job.location}</span>
+              <span className="overflow-hidden max-w-45 md:max-w-full text-left md:mt-0">
+                {job.location}
+              </span>
             </span>
             <span className="font-bold text-green-400">
               ₱{job.price?.toLocaleString() || 0}
@@ -125,40 +177,114 @@ const JobDetails = () => {
               {job.category?.name || "Uncategorized"}
             </span>
           </div>
-
-          </div>
+        </div>
       </article>
-          
-          {/* Bottom Action Button */}
-          <div className="flex justify-end md:mt-5">
-            {loadingUser ? (
-              <p className="text-gray-500">Checking user...</p>
-            ) : currentUser ? (
-              currentUser.userType === "worker" ? (
-                <button
-                  onClick={() => {
-                    if (job.client?.credentialId?._id) {
-                      navigate(`/chat/${job.client.credentialId._id}`, {
-                        state: { clientName: job.client.name },
-                      });
-                    }
-                  }}
-                  className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-                >
-                  Apply
-                </button>
 
-              ) : (
-                <>
-                </>
-              )
-            ) : (
-              <p className="text-red-500 font-medium">
-                Please log in to apply or edit jobs.
-              </p>
+      {/* Bottom Action Button */}
+      <div className="flex justify-end md:mt-5">
+        {loadingUser ? (
+          <p className="text-gray-500">Checking user...</p>
+        ) : currentUser ? (
+          currentUser.userType === "worker" ? (
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+            >
+              Apply
+            </button>
+          ) : null
+        ) : (
+          <p className="text-red-500 font-medium">
+            Please log in to apply or edit jobs.
+          </p>
+        )}
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex justify-center items-center z-50 pointer-events-none">
+          <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md relative shadow-md pointer-events-auto">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-4 text-[#252525]">
+              Apply for this Job
+            </h2>
+
+            {submitError && (
+              <p className="text-red-500 text-sm mb-3">{submitError}</p>
             )}
+
+            <form onSubmit={handleSubmitApplication} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium">Cover Letter</label>
+                <textarea
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  required
+                  minLength={20}
+                  maxLength={2000}
+                  className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+                  rows="4"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Proposed Price</label>
+                <input
+                  type="number"
+                  value={proposedPrice}
+                  onChange={(e) => setProposedPrice(e.target.value)}
+                  required
+                  min={0}
+                  max={1000000}
+                  className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">Duration</label>
+                  <input
+                    type="number"
+                    value={durationValue}
+                    onChange={(e) => setDurationValue(e.target.value)}
+                    required
+                    min={1}
+                    max={365}
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium">Unit</label>
+                  <select
+                    value={durationUnit}
+                    onChange={(e) => setDurationUnit(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+                  >
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                    <option value="months">Months</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold w-full cursor-pointer"
+              >
+                {submitting ? "Submitting..." : "Submit Application"}
+              </button>
+            </form>
           </div>
-        
+        </div>
+      )}
     </div>
   );
 };

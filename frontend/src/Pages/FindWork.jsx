@@ -42,33 +42,33 @@ const FindWork = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  // ✅ NEW: Draft and confirm modal state
+  // NEW: Draft and confirm modal state
   const [draft, setDraft] = useState(null);
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
 
   const [showIdSetup, setShowIdSetup] = useState(false);
 
 
-  // ✅ NEW: Reset form helper
+  // NEW: Reset form helper
   const resetForm = () => {
     setNewJob({ description: "", location: "", priceOffer: "" });
     setSelectedCategory("");
   };
 
-  // ✅ NEW: Handle modal close with draft check
+  // NEW: Handle modal close with draft check
   const handleCloseModal = () => {
     const hasInput =
       newJob.description || newJob.location || newJob.priceOffer || selectedCategory;
 
     if (hasInput) {
-      setShowDraftConfirm(true); // Ask user
+      setShowDraftConfirm(true);
     } else {
       resetForm();
       setIsModalOpen(false);
     }
   };
 
-  // ✅ NEW: Save/Discard draft
+  // NEW: Save/Discard draft
   const handleSaveDraft = () => {
     setDraft({ ...newJob, category: selectedCategory });
     setShowDraftConfirm(false);
@@ -82,7 +82,7 @@ const FindWork = () => {
     setIsModalOpen(false);
   };
 
-  // ✅ NEW: Load draft when modal opens
+  // NEW: Load draft when modal opens
   useEffect(() => {
     if (isModalOpen) {
       if (draft) {
@@ -100,11 +100,11 @@ const FindWork = () => {
 
   // ================== YOUR EXISTING LOGIC ==================
 
-  // ✅ EXTRACTED: Fetch jobs function for reuse
+  // EXTRACTED: Fetch jobs function for reuse
   const fetchJobs = async (useCache = true) => {
     try {
       const options = { page: 1, limit: 20, status: "open" };
-      if (!useCache) options._t = Date.now(); // cache buster
+      if (!useCache) options._t = Date.now(); 
       const response = await getAllJobs(options);
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs

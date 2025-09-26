@@ -273,18 +273,16 @@ const applyToJob = async (req, res) => {
       });
     }
 
+    
     // Check if worker is verified
-    const credential = await Credential.findById(req.user.id).select(
-      "+isVerified +isBlocked"
-    );
-    if (!credential || !credential.isVerified) {
+    if (!worker || worker.verificationStatus !== "approved") {
       return res.status(403).json({
         success: false,
         message:
           "Only verified workers can apply to jobs. Please complete your verification process.",
         code: "WORKER_NOT_VERIFIED",
         data: {
-          isVerified: credential?.isVerified || false,
+          verificationStatus: worker?.verificationStatus || "not_submitted",
           nextStep: "Complete account verification to apply for jobs",
         },
         meta: {
@@ -295,7 +293,7 @@ const applyToJob = async (req, res) => {
     }
 
     // Check if worker is blocked
-    if (credential.isBlocked) {
+    if (worker.isBlocked) {
       return res.status(403).json({
         success: false,
         message: "Your account is currently blocked. Please contact support.",
@@ -306,6 +304,7 @@ const applyToJob = async (req, res) => {
         },
       });
     }
+
 
     // Find and validate job
     const job = await Job.findOne({
