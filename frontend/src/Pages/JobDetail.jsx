@@ -149,7 +149,7 @@ const JobDetails = () => {
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
-            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs md:text-sm">
               {job.category?.name || "Uncategorized"}
             </span>
           </div>
