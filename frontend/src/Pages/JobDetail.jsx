@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Clock, MapPin, Briefcase, ArrowLeft, X } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { getJobById } from "../api/jobs";
-import { applyToJob } from "../api/jobApplication"; 
+import { applyToJob } from "../api/jobApplication";
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -62,9 +62,9 @@ const JobDetails = () => {
 
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
-  
+
     if (!job?.id) return;
-    
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -121,9 +121,11 @@ const JobDetails = () => {
             <div className="flex items-center gap-2">
               <img
                 src={
-                  job.client?.profilePicture ||
-                  job.client?.profilePicture?.url ||
-                  "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                  typeof job.client?.profilePicture === "string" && job.client.profilePicture.trim() !== ""
+                    ? job.client.profilePicture
+                    : job.client?.profilePicture?.url && job.client.profilePicture.url.trim() !== ""
+                      ? job.client.profilePicture.url
+                      : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
