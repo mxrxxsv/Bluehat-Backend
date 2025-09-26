@@ -62,13 +62,7 @@ const JobDetails = () => {
 
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
-    console.log("🚀 Submit clicked");
-    console.log("📤 Payload:", {
-  coverLetter,
-  proposedPrice: Number(proposedPrice),
-  estimatedDuration: { value: Number(durationValue), unit: durationUnit },
-});
-
+  
     if (!job?.id) return;
     
     setSubmitting(true);
@@ -134,7 +128,7 @@ const JobDetails = () => {
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
               />
-              <span className="text-sm font-medium text-[#252525] opacity-75">
+              <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
                 {job.client?.name || "Client Name"}
               </span>
             </div>
@@ -151,11 +145,11 @@ const JobDetails = () => {
             <span className="flex items-center justify-center w-5 h-5">
               <Briefcase size={20} className="text-blue-400" />
             </span>
-            <span className="text-sm mt-5 md:mt-0">{job.description}</span>
+            <span className="text-sm md:text-lg mt-5 md:mt-0">{job.description}</span>
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
-            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs md:text-sm">
               {job.category?.name || "Uncategorized"}
             </span>
           </div>
@@ -163,7 +157,7 @@ const JobDetails = () => {
           <div className="flex justify-between mt-3 items-center text-sm text-gray-600 ">
             <span className="flex items-center gap-1 ">
               <MapPin size={16} />
-              <span className="overflow-hidden max-w-45 md:max-w-full text-left md:mt-0">
+              <span className="overflow-hidden max-w-45 md:max-w-full text-left md:mt-0 md:text-base text-gray-500">
                 {job.location}
               </span>
             </span>

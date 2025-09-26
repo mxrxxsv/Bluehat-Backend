@@ -289,7 +289,7 @@ const FindWork = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
-            {/* ✅ CHANGED: Close uses draft check */}
+            {/* CHANGED: Close uses draft check */}
             <button
               onClick={handleCloseModal}
               className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
@@ -462,7 +462,7 @@ const FindWork = () => {
             >
               <div className="rounded-xl p-4 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-[#252525] opacity-75">
+                  <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
                     {job.client?.name || "Client Name"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
@@ -479,18 +479,18 @@ const FindWork = () => {
                   <span className="flex items-center justify-center w-5 h-5">
                     <Briefcase size={20} className="text-blue-400" />
                   </span>
-                  <span className="line-clamp-1 text-sm">{job.description}</span>
+                  <span className="line-clamp-1 md:text-base">{job.description}</span>
                 </p>
 
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                  <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
                     {job.category?.name || "Uncategorized"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
                   <span className="flex items-center gap-1">
                     <MapPin size={16} />
-                    <span className="truncate overflow-hidden max-w-45 md:max-w-full">{job.location}</span>
+                    <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location}</span>
                   </span>
                   <span className="font-bold text-green-400">
                     ₱{job.price?.toLocaleString() || 0}
