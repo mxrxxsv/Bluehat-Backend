@@ -10,12 +10,13 @@ const API = axios.create({
 // Apply to a job (Worker only, verified)
 export const applyToJob = async (jobId, applicationData) => {
   try {
-    const response = await API.post(`/apply/${jobId}`, applicationData);
+    const response = await API.post(`/apply/${jobId}`, applicationData); 
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };
   }
 };
+
 
 // Get worker's job applications
 export const getWorkerApplications = async (params = {}) => {
