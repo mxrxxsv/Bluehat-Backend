@@ -290,7 +290,7 @@ const FindWorker = () => {
                         <img
                           src={worker.profilePicture.url}
                           alt={worker.fullName}
-                          className="w-20 h-20 md:w-22 md:h-22 rounded-full object-cover border"
+                          className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
                         />
                         <div className="flex flex-col justify-between h-full">
                           <h2 className="text-[14px] md:text-xl font-semibold text-left">
@@ -309,10 +309,10 @@ const FindWorker = () => {
                             ● {worker.status || "Offline"}
                           </p> */}
 
-                          <p className="text-[12px] md:text-sm text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-4">
+                          <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
                             {worker.biography || "4th Year BSIT Student from Cabiao, Nueva Ecija."}
                           </p>
-                          <p className="text-[12px] md:text-sm text-gray-700 text-left flex items-center gap-1 mt-1">
+                          <p className="text-[12px] md:text-base text-gray-500 text-left flex items-center gap-1 mt-3">
                             <MapPin className="w-4 h-4 text-gray-500" />
                             {worker.location}
                           </p>
