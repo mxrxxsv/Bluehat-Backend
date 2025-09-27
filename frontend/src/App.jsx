@@ -22,6 +22,7 @@ import ProfilePage from "./Pages/ProfilePage";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import Setup2FA from "./components/Setup2FA";
 import VerifyEmail from "./components/VerifyEmail";
+import ApplicationsPage from "./Pages/ApplicationPage";
 function App() {
   return (
     <>
@@ -41,6 +42,7 @@ function App() {
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/applications" element={<ApplicationsPage />} />
 
         {/* <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />

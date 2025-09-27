@@ -13,6 +13,7 @@ const SkillCategory = require("../models/SkillCategory");
 
 // Utils
 const logger = require("../utils/logger");
+const { decryptAES128 } = require("../utils/encipher");
 
 // Constants
 const VALID_DURATION_UNITS = ["hours", "days", "weeks", "months"];
@@ -490,7 +491,9 @@ const getWorkerApplications = async (req, res) => {
       });
     }
 
-    const worker = await Worker.findOne({ credentialId: req.user.id });
+    const worker = await Worker.findOne({
+      credentialId: req.user._id || req.user.id,
+    });
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -505,7 +508,7 @@ const getWorkerApplications = async (req, res) => {
 
     // Build filter
     const filter = {
-      workerId: worker._id,
+      workerId: worker.id,
       isDeleted: false,
     };
 
@@ -518,6 +521,7 @@ const getWorkerApplications = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
     const sortOrder = order === "asc" ? 1 : -1;
 
+    // ✅ Fetch applications
     const applications = await JobApplication.find(filter)
       .populate({
         path: "jobId",
@@ -535,12 +539,29 @@ const getWorkerApplications = async (req, res) => {
       .skip(skip)
       .limit(limitNum);
 
+    // ✅ Decrypt client names
+    const decryptedApplications = applications.map((app) => {
+      if (app.clientId) {
+        try {
+          app.clientId.firstName = app.clientId.firstName
+            ? decryptAES128(app.clientId.firstName)
+            : "";
+          app.clientId.lastName = app.clientId.lastName
+            ? decryptAES128(app.clientId.lastName)
+            : "";
+        } catch (err) {
+          console.error("❌ Decryption failed:", err.message);
+        }
+      }
+      return app;
+    });
+
     const total = await JobApplication.countDocuments(filter);
     const totalPages = Math.ceil(total / limitNum);
 
     // Get application statistics
     const statsAggregation = await JobApplication.aggregate([
-      { $match: { workerId: worker._id, isDeleted: false } },
+      { $match: { workerId: worker.id, isDeleted: false } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
@@ -551,12 +572,13 @@ const getWorkerApplications = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    // ✅ Send decrypted applications in response
     res.status(200).json({
       success: true,
       message: "Worker applications retrieved successfully",
       code: "APPLICATIONS_RETRIEVED",
       data: {
-        applications,
+        applications: decryptedApplications,
         pagination: {
           currentPage: pageNum,
           totalPages,
@@ -607,6 +629,7 @@ const getWorkerApplications = async (req, res) => {
   }
 };
 
+
 // ✅ Get applications for client's jobs
 const getClientApplications = async (req, res) => {
   const startTime = Date.now();
@@ -633,7 +656,9 @@ const getClientApplications = async (req, res) => {
       });
     }
 
-    const client = await Client.findOne({ credentialId: req.user.id });
+    const client = await Client.findOne({
+      credentialId: req.user._id || req.user.id,
+    });
     if (!client) {
       return res.status(404).json({
         success: false,
@@ -648,7 +673,7 @@ const getClientApplications = async (req, res) => {
 
     // Build filter
     const filter = {
-      clientId: client._id,
+      clientId: client.id,
       isDeleted: false,
     };
 
@@ -665,6 +690,7 @@ const getClientApplications = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
     const sortOrder = order === "asc" ? 1 : -1;
 
+    // ✅ Fetch applications
     const applications = await JobApplication.find(filter)
       .populate({
         path: "jobId",
@@ -682,12 +708,29 @@ const getClientApplications = async (req, res) => {
       .skip(skip)
       .limit(limitNum);
 
+    // ✅ Decrypt worker names here
+    const decryptedApplications = applications.map((app) => {
+      if (app.workerId) {
+        try {
+          app.workerId.firstName = app.workerId.firstName
+            ? decryptAES128(app.workerId.firstName)
+            : "";
+          app.workerId.lastName = app.workerId.lastName
+            ? decryptAES128(app.workerId.lastName)
+            : "";
+        } catch (err) {
+          console.error("❌ Decryption failed:", err.message);
+        }
+      }
+      return app;
+    });
+
     const total = await JobApplication.countDocuments(filter);
     const totalPages = Math.ceil(total / limitNum);
 
     // Get application statistics
     const statsAggregation = await JobApplication.aggregate([
-      { $match: { clientId: client._id, isDeleted: false } },
+      { $match: { clientId: client.id, isDeleted: false } },
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
@@ -698,12 +741,13 @@ const getClientApplications = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    // ✅ Send decrypted applications in response
     res.status(200).json({
       success: true,
       message: "Client applications retrieved successfully",
       code: "APPLICATIONS_RETRIEVED",
       data: {
-        applications,
+        applications: decryptedApplications,
         pagination: {
           currentPage: pageNum,
           totalPages,

@@ -296,6 +296,16 @@ const Header = () => {
                   >
                     Advertisement
                   </Link>
+                </li><li>
+                  <Link
+                    to="/applications"
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      }`}
+                  >
+                    Work Application
+                  </Link>
                 </li>
               </ul>
             </nav>
