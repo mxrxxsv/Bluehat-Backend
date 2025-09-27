@@ -8,6 +8,7 @@ import { checkAuth, Logout } from "../api/auth";
 
 const Header = () => {
   const [user, setUser] = useState(null);
+  const [menuLabel, setMenuLabel] = useState("Applications");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -56,8 +57,22 @@ const Header = () => {
       console.log("Skipping auth check for:", location.pathname);
       return; // Don't check auth on these pages
     }
+
     checkAuth()
-      .then((res) => setUser(res.data.data))
+      .then((res) => {
+        if (res.data.success) {
+          const user = res.data.data;
+          setUser(user);
+
+          if (user.userType === "worker") {
+            setMenuLabel("My Applications");
+          } else if (user.userType === "client") {
+            setMenuLabel("Applications Received");
+          } else {
+            setMenuLabel("Applications");
+          }
+        }
+      })
       .catch(() => {
         const publicPages = [
           "/",
@@ -198,13 +213,13 @@ const Header = () => {
                         onClick={() => setShowDropdown(!showDropdown)}
                       /> */}
                       <div className="flex items-center gap-2">
-                      
-                      <img
-                        src={user?.image || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                        onClick={() => setShowDropdown(!showDropdown)}
-                      />
+
+                        <img
+                          src={user?.image || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                          onClick={() => setShowDropdown(!showDropdown)}
+                        />
                       </div>
                       {showDropdown && (
                         <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
@@ -268,8 +283,8 @@ const Header = () => {
                   <Link
                     to="/find-work"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Find Work
@@ -279,8 +294,8 @@ const Header = () => {
                   <Link
                     to="/find-workers"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Find Worker
@@ -290,13 +305,14 @@ const Header = () => {
                   <Link
                     to="/ads"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Advertisement
                   </Link>
-                </li><li>
+                </li>
+                <li>
                   <Link
                     to="/applications"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
@@ -304,7 +320,7 @@ const Header = () => {
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
-                    Work Application
+                    {user?.userType === "worker" ? "My Applications" : "Applications Received"}
                   </Link>
                 </li>
               </ul>
