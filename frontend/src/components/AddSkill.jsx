@@ -11,7 +11,7 @@ const AddSkill = ({ onClose, onAdd }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ✅ Get user (so we have userId)
+  // Get user (so we have userId)
   useEffect(() => {
     checkAuth()
       .then((res) => {
@@ -24,7 +24,7 @@ const AddSkill = ({ onClose, onAdd }) => {
       .catch(() => setCurrentUser(null));
   }, []);
 
-  // ✅ Fetch available skills
+  // Fetch available skills
   useEffect(() => {
     const fetchSkills = async () => {
       try {
@@ -40,14 +40,14 @@ const AddSkill = ({ onClose, onAdd }) => {
     fetchSkills();
   }, []);
 
-  // ✅ Toggle skill selection
+  // Toggle skill selection
   const toggleSkill = (id) => {
     setSelectedSkills((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
   };
 
-  // ✅ Submit skills
+  // Submit skills
   const handleAddSkills = async () => {
     if (!currentUser || selectedSkills.length === 0) return;
 
