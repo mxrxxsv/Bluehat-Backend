@@ -860,7 +860,7 @@ const approveVerification = async (req, res) => {
       userId,
       userType: credential.userType,
       email: credential.email,
-      approvedBy: req.admin?.userName || req.admin?._id,
+      approvedBy: req.admin?.userName || req.admin?.id,
       notes: notes || "No notes provided",
     });
 
@@ -885,7 +885,7 @@ const approveVerification = async (req, res) => {
       error: error.message,
       stack: error.stack,
       userId: req.params.userId,
-      adminId: req.admin?._id,
+      adminId: req.admin?.id,
     });
 
     res.status(500).json({
@@ -1021,7 +1021,7 @@ const rejectVerification = async (req, res) => {
       userId,
       userType: credential.userType,
       email: credential.email,
-      rejectedBy: req.admin?.userName || req.admin?._id,
+      rejectedBy: req.admin?.userName || req.admin?.id,
       requireResubmission,
       resubmissionCount: userProfile.resubmissionCount,
       notes: notes || "No reason provided",
