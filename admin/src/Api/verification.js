@@ -4,10 +4,10 @@ import axios from "axios";
 const verificationApi = axios.create({
   baseURL: "http://localhost:5000/id-verification/admin",
   withCredentials: true, // optional: include cookies if needed
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token")}`, // automatically send token
-  },
+  // headers: {
+  //   "Content-Type": "application/json",
+  //   Authorization: `Bearer ${localStorage.getItem("token")}`, // automatically send token
+  // },
 });
 
 // ===== Verification API FUNCTIONS =====
