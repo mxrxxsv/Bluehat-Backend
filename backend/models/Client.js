@@ -93,6 +93,23 @@ const ClientSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    indexes: [
+      { credentialId: 1 },
+      { isVerified: 1 },
+      { verifiedAt: 1 },
+      { blocked: 1 },
+      { "address.city": 1, "address.province": 1 },
+    ],
+  }
 );
+
+// ==================== INDEXES ====================
+ClientSchema.index({ credentialId: 1 });
+ClientSchema.index({ isVerified: 1 });
+ClientSchema.index({ verifiedAt: 1 });
+ClientSchema.index({ blocked: 1 });
+ClientSchema.index({ "address.city": 1, "address.province": 1 });
+
 module.exports = mongoose.model("Client", ClientSchema);

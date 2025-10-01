@@ -291,6 +291,11 @@ WorkerSchema.methods.rejectIdVerification = function () {
 // ==================== INDEXES ====================
 WorkerSchema.index({ credentialId: 1 });
 WorkerSchema.index({ verificationStatus: 1 });
+WorkerSchema.index({ isVerified: 1 });
+WorkerSchema.index({ verifiedAt: 1 });
+WorkerSchema.index({ blocked: 1 });
+WorkerSchema.index({ status: 1 });
+WorkerSchema.index({ rating: 1 });
 WorkerSchema.index({ idVerificationSubmittedAt: 1 });
 WorkerSchema.index({ "address.city": 1, "address.province": 1 });
 

@@ -80,6 +80,12 @@ const getWorkers = async (req, res) => {
           "any.only":
             "Work status must be one of: available, working, not available, all",
         }),
+      blockedStatus: Joi.string()
+        .valid("blocked", "active", "all")
+        .default("all")
+        .messages({
+          "any.only": "Blocked status must be one of: blocked, active, all",
+        }),
       minRating: Joi.number().min(0).max(5).optional(),
       maxRating: Joi.number().min(0).max(5).optional(),
     }).validate(req.query, {
@@ -116,6 +122,7 @@ const getWorkers = async (req, res) => {
       accountStatus,
       verificationStatus,
       workStatus,
+      blockedStatus,
       minRating,
       maxRating,
     } = sanitizedQuery;
@@ -155,6 +162,15 @@ const getWorkers = async (req, res) => {
       matchConditions["status"] = workStatus;
     }
 
+    // Add blocked status filter
+    if (blockedStatus !== "all") {
+      if (blockedStatus === "blocked") {
+        matchConditions["blocked"] = true;
+      } else if (blockedStatus === "active") {
+        matchConditions["blocked"] = { $ne: true };
+      }
+    }
+
     // ✅ Build aggregation pipeline
     const pipeline = [
       {
@@ -185,6 +201,7 @@ const getWorkers = async (req, res) => {
           status: 1,
           rating: 1,
           totalRatings: 1,
+          blocked: 1,
           skillsByCategory: 1,
           experience: 1,
           biography: 1,
@@ -339,6 +356,12 @@ const getWorkers = async (req, res) => {
           notAvailable: {
             $sum: { $cond: [{ $eq: ["$status", "not available"] }, 1, 0] },
           },
+          blocked: {
+            $sum: { $cond: [{ $eq: ["$blocked", true] }, 1, 0] },
+          },
+          active: {
+            $sum: { $cond: [{ $ne: ["$blocked", true] }, 1, 0] },
+          },
           averageRating: {
             $avg: {
               $cond: [
@@ -368,6 +391,10 @@ const getWorkers = async (req, res) => {
               working: statsAggregation[0].working,
               notAvailable: statsAggregation[0].notAvailable,
             },
+            blockStatus: {
+              blocked: statsAggregation[0].blocked,
+              active: statsAggregation[0].active,
+            },
             averageRating: parseFloat(
               (statsAggregation[0].averageRating || 0).toFixed(2)
             ),
@@ -386,6 +413,10 @@ const getWorkers = async (req, res) => {
               working: 0,
               notAvailable: 0,
             },
+            blockStatus: {
+              blocked: 0,
+              active: 0,
+            },
             averageRating: 0,
           };
     const processingTime = Date.now() - startTime;
@@ -401,8 +432,10 @@ const getWorkers = async (req, res) => {
       sortBy,
       order,
       search: search || "none",
-      status,
+      accountStatus,
       verificationStatus,
+      workStatus,
+      blockedStatus,
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
@@ -426,8 +459,10 @@ const getWorkers = async (req, res) => {
         statistics,
         filters: {
           search: search || null,
-          status,
+          accountStatus,
           verificationStatus,
+          workStatus,
+          blockedStatus,
           sortBy,
           order,
         },
@@ -509,18 +544,14 @@ const getWorkerDetails = async (req, res) => {
           verificationStatus: 1,
           isVerified: 1,
           verifiedAt: 1,
-          skills: 1,
+          skillsByCategory: 1,
           experience: 1,
-          hourlyRate: 1,
           portfolio: 1,
-          bio: 1,
+          biography: 1,
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
           userType: "$cred.userType",
-          isBlocked: "$cred.isBlocked",
-          blockReason: "$cred.blockReason",
-          blockedAt: "$cred.blockedAt",
         },
       },
     ]);
@@ -579,7 +610,7 @@ const getWorkerDetails = async (req, res) => {
   }
 };
 
-// Block a worker (update Credential)
+// Block a worker (update Worker model)
 const blockWorker = async (req, res) => {
   const startTime = Date.now();
   try {
@@ -607,20 +638,18 @@ const blockWorker = async (req, res) => {
 
     const sanitizedReason = sanitizeInput(value.reason);
 
-    // Find credential and block
-    const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "worker") {
+    // Find worker and block
+    const worker = await Worker.findById(id);
+    if (!worker) {
       return res.status(404).json({
         success: false,
-        message: "Worker credential not found",
+        message: "Worker not found",
         code: "WORKER_NOT_FOUND",
       });
     }
 
-    credential.isBlocked = true;
-    credential.blockedAt = new Date();
-    credential.blockReason = sanitizedReason;
-    await credential.save();
+    worker.blocked = true;
+    await worker.save();
 
     logger.info("Worker blocked", {
       workerId: id,
@@ -633,8 +662,7 @@ const blockWorker = async (req, res) => {
       message: "Worker blocked successfully",
       data: {
         workerId: id,
-        blockedAt: credential.blockedAt,
-        blockReason: credential.blockReason,
+        blocked: true,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,
@@ -651,30 +679,27 @@ const blockWorker = async (req, res) => {
   }
 };
 
-// Unblock a worker (update Credential)
+// Unblock a worker (update Worker model)
 const unblockWorker = async (req, res) => {
   const startTime = Date.now();
   try {
     const { id } = req.params;
 
-    // Find credential and unblock
-    const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "worker") {
+    // Find worker and unblock
+    const worker = await Worker.findById(id);
+    if (!worker) {
       return res.status(404).json({
         success: false,
-        message: "Worker credential not found",
+        message: "Worker not found",
         code: "WORKER_NOT_FOUND",
       });
     }
 
-    credential.isBlocked = false;
-    credential.unblockedAt = new Date();
-    credential.unblockNotes = "Unblocked by admin";
-    await credential.save();
+    worker.blocked = false;
+    await worker.save();
 
     logger.info("Worker unblocked", {
       workerId: id,
-      unblockedAt: credential.unblockedAt,
       processingTime: `${Date.now() - startTime}ms`,
     });
 
@@ -683,7 +708,7 @@ const unblockWorker = async (req, res) => {
       message: "Worker unblocked successfully",
       data: {
         workerId: id,
-        unblockedAt: credential.unblockedAt,
+        blocked: false,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,

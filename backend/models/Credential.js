@@ -83,14 +83,7 @@ const CredentialSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    indexes: [
-      { email: 1 },
-      { userType: 1 },
-      { isVerified: 1 },
-      { isBlocked: 1 },
-      { verifiedAt: 1 },
-      { createdAt: 1 },
-    ],
+    indexes: [{ email: 1 }, { userType: 1 }, { createdAt: 1 }],
   }
 );
 
