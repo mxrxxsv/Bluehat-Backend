@@ -39,26 +39,49 @@ const getWorkers = async (req, res) => {
     const { error, value } = Joi.object({
       page: Joi.number().integer().min(1).max(1000).default(1),
       sortBy: Joi.string()
-        .valid("createdAt", "firstName", "lastName", "email")
+        .valid(
+          "createdAt",
+          "firstName",
+          "lastName",
+          "email",
+          "rating",
+          "verifiedAt"
+        )
         .default("createdAt"),
       order: Joi.string().valid("asc", "desc").default("desc"),
       search: Joi.string().trim().allow("").max(100).optional().messages({
         "string.min": "Search term must be at least 2 characters",
         "string.max": "Search term cannot exceed 100 characters",
       }),
-      status: Joi.string()
-        .valid("blocked", "active", "all")
+      accountStatus: Joi.string()
+        .valid("all", "active")
         .default("all")
         .messages({
-          "any.only": "Status must be one of: blocked, active, all",
+          "any.only": "Account status must be one of: all, active",
         }),
       verificationStatus: Joi.string()
-        .valid("verified", "unverified", "all")
+        .valid(
+          "verified",
+          "unverified",
+          "pending",
+          "rejected",
+          "not_submitted",
+          "all"
+        )
         .default("all")
         .messages({
           "any.only":
-            "Verification status must be one of: verified, unverified, all",
+            "Verification status must be one of: verified, unverified, pending, rejected, not_submitted, all",
         }),
+      workStatus: Joi.string()
+        .valid("available", "working", "not available", "all")
+        .default("all")
+        .messages({
+          "any.only":
+            "Work status must be one of: available, working, not available, all",
+        }),
+      minRating: Joi.number().min(0).max(5).optional(),
+      maxRating: Joi.number().min(0).max(5).optional(),
     }).validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
@@ -85,8 +108,17 @@ const getWorkers = async (req, res) => {
 
     // ✅ Sanitize query parameters
     const sanitizedQuery = sanitizeInput(value);
-    const { page, sortBy, order, search, status, verificationStatus } =
-      sanitizedQuery;
+    const {
+      page,
+      sortBy,
+      order,
+      search,
+      accountStatus,
+      verificationStatus,
+      workStatus,
+      minRating,
+      maxRating,
+    } = sanitizedQuery;
 
     // ✅ Fixed limit to 30 workers per page
     const limit = 30;
@@ -95,16 +127,12 @@ const getWorkers = async (req, res) => {
 
     // ✅ Build match conditions for aggregation
     const matchConditions = {
-      "cred.userType": "worker", // ✅ Change to worker
+      "cred.userType": "worker",
     };
 
-    // Add status filter
-    if (status !== "all") {
-      if (status === "blocked") {
-        matchConditions["cred.isBlocked"] = true;
-      } else if (status === "active") {
-        matchConditions["cred.isBlocked"] = { $ne: true };
-      }
+    // Add account status filter (only active for now since no blocking system)
+    if (accountStatus === "active") {
+      // Only active accounts (no additional filtering needed as there's no blocking)
     }
 
     // Add verification status filter
@@ -112,8 +140,19 @@ const getWorkers = async (req, res) => {
       if (verificationStatus === "verified") {
         matchConditions["isVerified"] = true;
       } else if (verificationStatus === "unverified") {
-        matchConditions["isVerified"] = { $ne: true };
+        matchConditions["isVerified"] = false;
+      } else if (verificationStatus === "pending") {
+        matchConditions["verificationStatus"] = "pending";
+      } else if (verificationStatus === "rejected") {
+        matchConditions["verificationStatus"] = "rejected";
+      } else if (verificationStatus === "not_submitted") {
+        matchConditions["verificationStatus"] = "not_submitted";
       }
+    }
+
+    // Add work status filter
+    if (workStatus !== "all") {
+      matchConditions["status"] = workStatus;
     }
 
     // ✅ Build aggregation pipeline
@@ -143,15 +182,24 @@ const getWorkers = async (req, res) => {
           verificationStatus: 1,
           isVerified: 1,
           verifiedAt: 1,
-          skills: 1,
+          status: 1,
+          rating: 1,
+          totalRatings: 1,
+          skillsByCategory: 1,
           experience: 1,
+          biography: 1,
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
           userType: "$cred.userType",
-          isBlocked: "$cred.isBlocked",
-          blockReason: "$cred.blockReason",
-          blockedAt: "$cred.blockedAt",
+          // Calculate average rating
+          averageRating: {
+            $cond: {
+              if: { $gt: ["$totalRatings", 0] },
+              then: { $divide: ["$rating", "$totalRatings"] },
+              else: 0,
+            },
+          },
         },
       },
     ];
@@ -162,11 +210,26 @@ const getWorkers = async (req, res) => {
         $match: {
           $or: [
             { email: { $regex: search, $options: "i" } },
-            // Note: We can't search encrypted fields directly
-            // Search will only work on email for now
+            { biography: { $regex: search, $options: "i" } },
           ],
         },
       });
+    }
+
+    // Add rating filter
+    if (minRating !== undefined || maxRating !== undefined) {
+      const ratingMatch = {};
+      if (minRating !== undefined) {
+        ratingMatch["averageRating"] = { $gte: minRating };
+      }
+      if (maxRating !== undefined) {
+        if (ratingMatch["averageRating"]) {
+          ratingMatch["averageRating"]["$lte"] = maxRating;
+        } else {
+          ratingMatch["averageRating"] = { $lte: maxRating };
+        }
+      }
+      pipeline.push({ $match: ratingMatch });
     }
 
     // ✅ Get total count for pagination
@@ -176,8 +239,9 @@ const getWorkers = async (req, res) => {
       totalCountResult.length > 0 ? totalCountResult[0].total : 0;
 
     // ✅ Add sorting, skip, and limit
+    const sortField = sortBy === "rating" ? "averageRating" : sortBy;
     pipeline.push(
-      { $sort: { [sortBy]: sortOrder } },
+      { $sort: { [sortField]: sortOrder } },
       { $skip: skip },
       { $limit: limit }
     );
@@ -245,20 +309,44 @@ const getWorkers = async (req, res) => {
         $group: {
           _id: null,
           total: { $sum: 1 },
-          blocked: {
-            $sum: { $cond: [{ $eq: ["$cred.isBlocked", true] }, 1, 0] },
+          verified: {
+            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
           },
-          active: {
-            $sum: { $cond: [{ $ne: ["$cred.isBlocked", true] }, 1, 0] },
-          },
-          approved: {
-            $sum: { $cond: [{ $eq: ["$verificationStatus", "approved"] }, 1, 0] },
+          unverified: {
+            $sum: { $cond: [{ $eq: ["$isVerified", false] }, 1, 0] },
           },
           pending: {
-            $sum: { $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0] },
+            $sum: {
+              $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0],
+            },
           },
           rejected: {
-            $sum: { $cond: [{ $eq: ["$verificationStatus", "rejected"] }, 1, 0] },
+            $sum: {
+              $cond: [{ $eq: ["$verificationStatus", "rejected"] }, 1, 0],
+            },
+          },
+          notSubmitted: {
+            $sum: {
+              $cond: [{ $eq: ["$verificationStatus", "not_submitted"] }, 1, 0],
+            },
+          },
+          available: {
+            $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] },
+          },
+          working: {
+            $sum: { $cond: [{ $eq: ["$status", "working"] }, 1, 0] },
+          },
+          notAvailable: {
+            $sum: { $cond: [{ $eq: ["$status", "not available"] }, 1, 0] },
+          },
+          averageRating: {
+            $avg: {
+              $cond: [
+                { $gt: ["$totalRatings", 0] },
+                { $divide: ["$rating", "$totalRatings"] },
+                0,
+              ],
+            },
           },
         },
       },
@@ -267,15 +355,39 @@ const getWorkers = async (req, res) => {
     const statistics =
       statsAggregation.length > 0
         ? {
-          total: statsAggregation[0].total,
-          blocked: statsAggregation[0].blocked,
-          active: statsAggregation[0].active,
-          approved: statsAggregation[0].approved,
-          pending: statsAggregation[0].pending,
-          rejected: statsAggregation[0].rejected,
-        }
-        : { total: 0, blocked: 0, active: 0, approved: 0, pending: 0, rejected: 0 };
-
+            total: statsAggregation[0].total,
+            verification: {
+              verified: statsAggregation[0].verified,
+              unverified: statsAggregation[0].unverified,
+              pending: statsAggregation[0].pending,
+              rejected: statsAggregation[0].rejected,
+              notSubmitted: statsAggregation[0].notSubmitted,
+            },
+            workStatus: {
+              available: statsAggregation[0].available,
+              working: statsAggregation[0].working,
+              notAvailable: statsAggregation[0].notAvailable,
+            },
+            averageRating: parseFloat(
+              (statsAggregation[0].averageRating || 0).toFixed(2)
+            ),
+          }
+        : {
+            total: 0,
+            verification: {
+              verified: 0,
+              unverified: 0,
+              pending: 0,
+              rejected: 0,
+              notSubmitted: 0,
+            },
+            workStatus: {
+              available: 0,
+              working: 0,
+              notAvailable: 0,
+            },
+            averageRating: 0,
+          };
     const processingTime = Date.now() - startTime;
 
     logger.info("Workers retrieved with pagination", {

@@ -6,7 +6,6 @@ const IDPicture = require("../models/IdPicture");
 const Selfie = require("../models/Selfie");
 const Credential = require("../models/Credential");
 const Worker = require("../models/Worker");
-const Client = require("../models/Client");
 const logger = require("../utils/logger");
 const { decryptAES128 } = require("../utils/encipher");
 
@@ -37,14 +36,13 @@ const uploadSchema = Joi.object({
 });
 
 const approveRejectSchema = Joi.object({
-  notes: Joi.string().trim().max(500).optional(),
   requireResubmission: Joi.boolean().default(true),
 });
 
 const getPendingSchema = Joi.object({
   page: Joi.number().integer().min(1).max(1000).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),
-  userType: Joi.string().valid("worker", "client", "all").default("all"),
+  userType: Joi.string().valid("worker").default("worker"),
   sortBy: Joi.string()
     .valid("submittedAt", "firstName", "lastName", "createdAt")
     .default("submittedAt"),
@@ -62,23 +60,15 @@ const checkBothDocumentsUploaded = async (
     const credential = await Credential.findById(userId);
     if (!credential) return false;
 
-    if (credential.userType === "worker") {
-      const worker = await Worker.findOne({ credentialId: userId });
-      if (!worker) return false;
+    // Only workers need ID verification
+    if (credential.userType !== "worker") return false;
 
-      const hasIdPicture = worker.idPictureId || newIdPictureId;
-      const hasSelfie = worker.selfiePictureId || newSelfieId;
-      return hasIdPicture && hasSelfie;
-    } else if (credential.userType === "client") {
-      const client = await Client.findOne({ credentialId: userId });
-      if (!client) return false;
+    const worker = await Worker.findOne({ credentialId: userId });
+    if (!worker) return false;
 
-      const hasIdPicture = client.idPictureId || newIdPictureId;
-      const hasSelfie = client.selfiePictureId || newSelfieId;
-      return hasIdPicture && hasSelfie;
-    }
-
-    return false;
+    const hasIdPicture = worker.idPictureId || newIdPictureId;
+    const hasSelfie = worker.selfiePictureId || newSelfieId;
+    return hasIdPicture && hasSelfie;
   } catch (error) {
     console.error("Error checking documents:", error);
     return false;
@@ -94,39 +84,27 @@ const updateUserVerificationStatus = async (
     const credential = await Credential.findById(userId);
     if (!credential) return;
 
+    // Only workers need ID verification
+    if (credential.userType !== "worker") return;
+
     const bothUploaded = await checkBothDocumentsUploaded(
       userId,
       idPictureId,
       selfiePictureId
     );
 
-    if (credential.userType === "worker") {
-      const updateData = {};
-      if (idPictureId) updateData.idPictureId = idPictureId;
-      if (selfiePictureId) updateData.selfiePictureId = selfiePictureId;
+    const updateData = {};
+    if (idPictureId) updateData.idPictureId = idPictureId;
+    if (selfiePictureId) updateData.selfiePictureId = selfiePictureId;
 
-      if (bothUploaded) {
-        updateData.verificationStatus = "pending";
-        updateData.idVerificationSubmittedAt = new Date();
-      }
-
-      await Worker.findOneAndUpdate({ credentialId: userId }, updateData, {
-        new: true,
-      });
-    } else if (credential.userType === "client") {
-      const updateData = {};
-      if (idPictureId) updateData.idPictureId = idPictureId;
-      if (selfiePictureId) updateData.selfiePictureId = selfiePictureId;
-
-      if (bothUploaded) {
-        updateData.verificationStatus = "pending";
-        updateData.idVerificationSubmittedAt = new Date();
-      }
-
-      await Client.findOneAndUpdate({ credentialId: userId }, updateData, {
-        new: true,
-      });
+    if (bothUploaded) {
+      updateData.verificationStatus = "pending";
+      updateData.idVerificationSubmittedAt = new Date();
     }
+
+    await Worker.findOneAndUpdate({ credentialId: userId }, updateData, {
+      new: true,
+    });
   } catch (error) {
     console.error("Error updating user verification status:", error);
   }
@@ -155,6 +133,15 @@ const uploadIDPicture = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "User not found",
+      });
+    }
+
+    // Only workers need ID verification
+    if (credential.userType !== "worker") {
+      return res.status(403).json({
+        success: false,
+        message: "ID verification is only required for workers",
+        code: "WORKER_ONLY_VERIFICATION",
       });
     }
 
@@ -289,6 +276,15 @@ const uploadSelfie = async (req, res) => {
       });
     }
 
+    // Only workers need ID verification
+    if (credential.userType !== "worker") {
+      return res.status(403).json({
+        success: false,
+        message: "ID verification is only required for workers",
+        code: "WORKER_ONLY_VERIFICATION",
+      });
+    }
+
     // Check if file is provided
     if (!req.file) {
       return res.status(400).json({
@@ -419,16 +415,19 @@ const getVerificationStatus = async (req, res) => {
       });
     }
 
-    let userProfile;
-    if (credential.userType === "worker") {
-      userProfile = await Worker.findOne({ credentialId: userId })
-        .populate("idPictureId")
-        .populate("selfiePictureId");
-    } else if (credential.userType === "client") {
-      userProfile = await Client.findOne({ credentialId: userId })
-        .populate("idPictureId")
-        .populate("selfiePictureId");
+    // Only workers need ID verification
+    if (credential.userType !== "worker") {
+      return res.status(403).json({
+        success: false,
+        message: "ID verification is only required for workers",
+        code: "WORKER_ONLY_VERIFICATION",
+      });
     }
+
+    let userProfile;
+    userProfile = await Worker.findOne({ credentialId: userId })
+      .populate("idPictureId")
+      .populate("selfiePictureId");
 
     if (!userProfile) {
       return res.status(404).json({
@@ -447,12 +446,11 @@ const getVerificationStatus = async (req, res) => {
         hasSelfie: !!userProfile.selfiePictureId,
         hasCompleteVerification: userProfile.hasCompleteIdVerification,
         canResubmit: userProfile.canResubmit,
-        resubmissionCount: userProfile.resubmissionCount,
-        maxResubmissionAttempts: userProfile.maxResubmissionAttempts,
         submittedAt: userProfile.idVerificationSubmittedAt,
         approvedAt: userProfile.idVerificationApprovedAt,
         rejectedAt: userProfile.idVerificationRejectedAt,
-        notes: userProfile.idVerificationNotes,
+        isVerified: userProfile.isVerified,
+        verifiedAt: userProfile.verifiedAt,
         documents: {
           idPicture: userProfile.idPictureId
             ? {
@@ -564,7 +562,6 @@ const getPendingVerifications = async (req, res) => {
           userType: 1,
           verificationStatus: 1,
           idVerificationSubmittedAt: 1,
-          resubmissionCount: 1,
           idPicture: {
             _id: "$idPicture._id",
             url: "$idPicture.url",
@@ -601,17 +598,10 @@ const getPendingVerifications = async (req, res) => {
     // Get pending verifications
     let aggregationPromises = [];
 
-    if (userType === "all" || userType === "worker") {
-      aggregationPromises.push(
-        Worker.aggregate(buildPipeline("workers", "worker"))
-      );
-    }
-
-    if (userType === "all" || userType === "client") {
-      aggregationPromises.push(
-        Client.aggregate(buildPipeline("clients", "client"))
-      );
-    }
+    // Only workers need ID verification
+    aggregationPromises.push(
+      Worker.aggregate(buildPipeline("workers", "worker"))
+    );
 
     const results = await Promise.all(aggregationPromises);
     let allPendingVerifications = [];
@@ -684,13 +674,7 @@ const getPendingVerifications = async (req, res) => {
     // Get statistics
     const stats = {
       total: totalItems,
-      workers: decryptedVerifications.filter((v) => v.userType === "worker")
-        .length,
-      clients: decryptedVerifications.filter((v) => v.userType === "client")
-        .length,
-      resubmissions: decryptedVerifications.filter(
-        (v) => v.resubmissionCount > 0
-      ).length,
+      workers: totalItems, // All are workers now
     };
 
     const processingTime = Date.now() - startTime;
@@ -772,7 +756,7 @@ const approveVerification = async (req, res) => {
       });
     }
 
-    const { notes } = value;
+    const { requireResubmission } = value;
 
     // Validate user ID format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -793,17 +777,19 @@ const approveVerification = async (req, res) => {
       });
     }
 
-    // Get user profile based on type
-    let userProfile;
-    if (credential.userType === "worker") {
-      userProfile = await Worker.findOne({ credentialId: userId }).session(
-        session
-      );
-    } else if (credential.userType === "client") {
-      userProfile = await Client.findOne({ credentialId: userId }).session(
-        session
-      );
+    // Only workers need ID verification
+    if (credential.userType !== "worker") {
+      return res.status(403).json({
+        success: false,
+        message: "ID verification is only required for workers",
+        code: "WORKER_ONLY_VERIFICATION",
+      });
     }
+
+    // Get worker profile
+    const userProfile = await Worker.findOne({ credentialId: userId }).session(
+      session
+    );
 
     if (!userProfile) {
       return res.status(404).json({
@@ -834,10 +820,13 @@ const approveVerification = async (req, res) => {
       });
     }
 
-    // Approve the verification
+    // Approve the ID verification
     userProfile.verificationStatus = "approved";
     userProfile.idVerificationApprovedAt = new Date();
-    userProfile.idVerificationNotes = notes || "";
+
+    // Set worker as verified
+    userProfile.isVerified = true;
+    userProfile.verifiedAt = new Date();
 
     await userProfile.save({ session });
 
@@ -861,12 +850,11 @@ const approveVerification = async (req, res) => {
       userType: credential.userType,
       email: credential.email,
       approvedBy: req.admin?.userName || req.admin?.id,
-      notes: notes || "No notes provided",
     });
 
     res.status(200).json({
       success: true,
-      message: "ID verification approved successfully",
+      message: "ID verification approved successfully - Worker is now verified",
       code: "VERIFICATION_APPROVED",
       data: {
         userId,
@@ -875,7 +863,8 @@ const approveVerification = async (req, res) => {
         verificationStatus: "approved",
         approvedAt: userProfile.idVerificationApprovedAt,
         approvedBy: req.admin?.userName || "Admin",
-        notes: userProfile.idVerificationNotes,
+        isVerified: userProfile.isVerified,
+        verifiedAt: userProfile.verifiedAt,
       },
     });
   } catch (error) {
@@ -916,7 +905,7 @@ const rejectVerification = async (req, res) => {
       });
     }
 
-    const { notes, requireResubmission } = value;
+    const { requireResubmission } = value;
 
     // Validate user ID format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -937,17 +926,19 @@ const rejectVerification = async (req, res) => {
       });
     }
 
-    // Get user profile based on type
-    let userProfile;
-    if (credential.userType === "worker") {
-      userProfile = await Worker.findOne({ credentialId: userId }).session(
-        session
-      );
-    } else if (credential.userType === "client") {
-      userProfile = await Client.findOne({ credentialId: userId }).session(
-        session
-      );
+    // Only workers need ID verification
+    if (credential.userType !== "worker") {
+      return res.status(403).json({
+        success: false,
+        message: "ID verification is only required for workers",
+        code: "WORKER_ONLY_VERIFICATION",
+      });
     }
+
+    // Get worker profile
+    const userProfile = await Worker.findOne({ credentialId: userId }).session(
+      session
+    );
 
     if (!userProfile) {
       return res.status(404).json({
@@ -967,41 +958,21 @@ const rejectVerification = async (req, res) => {
       });
     }
 
-    // Check resubmission limits
-    if (
-      requireResubmission &&
-      userProfile.resubmissionCount >= userProfile.maxResubmissionAttempts
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Maximum resubmission attempts exceeded",
-        code: "MAX_RESUBMISSIONS_EXCEEDED",
-        resubmissionCount: userProfile.resubmissionCount,
-        maxAttempts: userProfile.maxResubmissionAttempts,
-      });
-    }
-
     // Reject the verification
-    userProfile.verificationStatus = requireResubmission
-      ? "requires_resubmission"
-      : "rejected";
+    userProfile.verificationStatus = "rejected";
     userProfile.idVerificationRejectedAt = new Date();
-    userProfile.idVerificationNotes = notes || "";
 
-    if (requireResubmission) {
-      userProfile.resubmissionCount += 1;
-    }
+    // Unverify the worker
+    userProfile.isVerified = false;
+    userProfile.verifiedAt = null;
 
     await userProfile.save({ session });
 
     // Update document statuses
-    const documentStatus = requireResubmission ? "pending" : "rejected";
-
     await IDPicture.findByIdAndUpdate(
       userProfile.idPictureId,
       {
-        verificationStatus: documentStatus,
-        rejectionReason: notes || "",
+        verificationStatus: "rejected",
       },
       { session }
     );
@@ -1009,8 +980,7 @@ const rejectVerification = async (req, res) => {
     await Selfie.findByIdAndUpdate(
       userProfile.selfiePictureId,
       {
-        verificationStatus: documentStatus,
-        rejectionReason: notes || "",
+        verificationStatus: "rejected",
       },
       { session }
     );
@@ -1022,19 +992,12 @@ const rejectVerification = async (req, res) => {
       userType: credential.userType,
       email: credential.email,
       rejectedBy: req.admin?.userName || req.admin?.id,
-      requireResubmission,
-      resubmissionCount: userProfile.resubmissionCount,
-      notes: notes || "No reason provided",
     });
 
     res.status(200).json({
       success: true,
-      message: requireResubmission
-        ? "ID verification rejected - user can resubmit documents"
-        : "ID verification permanently rejected",
-      code: requireResubmission
-        ? "VERIFICATION_REJECTED_RESUBMIT"
-        : "VERIFICATION_REJECTED_FINAL",
+      message: "ID verification rejected - worker can resubmit documents",
+      code: "VERIFICATION_REJECTED",
       data: {
         userId,
         userType: credential.userType,
@@ -1042,13 +1005,9 @@ const rejectVerification = async (req, res) => {
         verificationStatus: userProfile.verificationStatus,
         rejectedAt: userProfile.idVerificationRejectedAt,
         rejectedBy: req.admin?.userName || "Admin",
-        requireResubmission,
-        resubmissionCount: userProfile.resubmissionCount,
-        maxResubmissionAttempts: userProfile.maxResubmissionAttempts,
-        canResubmit:
-          requireResubmission &&
-          userProfile.resubmissionCount < userProfile.maxResubmissionAttempts,
-        notes: userProfile.idVerificationNotes,
+        canResubmit: true,
+        isVerified: userProfile.isVerified,
+        verifiedAt: userProfile.verifiedAt,
       },
     });
   } catch (error) {

@@ -969,7 +969,7 @@ const verify = async (req, res) => {
       });
     }
 
-    const isVerified = userType === "client";
+    const isVerified = userType === "client"; // Clients are automatically verified, workers need ID verification
 
     // ✅ Move to Credential collection
     const credential = new Credential({

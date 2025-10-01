@@ -171,13 +171,7 @@ const WorkerSchema = new mongoose.Schema(
     },
     verificationStatus: {
       type: String,
-      enum: [
-        "not_submitted",
-        "pending",
-        "approved",
-        "rejected",
-        "requires_resubmission",
-      ],
+      enum: ["not_submitted", "pending", "approved", "rejected"],
       default: "not_submitted",
     },
     idVerificationSubmittedAt: {
@@ -188,22 +182,17 @@ const WorkerSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    approvedByAdminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+    },
     idVerificationRejectedAt: {
       type: Date,
       default: null,
     },
-    idVerificationNotes: {
-      type: String,
-      default: "",
-    },
-    resubmissionCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    maxResubmissionAttempts: {
-      type: Number,
-      default: 3,
+    rejectedByAdminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
     },
 
     // ==================== EXISTING WORKER FIELDS ====================
@@ -257,7 +246,7 @@ WorkerSchema.virtual("hasCompleteIdVerification").get(function () {
 
 // Check if can resubmit documents
 WorkerSchema.virtual("canResubmit").get(function () {
-  return this.resubmissionCount < this.maxResubmissionAttempts;
+  return this.verificationStatus === "rejected";
 });
 
 // Get verification status display text
@@ -267,7 +256,6 @@ WorkerSchema.virtual("verificationStatusText").get(function () {
     pending: "Under Review",
     approved: "Approved",
     rejected: "Rejected",
-    requires_resubmission: "Requires Resubmission",
   };
   return statusMap[this.verificationStatus] || "Unknown";
 });
@@ -287,28 +275,16 @@ WorkerSchema.methods.submitIdVerification = function (
 };
 
 // Method to approve ID verification
-WorkerSchema.methods.approveIdVerification = function (notes = "") {
+WorkerSchema.methods.approveIdVerification = function () {
   this.verificationStatus = "approved";
   this.idVerificationApprovedAt = new Date();
-  this.idVerificationNotes = notes;
   return this;
 };
 
 // Method to reject ID verification
-WorkerSchema.methods.rejectIdVerification = function (
-  reason,
-  requireResubmission = true
-) {
-  this.verificationStatus = requireResubmission
-    ? "requires_resubmission"
-    : "rejected";
+WorkerSchema.methods.rejectIdVerification = function () {
+  this.verificationStatus = "rejected";
   this.idVerificationRejectedAt = new Date();
-  this.idVerificationNotes = reason;
-
-  if (requireResubmission) {
-    this.resubmissionCount += 1;
-  }
-
   return this;
 };
 

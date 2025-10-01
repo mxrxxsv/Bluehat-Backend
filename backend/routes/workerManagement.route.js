@@ -44,7 +44,7 @@ const workerListLimiter = rateLimit({
  * @route   GET /api/worker-management
  * @desc    Get all workers with pagination (30 per page)
  * @access  Private (Admin only)
- * @query   page, sortBy, order, search, status, verificationStatus
+ * @query   page, sortBy, order, search, verificationStatus, workStatus, minRating, maxRating
  */
 router.get("/", workerListLimiter, verifyAdmin, getWorkers);
 
@@ -94,10 +94,11 @@ router.get("/health", (req, res) => {
     ],
     features: {
       pagination: "30 workers per page",
-      search: "Search by email",
+      search: "Search by names and biography",
       filtering:
-        "Filter by status (blocked/active/all) and verification (verified/unverified/all)",
-      sorting: "Sort by createdAt, firstName, lastName, email",
+        "Filter by verificationStatus (verified/unverified/pending/rejected/not_submitted), workStatus (available/working/not available), rating range",
+      sorting:
+        "Sort by createdAt, firstName, lastName, email, rating, verifiedAt",
       encryption: "Sensitive data decryption supported",
     },
     rateLimits: {

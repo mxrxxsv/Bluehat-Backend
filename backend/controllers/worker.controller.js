@@ -101,13 +101,13 @@ const getAllWorkers = async (req, res) => {
       },
       { $unwind: "$credential" },
 
-      // ⭐ CRITICAL: Only show workers with approved ID verification
+      // ⭐ CRITICAL: Only show verified workers
       {
         $match: {
           "credential.userType": "worker",
           "credential.isBlocked": { $ne: true },
           blocked: { $ne: true },
-          verificationStatus: "approved",
+          isVerified: true,
         },
       },
 
@@ -137,21 +137,23 @@ const getAllWorkers = async (req, res) => {
                         input: {
                           $filter: {
                             input: "$skillsData",
-                            cond: { $eq: ["$$this._id", "$$sbc.skillCategoryId"] }
-                          }
+                            cond: {
+                              $eq: ["$$this._id", "$$sbc.skillCategoryId"],
+                            },
+                          },
                         },
                         as: "cat",
-                        in: "$$cat.categoryName"
-                      }
+                        in: "$$cat.categoryName",
+                      },
                     },
-                    0
-                  ]
-                }
-              }
-            }
+                    0,
+                  ],
+                },
+              },
+            },
           },
           email: "$credential.email",
-          isVerified: "$credential.isVerified",
+          isAccountVerified: "$credential.isVerified",
           averageRating: {
             $cond: {
               if: { $gt: ["$totalRatings", 0] },
@@ -159,9 +161,8 @@ const getAllWorkers = async (req, res) => {
               else: 0,
             },
           },
-        }
-      }
-
+        },
+      },
     ];
 
     // Add search filter
@@ -211,15 +212,14 @@ const getAllWorkers = async (req, res) => {
         averageRating: 1,
         email: 1,
         isAccountVerified: 1,
-        isIdVerified: 1,
+        isVerified: 1,
         verificationStatus: 1,
         hasCompleteDocuments: 1,
-        idVerificationApprovedAt: 1,
+        verifiedAt: 1,
         createdAt: 1,
         biography: 1, // keep biography in projection
       },
     });
-
 
     // Get total count for pagination
     const totalCountPipeline = [...pipeline, { $count: "total" }];
@@ -228,8 +228,7 @@ const getAllWorkers = async (req, res) => {
       totalCountResult.length > 0 ? totalCountResult[0].total : 0;
 
     // Add sorting, pagination
-    const sortField =
-      sortBy === "verifiedAt" ? "idVerificationApprovedAt" : sortBy;
+    const sortField = sortBy === "verifiedAt" ? "verifiedAt" : sortBy;
     pipeline.push(
       { $sort: { [sortField]: sortOrder } },
       { $skip: skip },
@@ -283,7 +282,6 @@ const getAllWorkers = async (req, res) => {
         }
 
         if (includeWorker) {
-
           // Decrypt skills category names
           if (worker.skills && worker.skills.length > 0) {
             worker.skills = worker.skills.map((s) => ({
@@ -298,14 +296,16 @@ const getAllWorkers = async (req, res) => {
             _id: worker._id,
             credentialId: worker.credentialId,
             profilePicture: worker.profilePicture,
-            fullName: `${worker.firstName} ${worker.lastName}${worker.suffixName ? ` ${worker.suffixName}` : ""
-              }`,
+            fullName: `${worker.firstName} ${worker.lastName}${
+              worker.suffixName ? ` ${worker.suffixName}` : ""
+            }`,
             firstName: worker.firstName,
             lastName: worker.lastName,
             suffixName: worker.suffixName,
             sex: worker.sex,
-            location: `${worker.address?.city || "N/A"}, ${worker.address?.province || "N/A"
-              }`,
+            location: `${worker.address?.city || "N/A"}, ${
+              worker.address?.province || "N/A"
+            }`,
             address: worker.address,
             skills: worker.skills || [],
             biography: worker.biography,
@@ -314,15 +314,13 @@ const getAllWorkers = async (req, res) => {
             totalRatings: worker.totalRatings,
             email: worker.email,
             isAccountVerified: worker.isAccountVerified,
-            isIdVerified: worker.isIdVerified,
+            isVerified: worker.isVerified,
             verificationStatus: worker.verificationStatus,
             hasCompleteDocuments: worker.hasCompleteDocuments,
-            verifiedAt: worker.idVerificationApprovedAt,
+            verifiedAt: worker.verifiedAt,
             createdAt: worker.createdAt,
             // 🏆 Badge for verified workers
-            verificationBadge: worker.isIdVerified
-              ? "✅ ID Verified"
-              : "⏳ Pending",
+            verificationBadge: worker.isVerified ? "✅ Verified" : "⏳ Pending",
           };
 
           decryptedWorkers.push(formattedWorker);
@@ -366,38 +364,15 @@ const getAllWorkers = async (req, res) => {
         $group: {
           _id: null,
           total: { $sum: 1 },
-          // Account verification stats
-          accountVerified: {
-            $sum: { $cond: [{ $eq: ["$credential.isVerified", true] }, 1, 0] },
-          },
-          // ID verification stats
-          idVerified: {
+          // Verification stats
+          verified: {
             $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "approved"] }, 1, 0],
+              $cond: [{ $eq: ["$isVerified", true] }, 1, 0],
             },
           },
-          pendingIdVerification: {
+          unverified: {
             $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0],
-            },
-          },
-          rejectedIdVerification: {
-            $sum: {
-              $cond: [
-                {
-                  $in: [
-                    "$verificationStatus",
-                    ["rejected", "requires_resubmission"],
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-          notSubmittedId: {
-            $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "not_submitted"] }, 1, 0],
+              $cond: [{ $eq: ["$isVerified", false] }, 1, 0],
             },
           },
           // Work status stats (only for verified workers)
@@ -407,7 +382,7 @@ const getAllWorkers = async (req, res) => {
                 {
                   $and: [
                     { $eq: ["$status", "available"] },
-                    { $eq: ["$verificationStatus", "approved"] },
+                    { $eq: ["$isVerified", true] },
                   ],
                 },
                 1,
@@ -421,7 +396,7 @@ const getAllWorkers = async (req, res) => {
                 {
                   $and: [
                     { $eq: ["$status", "working"] },
-                    { $eq: ["$verificationStatus", "approved"] },
+                    { $eq: ["$isVerified", true] },
                   ],
                 },
                 1,
@@ -435,7 +410,7 @@ const getAllWorkers = async (req, res) => {
                 {
                   $and: [
                     { $eq: ["$status", "not available"] },
-                    { $eq: ["$verificationStatus", "approved"] },
+                    { $eq: ["$isVerified", true] },
                   ],
                 },
                 1,
@@ -447,7 +422,7 @@ const getAllWorkers = async (req, res) => {
           averageRating: {
             $avg: {
               $cond: [
-                { $eq: ["$verificationStatus", "approved"] },
+                { $eq: ["$isVerified", true] },
                 { $divide: ["$rating", { $max: ["$totalRatings", 1] }] },
                 null,
               ],
@@ -460,25 +435,29 @@ const getAllWorkers = async (req, res) => {
     const statistics =
       statsAggregation.length > 0
         ? {
-          total: statsAggregation[0].total,
-          available: statsAggregation[0].available,
-          working: statsAggregation[0].working,
-          notAvailable: statsAggregation[0].notAvailable,
-          averageRating: parseFloat(
-            (statsAggregation[0].averageRating || 0).toFixed(2)
-          ),
-        }
+            total: statsAggregation[0].total,
+            verified: statsAggregation[0].verified,
+            unverified: statsAggregation[0].unverified,
+            available: statsAggregation[0].available,
+            working: statsAggregation[0].working,
+            notAvailable: statsAggregation[0].notAvailable,
+            averageRating: parseFloat(
+              (statsAggregation[0].averageRating || 0).toFixed(2)
+            ),
+          }
         : {
-          total: 0,
-          available: 0,
-          working: 0,
-          notAvailable: 0,
-          averageRating: 0,
-        };
+            total: 0,
+            verified: 0,
+            unverified: 0,
+            available: 0,
+            working: 0,
+            notAvailable: 0,
+            averageRating: 0,
+          };
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("ID-verified workers retrieved successfully", {
+    logger.info("Verified workers retrieved successfully", {
       page,
       limit,
       totalCount,
@@ -486,7 +465,7 @@ const getAllWorkers = async (req, res) => {
       successfulDecryptions,
       failedDecryptions,
       filters: { skills, status, city, province, search },
-      verificationFilter: includeUnverified ? "all" : "approved only",
+      verificationFilter: includeUnverified ? "all" : "verified only",
       processingTime: `${processingTime}ms`,
     });
 
@@ -494,7 +473,7 @@ const getAllWorkers = async (req, res) => {
       success: true,
       message: includeUnverified
         ? "All workers retrieved successfully"
-        : "ID-verified workers retrieved successfully",
+        : "Verified workers retrieved successfully",
       code: "WORKERS_RETRIEVED",
       data: {
         workers: decryptedWorkers,
@@ -517,7 +496,7 @@ const getAllWorkers = async (req, res) => {
           search: search || null,
           sortBy,
           order,
-          verificationFilter: includeUnverified ? "all" : "approved_only",
+          verificationFilter: includeUnverified ? "all" : "verified_only",
         },
       },
       meta: {
@@ -526,8 +505,8 @@ const getAllWorkers = async (req, res) => {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
         note: includeUnverified
-          ? "Showing all workers regardless of ID verification"
-          : "Showing only ID-verified workers",
+          ? "Showing all workers regardless of verification"
+          : "Showing only verified workers",
       },
     });
   } catch (error) {
@@ -587,7 +566,7 @@ const getWorkerById = async (req, res) => {
           "credential.userType": "worker",
           "credential.isBlocked": { $ne: true },
           blocked: { $ne: true },
-          verificationStatus: "approved",
+          isVerified: true,
         },
       },
       {
@@ -650,7 +629,7 @@ const getWorkerById = async (req, res) => {
       {
         $addFields: {
           email: "$credential.email",
-          isVerified: "$credential.isVerified",
+          isAccountVerified: "$credential.isVerified",
           skills: {
             $map: {
               input: "$skillsByCategory",
@@ -664,18 +643,23 @@ const getWorkerById = async (req, res) => {
                         input: {
                           $filter: {
                             input: "$skillsData",
-                            cond: { $eq: ["$$this._id", { $toObjectId: "$$sbc.skillCategoryId" }] }
-                          }
+                            cond: {
+                              $eq: [
+                                "$$this._id",
+                                { $toObjectId: "$$sbc.skillCategoryId" },
+                              ],
+                            },
+                          },
                         },
                         as: "cat",
-                        in: "$$cat.categoryName"
-                      }
+                        in: "$$cat.categoryName",
+                      },
                     },
-                    0
-                  ]
-                }
-              }
-            }
+                    0,
+                  ],
+                },
+              },
+            },
           },
           averageRating: {
             $cond: {
@@ -685,7 +669,6 @@ const getWorkerById = async (req, res) => {
             },
           },
           reviews: "$reviewsData",
-          isIdVerified: { $eq: ["$verificationStatus", "approved"] },
           hasCompleteDocuments: {
             $and: [
               { $ne: ["$idPictureId", null] },
@@ -694,7 +677,7 @@ const getWorkerById = async (req, res) => {
           },
           idPictureData: { $arrayElemAt: ["$idPicture", 0] },
           selfieData: { $arrayElemAt: ["$selfie", 0] },
-        }
+        },
       },
       {
         $project: {
@@ -712,12 +695,12 @@ const getWorkerById = async (req, res) => {
         success: false,
         message: includeUnverified
           ? "Worker not found or not verified"
-          : "Worker not found or ID verification not approved",
+          : "Worker not found or not verified",
         code: "WORKER_NOT_FOUND",
         details: {
           requirement: includeUnverified
             ? "Worker must have verified account"
-            : "Worker must have approved ID verification",
+            : "Worker must be verified",
         },
       });
     }
@@ -763,13 +746,13 @@ const getWorkerById = async (req, res) => {
       }));
     }
 
-
     // Format the response
     const formattedWorker = {
       _id: worker._id,
       credentialId: worker.credentialId,
-      fullName: `${worker.firstName} ${worker.middleName ? worker.middleName + " " : ""
-        }${worker.lastName}${worker.suffixName ? " " + worker.suffixName : ""}`,
+      fullName: `${worker.firstName} ${
+        worker.middleName ? worker.middleName + " " : ""
+      }${worker.lastName}${worker.suffixName ? " " + worker.suffixName : ""}`,
       firstName: worker.firstName,
       middleName: worker.middleName,
       lastName: worker.lastName,
@@ -793,7 +776,7 @@ const getWorkerById = async (req, res) => {
       totalRatings: worker.totalRatings,
       email: worker.email,
       isAccountVerified: worker.isAccountVerified,
-      isIdVerified: worker.isIdVerified,
+      isVerified: worker.isVerified,
       verificationStatus: worker.verificationStatus,
       hasCompleteDocuments: worker.hasCompleteDocuments,
       verificationDetails: {
@@ -801,12 +784,11 @@ const getWorkerById = async (req, res) => {
         submittedAt: worker.idVerificationSubmittedAt,
         approvedAt: worker.idVerificationApprovedAt,
         rejectedAt: worker.idVerificationRejectedAt,
-        notes: worker.idVerificationNotes,
-        resubmissionCount: worker.resubmissionCount,
-        canResubmit: worker.resubmissionCount < worker.maxResubmissionAttempts,
+        isVerified: worker.isVerified,
+        verifiedAt: worker.verifiedAt,
       },
-      verificationBadge: worker.isIdVerified
-        ? "✅ ID Verified"
+      verificationBadge: worker.isVerified
+        ? "✅ Verified"
         : "⏳ Pending Verification",
       createdAt: worker.createdAt,
       updatedAt: worker.updatedAt,
@@ -816,7 +798,7 @@ const getWorkerById = async (req, res) => {
 
     logger.info("Worker details retrieved", {
       workerId: id,
-      isIdVerified: worker.isIdVerified,
+      isVerified: worker.isVerified,
       verificationStatus: worker.verificationStatus,
       processingTime: `${processingTime}ms`,
     });
@@ -831,9 +813,9 @@ const getWorkerById = async (req, res) => {
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
-        verificationNote: worker.isIdVerified
-          ? "This worker has approved ID verification"
-          : "This worker's ID verification is pending or incomplete",
+        verificationNote: worker.isVerified
+          ? "This worker is verified"
+          : "This worker is not yet verified",
       },
     });
   } catch (error) {

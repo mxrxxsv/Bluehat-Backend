@@ -1455,3 +1455,97 @@
 {"hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"GET","service":"fixit-api","timestamp":"2025-09-30T01:24:38.859Z","url":"/ver/check-auth","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"}
 {"ip":"::1","level":"info","message":"Auth check successful","processingTime":"171ms","service":"fixit-api","timestamp":"2025-09-30T01:24:39.040Z","userId":"68b6acb6dc817d7a943a474d","userType":"worker"}
 {"duration":"183ms","hasAuth":true,"ip":"::1","level":"info","message":"Authentication response","method":"GET","responseSize":799,"service":"fixit-api","statusCode":200,"timestamp":"2025-09-30T01:24:39.042Z","url":"/ver/check-auth","userId":"68b6acb6dc817d7a943a474d"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:21:20.995Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:21:22.153Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:42:11.727Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:42:12.835Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:49:11.358Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:49:12.456Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:52:20.704Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:52:21.970Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:52:34.552Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:52:35.625Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:52:49.193Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:52:50.230Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:53:03.585Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:53:04.684Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:53:27.501Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:53:28.552Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:53:42.283Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:53:44.442Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:53:54.417Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:53:55.474Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:54:05.943Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:54:07.159Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:54:20.050Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:54:21.194Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:54:33.376Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:54:34.527Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:54:46.599Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:54:47.729Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:55:01.727Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:55:03.008Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:55:17.029Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:55:18.455Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:55:29.740Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:55:30.876Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:55:43.347Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:55:44.503Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:55:57.991Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:55:59.238Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:57:52.868Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:57:54.041Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:59:37.776Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:59:38.916Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T13:59:52.367Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T13:59:53.529Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:01:01.678Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:02:06.598Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:02:35.368Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:02:36.520Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:03:12.987Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:03:14.118Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:09:44.187Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:09:45.250Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:09:58.712Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:09:59.815Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:10:14.344Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:10:15.505Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:10:37.821Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:10:38.962Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:10:55.368Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:10:56.604Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:11:09.626Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:11:10.748Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:11:27.760Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:11:28.986Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:11:48.931Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:11:50.094Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:12:25.579Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:12:26.657Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:16:52.797Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:16:53.906Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:17:05.230Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:17:06.285Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:17:24.228Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:17:25.403Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:17:43.964Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:17:45.021Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:17:58.264Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:17:59.379Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:18:09.740Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:18:11.175Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:18:32.434Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:18:34.117Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:18:44.486Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:18:45.622Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:20:52.502Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:20:53.844Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:22:06.062Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:22:07.175Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:22:16.632Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:22:18.115Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:22:32.343Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:22:33.465Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:26:05.577Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:26:06.747Z"}
