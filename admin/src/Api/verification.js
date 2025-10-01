@@ -12,8 +12,6 @@ const verificationApi = axios.create({
 
 // ===== Verification API FUNCTIONS =====
 
-// Admin-only
-
 // Get all pending verifications
 export const getPendingVerifications = () => verificationApi.get("/pending");
 
