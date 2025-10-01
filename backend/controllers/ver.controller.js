@@ -414,7 +414,8 @@ const createClientProfile = async (pending, credentialId, session) => {
         public_id: "",
       },
       blocked: false,
-      isVerified: false,
+      isVerified: true,
+      verifiedAt: new Date(),
     });
 
     await clientProfile.save({ session });
@@ -467,6 +468,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       currentJob: null,
       blocked: false,
       isVerified: false,
+      verifiedAt: null,
     });
 
     await workerProfile.save({ session });
@@ -576,8 +578,8 @@ const signup = async (req, res) => {
 
       return res.status(409).json({
         success: false,
-        message: "Email already registered.",
-        code: "EMAIL_EXISTS",
+        message: "Please use a different email.",
+        code: "USE_DIFFERENT_EMAIL",
       });
     }
 
@@ -606,7 +608,7 @@ const signup = async (req, res) => {
 
     // ✅ Generate TOTP secret
     const secret = speakeasy.generateSecret({
-      name: `FixIt (${email})`,
+      name: `FixIt ${userType}: (${email})`,
       issuer: "FixIt",
     });
 
@@ -959,8 +961,9 @@ const verify = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: `Invalid code. ${ATTEMPT_LIMIT - pending.verifyAttempts
-          } attempt(s) left.`,
+        message: `Invalid code. ${
+          ATTEMPT_LIMIT - pending.verifyAttempts
+        } attempt(s) left.`,
         code: "INVALID_TOTP",
         attemptsLeft: ATTEMPT_LIMIT - pending.verifyAttempts,
       });
@@ -975,7 +978,6 @@ const verify = async (req, res) => {
       userType: pending.userType,
       totpSecret: pending.totpSecret,
       isAuthenticated: true,
-      isVerified: isVerified,
     });
     await credential.save({ session });
 
@@ -1117,7 +1119,7 @@ const resendCode = async (req, res) => {
     const secret = pending.totpSecret;
     const otpauthUrl = speakeasy.otpauthURL({
       secret,
-      label: `FixIt (${email})`,
+      label: `FixIt ${userType}: (${email})`,
       issuer: "FixIt",
       encoding: "base32",
     });
@@ -1451,7 +1453,7 @@ const checkAuth = async (req, res) => {
     } else if (userType === "worker") {
       user = await Worker.findOne({ credentialId: id });
       user = await Worker.findOne({ credentialId: id })
-        .populate("skillsByCategory.skillCategoryId", "categoryName") 
+        .populate("skillsByCategory.skillCategoryId", "categoryName")
         .lean();
     }
 
@@ -1544,7 +1546,6 @@ const checkAuth = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-
   } catch (err) {
     const processingTime = Date.now() - startTime;
 

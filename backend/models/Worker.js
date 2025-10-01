@@ -232,6 +232,14 @@ const WorkerSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Total ratings cannot be negative"],
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
