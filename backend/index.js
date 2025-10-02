@@ -16,7 +16,6 @@ const adminRoute = require("./routes/admin.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
 const workerRoute = require("./routes/worker.route");
-const jobApplicationRoute = require("./routes/jobApplication.route");
 const skillsRoute = require("./routes/skill.route");
 const profileRoute = require("./routes/profile.route");
 const clientManagementRoute = require("./routes/clientManagement.route");

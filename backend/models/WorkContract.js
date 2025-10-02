@@ -132,11 +132,6 @@ workContractSchema.pre("save", function (next) {
     this.actualEndDate = new Date();
   }
 
-  // Calculate total amount if rate and completion
-  if (this.contractStatus === "completed" && !this.totalAmount) {
-    this.totalAmount = this.agreedRate;
-  }
-
   next();
 });
 
@@ -178,7 +173,6 @@ workContractSchema.statics.getClientStats = async function (clientId) {
           $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
         },
         averageRating: { $avg: "$clientRating" },
-        totalSpent: { $sum: "$totalAmount" },
       },
     },
   ]);
@@ -195,7 +189,6 @@ workContractSchema.statics.getWorkerStats = async function (workerId) {
           $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
         },
         averageRating: { $avg: "$workerRating" },
-        totalEarned: { $sum: "$totalAmount" },
       },
     },
   ]);

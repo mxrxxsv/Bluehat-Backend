@@ -205,7 +205,6 @@ const getClientContracts = async (req, res) => {
           completedContracts: {
             $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
           },
-          totalSpent: { $sum: "$totalAmount" },
           averageRating: { $avg: "$clientRating" },
         },
       },
@@ -234,7 +233,6 @@ const getClientContracts = async (req, res) => {
           totalContracts: 0,
           activeContracts: 0,
           completedContracts: 0,
-          totalSpent: 0,
           averageRating: 0,
         },
       },
@@ -325,7 +323,6 @@ const getWorkerContracts = async (req, res) => {
           completedContracts: {
             $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
           },
-          totalEarned: { $sum: "$totalAmount" },
           averageRating: { $avg: "$workerRating" },
         },
       },
@@ -354,7 +351,6 @@ const getWorkerContracts = async (req, res) => {
           totalContracts: 0,
           activeContracts: 0,
           completedContracts: 0,
-          totalEarned: 0,
           averageRating: 0,
         },
       },
@@ -541,7 +537,6 @@ const completeWork = async (req, res) => {
     contract.contractStatus = "completed";
     contract.completedAt = new Date();
     contract.actualEndDate = new Date();
-    contract.totalAmount = contract.agreedRate;
     await contract.save();
 
     // Update job status if linked to a job

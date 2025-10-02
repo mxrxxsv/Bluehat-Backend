@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 // Middleware
-const { verifyToken } = require("../middleware/verifyToken");
+const verifyToken = require("../middleware/verifyToken");
 const { verifyClientOrWorker } = require("../middleware/verifyHiring");
 const {
   contractActionLimiter,
