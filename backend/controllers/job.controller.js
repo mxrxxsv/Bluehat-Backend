@@ -325,20 +325,22 @@ const optimizeJobForResponse = (job) => {
       id: client._id,
       credentialId, // ✅ now returns the proper credentialId
       name: clientName,
-      profilePicture: client?.profilePicture?.url || client?.profilePicture || null,
-      isVerified: true,
+      profilePicture:
+        client?.profilePicture?.url || client?.profilePicture || null,
+      isVerified: client?.isVerified || false,
     },
     hiredWorker: job.hiredWorker
       ? {
-        id: job.hiredWorker._id,
-        name: `${job.hiredWorker.firstName || ""} ${job.hiredWorker.lastName || ""}`.trim() || "Unknown Worker",
-        profilePicture: job.hiredWorker.profilePicture?.url || null,
-      }
+          id: job.hiredWorker._id,
+          name:
+            `${job.hiredWorker.firstName || ""} ${
+              job.hiredWorker.lastName || ""
+            }`.trim() || "Unknown Worker",
+          profilePicture: job.hiredWorker.profilePicture?.url || null,
+        }
       : null,
   };
 };
-
-
 
 const handleJobError = (
   error,
@@ -429,12 +431,20 @@ const getAllJobs = async (req, res) => {
 
     // ✅ Sanitize all inputs
     const sanitizedQuery = sanitizeInput(value);
-    const { page, limit, category, location, search, status, sortBy, order, clientId } =
-      sanitizedQuery; // ✅ include clientId
+    const {
+      page,
+      limit,
+      category,
+      location,
+      search,
+      status,
+      sortBy,
+      order,
+      clientId,
+    } = sanitizedQuery; // ✅ include clientId
 
-    // Build filter - only show verified jobs from verified clients
+    // Build filter - only show non-deleted jobs from verified clients
     const filter = {
-      isVerified: true,
       isDeleted: false,
     };
 
@@ -458,11 +468,12 @@ const getAllJobs = async (req, res) => {
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
-        select: "firstName lastName profilePicture credentialId",
+        match: { isVerified: true, blocked: { $ne: true } },
+        select:
+          "firstName lastName profilePicture credentialId isVerified blocked",
         populate: {
           path: "credentialId",
-          match: { isVerified: true, isBlocked: { $ne: true } },
-          select: "email isVerified",
+          select: "email",
         },
       })
       .populate("category", "categoryName")
@@ -472,8 +483,10 @@ const getAllJobs = async (req, res) => {
       .limit(limit)
       .lean();
 
-    // ✅ Only keep verified clients
-    const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
+    // ✅ Only keep verified and non-blocked clients
+    const verifiedJobs = jobs.filter(
+      (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
+    );
 
     if (!verifiedJobs || verifiedJobs.length === 0) {
       return res.status(200).json({
@@ -490,7 +503,15 @@ const getAllJobs = async (req, res) => {
             hasNextPage: false,
             hasPrevPage: page > 1,
           },
-          filters: { category, location, search, status, sortBy, order, clientId },
+          filters: {
+            category,
+            location,
+            search,
+            status,
+            sortBy,
+            order,
+            clientId,
+          },
         },
         meta: {
           processingTime: `${Date.now() - startTime}ms`,
@@ -504,13 +525,8 @@ const getAllJobs = async (req, res) => {
       ...filter,
       clientId: {
         $in: await Client.find({
-          credentialId: {
-            $in: await Credential.find({
-              isVerified: true,
-              isBlocked: { $ne: true },
-              userType: "client",
-            }).distinct("_id"),
-          },
+          isVerified: true,
+          blocked: { $ne: true },
         }).distinct("_id"),
       },
     });
@@ -532,17 +548,19 @@ const getAllJobs = async (req, res) => {
       clientId: job.clientId?._id,
       client: job.clientId
         ? {
-          name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(job.clientId.lastName)}`,
-          profilePicture: job.clientId.profilePicture,
-          isVerified: job.clientId.credentialId?.isVerified || false,
-        }
+            name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(
+              job.clientId.lastName
+            )}`,
+            profilePicture: job.clientId.profilePicture,
+            isVerified: job.clientId.isVerified || false,
+          }
         : null,
       hiredWorker: job.hiredWorker
         ? {
-          id: job.hiredWorker._id,
-          name: `${job.hiredWorker.firstName} ${job.hiredWorker.lastName}`,
-          profilePicture: job.hiredWorker.profilePicture,
-        }
+            id: job.hiredWorker._id,
+            name: `${job.hiredWorker.firstName} ${job.hiredWorker.lastName}`,
+            profilePicture: job.hiredWorker.profilePicture,
+          }
         : null,
     }));
 
@@ -578,7 +596,15 @@ const getAllJobs = async (req, res) => {
           hasNextPage: page < Math.ceil(totalCount / limit),
           hasPrevPage: page > 1,
         },
-        filters: { category, location, search, status, sortBy, order, clientId },
+        filters: {
+          category,
+          location,
+          search,
+          status,
+          sortBy,
+          order,
+          clientId,
+        },
       },
       meta: {
         processingTime: `${processingTime}ms`,
@@ -676,7 +702,6 @@ const getJobsByCategory = async (req, res) => {
     // Build filter
     const filter = {
       category: categoryId,
-      isVerified: true,
       isDeleted: false,
     };
 
@@ -695,10 +720,11 @@ const getJobsByCategory = async (req, res) => {
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        match: { isVerified: true, blocked: { $ne: true } },
+        select:
+          "firstName lastName profilePicture credentialId isVerified blocked",
         populate: {
           path: "credentialId",
-          match: { isVerified: true, isBlocked: { $ne: true } },
           select: "email",
         },
       })
@@ -709,20 +735,17 @@ const getJobsByCategory = async (req, res) => {
       .limit(limit)
       .lean(); // ✅ Performance optimization
 
-    // Filter out jobs from unverified clients
-    const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
+    // Filter out jobs from unverified or blocked clients
+    const verifiedJobs = jobs.filter(
+      (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
+    );
 
     const totalCount = await Job.countDocuments({
       ...filter,
       clientId: {
         $in: await Client.find({
-          credentialId: {
-            $in: await Credential.find({
-              isVerified: true,
-              isBlocked: { $ne: true },
-              userType: "client",
-            }).distinct("_id"),
-          },
+          isVerified: true,
+          blocked: { $ne: true },
         }).distinct("_id"),
       },
     });
@@ -851,7 +874,6 @@ const getJobsByLocation = async (req, res) => {
     // Build filter
     const filter = {
       location: { $regex: location, $options: "i" },
-      isVerified: true,
       isDeleted: false,
     };
 
@@ -870,10 +892,11 @@ const getJobsByLocation = async (req, res) => {
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        match: { isVerified: true, blocked: { $ne: true } },
+        select:
+          "firstName lastName profilePicture credentialId isVerified blocked",
         populate: {
           path: "credentialId",
-          match: { isVerified: true, isBlocked: { $ne: true } },
           select: "email",
         },
       })
@@ -884,20 +907,17 @@ const getJobsByLocation = async (req, res) => {
       .limit(limit)
       .lean(); // ✅ Performance optimization
 
-    // Filter out jobs from unverified clients
-    const verifiedJobs = jobs.filter((job) => job.clientId?.credentialId);
+    // Filter out jobs from unverified or blocked clients
+    const verifiedJobs = jobs.filter(
+      (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
+    );
 
     const totalCount = await Job.countDocuments({
       ...filter,
       clientId: {
         $in: await Client.find({
-          credentialId: {
-            $in: await Credential.find({
-              isVerified: true,
-              isBlocked: { $ne: true },
-              userType: "client",
-            }).distinct("_id"),
-          },
+          isVerified: true,
+          blocked: { $ne: true },
         }).distinct("_id"),
       },
     });
@@ -907,8 +927,21 @@ const getJobsByLocation = async (req, res) => {
       {
         $match: {
           location: { $regex: location, $options: "i" },
-          isVerified: true,
           isDeleted: false,
+        },
+      },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      {
+        $match: {
+          "client.isVerified": true,
+          "client.blocked": { $ne: true },
         },
       },
       {
@@ -1015,10 +1048,11 @@ const getJobById = async (req, res) => {
       .populate("category", "categoryName")
       .populate({
         path: "clientId",
-        select: "_id firstName lastName profilePicture credentialId",
+        match: { isVerified: true, blocked: { $ne: true } },
+        select:
+          "_id firstName lastName profilePicture credentialId isVerified blocked",
         populate: {
           path: "credentialId",
-          match: { isVerified: true, isBlocked: { $ne: true } },
           select: "_id email", // include _id to get the credentialId
         },
         options: { lean: true },
@@ -1026,10 +1060,32 @@ const getJobById = async (req, res) => {
       .populate("hiredWorker", "firstName lastName profilePicture")
       .lean();
 
+    // ✅ Check if job exists and belongs to verified, non-blocked client
+    if (
+      !job ||
+      !job.clientId ||
+      !job.clientId.isVerified ||
+      job.clientId.blocked
+    ) {
+      logger.warn("Job not found or client not verified/blocked", {
+        jobId: id,
+        jobExists: !!job,
+        clientExists: !!job?.clientId,
+        clientVerified: job?.clientId?.isVerified,
+        clientBlocked: job?.clientId?.blocked,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+        code: "JOB_NOT_FOUND",
+      });
+    }
+
     // Map clientId to client for frontend
     if (job.clientId) job.client = job.clientId;
-
-
 
     const optimizedJob = optimizeJobForResponse(job);
 
@@ -1050,7 +1106,6 @@ const getJobById = async (req, res) => {
     return handleJobError(err, res, "Get job by ID", req);
   }
 };
-
 
 // Create a job (only verified clients) with content filtering
 const postJob = async (req, res) => {
@@ -1102,12 +1157,27 @@ const postJob = async (req, res) => {
     const sanitizedData = sanitizeInput(value);
     const { description, price, location, category } = sanitizedData;
 
-    // ✅ Check if client is verified
-    const clientCredential = await Credential.findById(req.user.id);
-    if (!clientCredential || !clientCredential.isVerified) {
+    // ✅ Check if client is verified and not blocked
+    const clientProfile = await Client.findOne({ credentialId: req.user.id });
+    if (!clientProfile) {
+      logger.error("Client profile not found for user", {
+        userId: req.user.id,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Client profile not found",
+        code: "CLIENT_PROFILE_NOT_FOUND",
+      });
+    }
+
+    if (!clientProfile.isVerified) {
       logger.warn("Unverified client attempted to post job", {
         userId: req.user.id,
-        isVerified: clientCredential?.isVerified,
+        clientId: clientProfile._id,
+        isVerified: clientProfile.isVerified,
         ip: req.ip,
         timestamp: new Date().toISOString(),
       });
@@ -1119,9 +1189,10 @@ const postJob = async (req, res) => {
       });
     }
 
-    if (clientCredential.isBlocked) {
+    if (clientProfile.blocked) {
       logger.warn("Blocked client attempted to post job", {
         userId: req.user.id,
+        clientId: clientProfile._id,
         ip: req.ip,
         timestamp: new Date().toISOString(),
       });
@@ -1169,22 +1240,6 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Find client profile
-    const clientProfile = await Client.findOne({ credentialId: req.user.id });
-    if (!clientProfile) {
-      logger.error("Client profile not found for verified user", {
-        userId: req.user.id,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(400).json({
-        success: false,
-        message: "Client profile not found",
-        code: "CLIENT_PROFILE_NOT_FOUND",
-      });
-    }
-
     // ✅ Create job
     const job = new Job({
       clientId: clientProfile._id,
@@ -1193,7 +1248,6 @@ const postJob = async (req, res) => {
       location: location.trim(),
       category,
       status: "open",
-      isVerified: false,
       isDeleted: false,
       hiredWorker: null,
     });
@@ -1378,22 +1432,6 @@ const updateJob = async (req, res) => {
         success: false,
         message: "Only the job owner can update this job",
         code: "OWNERSHIP_REQUIRED",
-      });
-    }
-
-    // ✅ Check if job is verified (admin-approved)
-    if (job.isVerified) {
-      logger.warn("Attempt to update verified job", {
-        jobId: id,
-        userId: req.user.id,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(403).json({
-        success: false,
-        message: "Cannot edit a job that has already been verified by admin",
-        code: "JOB_VERIFIED",
       });
     }
 
@@ -1625,7 +1663,6 @@ const deleteJob = async (req, res) => {
       location: job.location,
       category: job.category,
       status: job.status,
-      isVerified: job.isVerified,
     };
 
     // ✅ Soft delete

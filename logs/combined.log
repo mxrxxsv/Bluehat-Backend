@@ -1551,3 +1551,84 @@
 {"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:26:06.747Z"}
 {"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-01T14:42:20.153Z"}
 {"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-01T14:42:22.402Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T05:41:34.906Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T05:41:36.724Z"}
+{"contentLength":"91","hasAuth":false,"ip":"::1","level":"info","message":"Admin request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T05:43:13.206Z","url":"/admin/login","userAgent":"PostmanRuntime/7.48.0"}
+{"adminId":"68d0ce976647d92e5149a595","firstName":"Richmond","ip":"::1","lastLogin":"2025-10-02T05:43:14.694Z","lastName":"Gillaco","level":"info","message":"Admin login successful","processingTime":"1560ms","service":"fixit-api","timestamp":"2025-10-02T05:43:14.770Z","userAgent":"PostmanRuntime/7.48.0","userName":"adminrichmond"}
+{"duration":"1568ms","hasAuth":false,"ip":"::1","level":"info","message":"Admin response","method":"POST","responseSize":258,"service":"fixit-api","statusCode":200,"timestamp":"2025-10-02T05:43:14.773Z","url":"/admin/login"}
+{"accountStatus":"all","blockedStatus":"all","failedDecryptions":0,"level":"info","limit":30,"message":"Workers retrieved with pagination","order":"desc","page":1,"processingTime":"165ms","search":"none","service":"fixit-api","sortBy":"createdAt","successfulDecryptions":4,"timestamp":"2025-10-02T05:43:27.070Z","totalCount":4,"totalPages":1,"verificationStatus":"all","workStatus":"all","workersReturned":4}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T05:45:56.788Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T05:45:57.902Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T05:47:13.398Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T05:47:14.616Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T05:49:53.899Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T05:49:54.955Z"}
+{"accountStatus":"all","blockedStatus":"all","failedDecryptions":0,"level":"info","limit":30,"message":"Workers retrieved with pagination","order":"desc","page":1,"processingTime":"131ms","search":"none","service":"fixit-api","sortBy":"createdAt","successfulDecryptions":0,"timestamp":"2025-10-02T05:49:59.067Z","totalCount":0,"totalPages":0,"verificationStatus":"verified","workStatus":"all","workersReturned":0}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T05:51:50.436Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T05:51:51.584Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:00:26.688Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:00:27.896Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:00:35.477Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:00:36.628Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:00:44.788Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:00:46.010Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:00:55.034Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:00:56.328Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:01:26.390Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:01:27.587Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:05:30.539Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:05:31.699Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:09:43.700Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:09:44.951Z"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:10:49.443Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"attempts":1,"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"Invalid TOTP attempt","service":"fixit-api","timestamp":"2025-10-02T06:10:49.797Z"}
+{"duration":"357ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":171,"service":"fixit-api","statusCode":400,"timestamp":"2025-10-02T06:10:49.799Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:10:59.152Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"attempts":2,"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"Invalid TOTP attempt","service":"fixit-api","timestamp":"2025-10-02T06:10:59.421Z"}
+{"duration":"270ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":171,"service":"fixit-api","statusCode":400,"timestamp":"2025-10-02T06:10:59.422Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:11:00.916Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"attempts":3,"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"Invalid TOTP attempt","service":"fixit-api","timestamp":"2025-10-02T06:11:01.300Z"}
+{"duration":"411ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":171,"service":"fixit-api","statusCode":400,"timestamp":"2025-10-02T06:11:01.327Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:11:02.718Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"attempts":4,"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"Invalid TOTP attempt","service":"fixit-api","timestamp":"2025-10-02T06:11:03.000Z"}
+{"duration":"282ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":171,"service":"fixit-api","statusCode":400,"timestamp":"2025-10-02T06:11:03.000Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:11:04.367Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"attempts":5,"blockedFor":"2min","email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"User TOTP blocked due to too many attempts","service":"fixit-api","timestamp":"2025-10-02T06:11:04.586Z"}
+{"attempts":5,"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"Invalid TOTP attempt","service":"fixit-api","timestamp":"2025-10-02T06:11:04.639Z"}
+{"duration":"273ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":171,"service":"fixit-api","statusCode":400,"timestamp":"2025-10-02T06:11:04.640Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:11:08.548Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"blockedFor":"116s","email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"TOTP attempt while rate limited","service":"fixit-api","timestamp":"2025-10-02T06:11:08.764Z"}
+{"duration":"218ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":179,"service":"fixit-api","statusCode":429,"timestamp":"2025-10-02T06:11:08.766Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:12:54.530Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"blockedFor":"10s","email":"jhinxzergillaco@gmail.com","ip":"::1","level":"warn","message":"TOTP attempt while rate limited","service":"fixit-api","timestamp":"2025-10-02T06:12:54.746Z"}
+{"duration":"219ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":177,"service":"fixit-api","statusCode":429,"timestamp":"2025-10-02T06:12:54.748Z","url":"/ver/login"}
+{"contentLength":"109","hasAuth":false,"ip":"::1","level":"info","message":"Authentication request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:13:26.592Z","url":"/ver/login","userAgent":"PostmanRuntime/7.48.0"}
+{"email":"jhinxzergillaco@gmail.com","ip":"::1","level":"info","message":"Successful login","processingTime":"301ms","service":"fixit-api","timestamp":"2025-10-02T06:13:26.894Z","userAgent":"PostmanRuntime/7.48.0","userId":"68b419ffb04d6791e5f6e14c","userType":"client"}
+{"duration":"305ms","hasAuth":false,"ip":"::1","level":"info","message":"Authentication response","method":"POST","responseSize":141,"service":"fixit-api","statusCode":200,"timestamp":"2025-10-02T06:13:26.897Z","url":"/ver/login"}
+{"contentLength":"193","hasAuth":false,"ip":"::1","level":"info","message":"Job request","method":"POST","service":"fixit-api","timestamp":"2025-10-02T06:13:45.725Z","url":"/jobs","userAgent":"PostmanRuntime/7.48.0"}
+{"clientId":"68b419ffb04d6791e5f6e14e","ip":"::1","isVerified":false,"level":"warn","message":"Unverified client attempted to post job","service":"fixit-api","timestamp":"2025-10-02T06:13:45.787Z","userId":"68b419ffb04d6791e5f6e14c"}
+{"duration":"65ms","hasAuth":true,"ip":"::1","level":"info","message":"Job response","method":"POST","responseSize":94,"service":"fixit-api","statusCode":403,"timestamp":"2025-10-02T06:13:45.789Z","url":"/jobs","userId":"68b419ffb04d6791e5f6e14c","userType":"client"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:14:24.476Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:14:25.590Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:18:13.769Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:18:14.917Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:18:22.832Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:18:24.021Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:18:30.975Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:18:32.487Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:18:51.877Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:18:53.163Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:19:19.757Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:19:21.009Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:19:52.230Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:19:53.452Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:20:23.081Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:20:24.241Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T06:26:55.989Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T06:26:57.133Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T07:00:10.039Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T07:00:11.258Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T07:02:39.666Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T07:02:40.928Z"}
+{"cloud_name":"djzbyduwk","level":"info","message":"Cloudinary configuration verified successfully","service":"fixit-api","timestamp":"2025-10-02T07:04:28.366Z"}
+{"level":"info","message":"Cloudinary connection successful","service":"fixit-api","status":"ok","timestamp":"2025-10-02T07:04:29.493Z"}

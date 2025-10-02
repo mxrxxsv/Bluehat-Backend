@@ -105,7 +105,6 @@ const getAllWorkers = async (req, res) => {
       {
         $match: {
           "credential.userType": "worker",
-          "credential.isBlocked": { $ne: true },
           blocked: { $ne: true },
           isVerified: true,
         },
@@ -153,7 +152,7 @@ const getAllWorkers = async (req, res) => {
             },
           },
           email: "$credential.email",
-          isAccountVerified: "$credential.isVerified",
+          isAccountVerified: "$credential.isAuthenticated",
           averageRating: {
             $cond: {
               if: { $gt: ["$totalRatings", 0] },
@@ -205,7 +204,7 @@ const getAllWorkers = async (req, res) => {
         address: 1,
         profilePicture: 1,
         biography: 1,
-        skills: 1,
+        skillsByCategory: 1,
         status: 1,
         rating: 1,
         totalRatings: 1,
@@ -355,8 +354,6 @@ const getAllWorkers = async (req, res) => {
       {
         $match: {
           "credential.userType": "worker",
-          "credential.isBlocked": { $ne: true },
-          "credential.isVerified": true,
           blocked: { $ne: true },
         },
       },
@@ -564,7 +561,6 @@ const getWorkerById = async (req, res) => {
       {
         $match: {
           "credential.userType": "worker",
-          "credential.isBlocked": { $ne: true },
           blocked: { $ne: true },
           isVerified: true,
         },
@@ -629,7 +625,7 @@ const getWorkerById = async (req, res) => {
       {
         $addFields: {
           email: "$credential.email",
-          isAccountVerified: "$credential.isVerified",
+          isAccountVerified: "$credential.isAuthenticated",
           skills: {
             $map: {
               input: "$skillsByCategory",

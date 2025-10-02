@@ -13,7 +13,6 @@ const { Server } = require("socket.io");
 // Routes
 const verRoute = require("./routes/ver.route");
 const adminRoute = require("./routes/admin.route");
-const adminTaskRoute = require("./routes/adminTask.route");
 const adsRoute = require("./routes/advertisement.route");
 const jobRoute = require("./routes/job.route");
 const workerRoute = require("./routes/worker.route");
@@ -24,6 +23,11 @@ const clientManagementRoute = require("./routes/clientManagement.route");
 const workerManagementRoute = require("./routes/workerManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification.route");
 const messageRoute = require("./routes/message.route");
+
+// Hiring system routes
+const applicationRoute = require("./routes/jobApplication.route");
+const invitationRoute = require("./routes/workerInvitation.route");
+const contractRoute = require("./routes/workContract.route");
 
 const allowedOrigins = [process.env.FRONTEND_URL];
 const app = express();
@@ -77,17 +81,20 @@ app.get("/healthz", (req, res) => res.sendStatus(200));
 // 6) Routes
 app.use("/ver", verRoute);
 app.use("/admin", adminRoute);
-app.use("/admin-tasks", adminTaskRoute);
 app.use("/advertisement", adsRoute);
 app.use("/jobs", jobRoute);
 app.use("/workers", workerRoute);
-app.use("/job-applications", jobApplicationRoute);
 app.use("/skills", skillsRoute);
 app.use("/profile", profileRoute);
 app.use("/id-verification", userIDVerificationRoute);
 app.use("/client-management", clientManagementRoute);
 app.use("/worker-management", workerManagementRoute);
 app.use("/messages", messageRoute);
+
+// Hiring system routes
+app.use("/applications", applicationRoute);
+app.use("/invitations", invitationRoute);
+app.use("/contracts", contractRoute);
 
 // 7) 404 handler
 app.use((req, res) => {
@@ -161,7 +168,9 @@ io.on("connection", (socket) => {
       socket.to(room).emit("receiveMessage", msg);
 
       // Also send to recipient if they’re online but not currently in room
-      const recipientCred = msg.toCredentialId ? String(msg.toCredentialId) : null;
+      const recipientCred = msg.toCredentialId
+        ? String(msg.toCredentialId)
+        : null;
       if (recipientCred && userSockets.has(recipientCred)) {
         userSockets.get(recipientCred).forEach((sockId) => {
           if (sockId !== socket.id) {
@@ -209,7 +218,6 @@ io.on("connection", (socket) => {
       console.error("socket deleteMessage error:", err);
     }
   });
-
 
   // Cleanup on disconnect
   socket.on("disconnect", () => {

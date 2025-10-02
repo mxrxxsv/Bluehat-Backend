@@ -210,16 +210,16 @@ const WorkerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    rating: {
+    averageRating: {
       type: Number,
       default: 0,
-      min: [0, "Rating cannot be negative"],
-      max: [5, "Rating cannot exceed 5"],
+      min: [0, "Average rating cannot be negative"],
+      max: [5, "Average rating cannot exceed 5"],
     },
-    totalRatings: {
+    totalJobsCompleted: {
       type: Number,
       default: 0,
-      min: [0, "Total ratings cannot be negative"],
+      min: [0, "Total jobs completed cannot be negative"],
     },
     isVerified: {
       type: Boolean,

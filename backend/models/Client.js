@@ -92,6 +92,17 @@ const ClientSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: [0, "Average rating cannot be negative"],
+      max: [5, "Average rating cannot exceed 5"],
+    },
+    totalJobsPosted: {
+      type: Number,
+      default: 0,
+      min: [0, "Total jobs posted cannot be negative"],
+    },
   },
   {
     timestamps: true,

@@ -3,7 +3,7 @@ const xss = require("xss");
 const mongoose = require("mongoose");
 
 // Models
-const JobApplication = require("../models/JobApplication");
+const WorkerInvitation = require("../models/WorkerInvitation");
 const WorkContract = require("../models/WorkContract");
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
@@ -13,20 +13,35 @@ const Client = require("../models/Client");
 const logger = require("../utils/logger");
 
 // ==================== JOI SCHEMAS ====================
-const applicationSchema = Joi.object({
+const invitationSchema = Joi.object({
+  jobId: Joi.string()
+    .pattern(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .allow(null)
+    .messages({
+      "string.pattern.base": "Invalid job ID format",
+    }),
+  invitationType: Joi.string()
+    .valid("job_specific", "general_hire")
+    .required()
+    .messages({
+      "any.only":
+        "Invitation type must be either 'job_specific' or 'general_hire'",
+      "any.required": "Invitation type is required",
+    }),
   proposedRate: Joi.number().min(0).max(1000000).required().messages({
     "number.min": "Proposed rate cannot be negative",
     "number.max": "Proposed rate cannot exceed 1,000,000",
     "any.required": "Proposed rate is required",
   }),
-  message: Joi.string().trim().min(10).max(1000).required().messages({
-    "string.min": "Message must be at least 10 characters",
-    "string.max": "Message cannot exceed 1000 characters",
-    "any.required": "Message is required",
+  description: Joi.string().trim().min(20).max(2000).required().messages({
+    "string.min": "Description must be at least 20 characters",
+    "string.max": "Description cannot exceed 2000 characters",
+    "any.required": "Description is required",
   }),
 });
 
-const applicationResponseSchema = Joi.object({
+const invitationResponseSchema = Joi.object({
   action: Joi.string().valid("accept", "reject").required().messages({
     "any.only": "Action must be either 'accept' or 'reject'",
     "any.required": "Action is required",
@@ -37,11 +52,12 @@ const querySchema = Joi.object({
   page: Joi.number().integer().min(1).max(1000).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),
   status: Joi.string()
-    .valid("pending", "accepted", "rejected", "withdrawn")
+    .valid("pending", "accepted", "rejected", "cancelled")
     .optional(),
+  invitationType: Joi.string().valid("job_specific", "general_hire").optional(),
   sortBy: Joi.string()
-    .valid("appliedAt", "proposedRate", "applicationStatus")
-    .default("appliedAt"),
+    .valid("sentAt", "proposedRate", "invitationStatus")
+    .default("sentAt"),
   order: Joi.string().valid("asc", "desc").default("desc"),
 });
 
@@ -74,10 +90,10 @@ const sanitizeInput = (input) => {
   return input;
 };
 
-const handleApplicationError = (
+const handleInvitationError = (
   error,
   res,
-  operation = "Application operation",
+  operation = "Invitation operation",
   req = null
 ) => {
   logger.error(`${operation} error`, {
@@ -107,8 +123,8 @@ const handleApplicationError = (
   if (error.code === 11000) {
     return res.status(409).json({
       success: false,
-      message: "You have already applied to this job",
-      code: "DUPLICATE_APPLICATION",
+      message: "You have already invited this worker",
+      code: "DUPLICATE_INVITATION",
     });
   }
 
@@ -116,32 +132,32 @@ const handleApplicationError = (
     return res.status(500).json({
       success: false,
       message: `${operation} failed. Please try again.`,
-      code: "APPLICATION_ERROR",
+      code: "INVITATION_ERROR",
     });
   }
 
   return res.status(500).json({
     success: false,
     message: error.message,
-    code: "APPLICATION_ERROR",
+    code: "INVITATION_ERROR",
   });
 };
 
 // ==================== CONTROLLERS ====================
 
-// Worker applies to a job
-const applyToJob = async (req, res) => {
+// Client invites worker
+const inviteWorker = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // Validate job ID parameter
-    const { error: paramError, value: paramValue } = paramIdSchema.validate(
-      req.params
-    );
+    // Validate worker ID parameter
+    const { error: paramError, value: paramValue } = paramIdSchema.validate({
+      id: req.params.workerId,
+    });
     if (paramError) {
       return res.status(400).json({
         success: false,
-        message: "Invalid job ID",
+        message: "Invalid worker ID",
         code: "INVALID_PARAM",
         errors: paramError.details.map((detail) => ({
           field: detail.path.join("."),
@@ -151,7 +167,7 @@ const applyToJob = async (req, res) => {
     }
 
     // Validate request body
-    const { error: bodyError, value: bodyValue } = applicationSchema.validate(
+    const { error: bodyError, value: bodyValue } = invitationSchema.validate(
       req.body
     );
     if (bodyError) {
@@ -166,75 +182,98 @@ const applyToJob = async (req, res) => {
       });
     }
 
-    const { id: jobId } = sanitizeInput(paramValue);
-    const { proposedRate, message } = sanitizeInput(bodyValue);
+    const { id: workerId } = sanitizeInput(paramValue);
+    const { jobId, invitationType, proposedRate, description } =
+      sanitizeInput(bodyValue);
 
-    // Check if job exists and is open
-    const job = await Job.findOne({
-      _id: jobId,
-      isDeleted: false,
-      status: "open",
-    }).populate("clientId", "isVerified blocked");
+    // Validate job-specific invitation has jobId
+    if (invitationType === "job_specific" && !jobId) {
+      return res.status(400).json({
+        success: false,
+        message: "Job ID is required for job-specific invitations",
+        code: "JOB_ID_REQUIRED",
+      });
+    }
 
-    if (!job) {
+    // Check if worker exists and is verified
+    const worker = await Worker.findOne({
+      _id: workerId,
+      isVerified: true,
+      blocked: { $ne: true },
+    }).select("firstName lastName profilePicture skills");
+
+    if (!worker) {
       return res.status(404).json({
         success: false,
-        message: "Job not found or not available for applications",
-        code: "JOB_NOT_FOUND",
+        message: "Worker not found or not available for hire",
+        code: "WORKER_NOT_FOUND",
       });
     }
 
-    // Verify job owner is verified and not blocked
-    if (!job.clientId || !job.clientId.isVerified || job.clientId.blocked) {
+    // Check if client is trying to invite themselves (edge case)
+    if (workerId === req.clientProfile._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "This job is not available for applications",
-        code: "JOB_NOT_AVAILABLE",
+        message: "You cannot invite yourself",
+        code: "SELF_INVITATION_NOT_ALLOWED",
       });
     }
 
-    // Check if worker already applied
-    const existingApplication = await JobApplication.findOne({
-      jobId,
-      workerId: req.workerProfile._id,
+    let job = null;
+    // Validate job if job-specific invitation
+    if (jobId) {
+      job = await Job.findOne({
+        _id: jobId,
+        clientId: req.clientProfile._id,
+        isDeleted: false,
+        status: "open",
+      });
+
+      if (!job) {
+        return res.status(404).json({
+          success: false,
+          message: "Job not found or not available",
+          code: "JOB_NOT_FOUND",
+        });
+      }
+    }
+
+    // Check for existing invitation
+    const existingInvitation = await WorkerInvitation.findOne({
+      clientId: req.clientProfile._id,
+      workerId,
+      jobId: jobId || null,
+      invitationStatus: "pending",
       isDeleted: false,
+      expiresAt: { $gt: new Date() },
     });
 
-    if (existingApplication) {
+    if (existingInvitation) {
       return res.status(409).json({
         success: false,
-        message: "You have already applied to this job",
-        code: "DUPLICATE_APPLICATION",
+        message: "You have already sent a pending invitation to this worker",
+        code: "DUPLICATE_INVITATION",
       });
     }
 
-    // Check if worker is trying to apply to their own job (edge case)
-    if (job.clientId._id.toString() === req.workerProfile._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "You cannot apply to your own job posting",
-        code: "SELF_APPLICATION_NOT_ALLOWED",
-      });
-    }
-
-    // Create application
-    const application = new JobApplication({
+    // Create invitation
+    const invitation = new WorkerInvitation({
+      clientId: req.clientProfile._id,
+      workerId,
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      invitationType,
       proposedRate,
-      message,
-      applicantIP: req.ip,
+      description,
+      senderIP: req.ip,
     });
 
-    await application.save();
+    await invitation.save();
 
     // Populate for response
-    await application.populate([
+    await invitation.populate([
       {
         path: "workerId",
-        select:
-          "firstName lastName profilePicture skills averageRating totalJobsCompleted",
+        select: "firstName lastName profilePicture skills",
       },
       {
         path: "jobId",
@@ -248,11 +287,12 @@ const applyToJob = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Job application submitted successfully", {
-      applicationId: application._id,
+    logger.info("Worker invitation sent successfully", {
+      invitationId: invitation._id,
+      workerId,
+      clientId: req.clientProfile._id,
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      invitationType,
       proposedRate,
       userId: req.user.id,
       ip: req.ip,
@@ -262,21 +302,21 @@ const applyToJob = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Application submitted successfully",
-      code: "APPLICATION_SUBMITTED",
-      data: application.toSafeObject(),
+      message: "Invitation sent successfully",
+      code: "INVITATION_SENT",
+      data: invitation.toSafeObject(),
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
-    return handleApplicationError(error, res, "Job application", req);
+    return handleInvitationError(error, res, "Worker invitation", req);
   }
 };
 
-// Client responds to application (accept/reject)
-const respondToApplication = async (req, res) => {
+// Worker responds to invitation (accept/reject)
+const respondToInvitation = async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -287,14 +327,14 @@ const respondToApplication = async (req, res) => {
     if (paramError) {
       return res.status(400).json({
         success: false,
-        message: "Invalid application ID",
+        message: "Invalid invitation ID",
         code: "INVALID_PARAM",
       });
     }
 
     // Validate body
     const { error: bodyError, value: bodyValue } =
-      applicationResponseSchema.validate(req.body);
+      invitationResponseSchema.validate(req.body);
     if (bodyError) {
       return res.status(400).json({
         success: false,
@@ -307,95 +347,97 @@ const respondToApplication = async (req, res) => {
       });
     }
 
-    const { id: applicationId } = sanitizeInput(paramValue);
+    const { id: invitationId } = sanitizeInput(paramValue);
     const { action } = sanitizeInput(bodyValue);
 
-    // Find application
-    const application = await JobApplication.findOne({
-      _id: applicationId,
-      clientId: req.clientProfile._id,
-      applicationStatus: "pending",
+    // Find invitation
+    const invitation = await WorkerInvitation.findOne({
+      _id: invitationId,
+      workerId: req.workerProfile._id,
+      invitationStatus: "pending",
       isDeleted: false,
+      expiresAt: { $gt: new Date() },
     }).populate([
+      {
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+      },
       {
         path: "jobId",
         select: "description price location category status",
       },
-      {
-        path: "workerId",
-        select: "firstName lastName profilePicture",
-      },
     ]);
 
-    if (!application) {
+    if (!invitation) {
       return res.status(404).json({
         success: false,
-        message: "Application not found or already processed",
-        code: "APPLICATION_NOT_FOUND",
+        message: "Invitation not found, expired, or already processed",
+        code: "INVITATION_NOT_FOUND",
       });
     }
 
-    // Check if job is still open
-    if (application.jobId.status !== "open") {
+    // Check if job is still open (for job-specific invitations)
+    if (invitation.jobId && invitation.jobId.status !== "open") {
       return res.status(400).json({
         success: false,
-        message: "This job is no longer open for applications",
+        message: "This job is no longer open",
         code: "JOB_NOT_OPEN",
       });
     }
 
-    // Update application status
-    application.applicationStatus =
-      action === "accept" ? "accepted" : "rejected";
-    application.respondedAt = new Date();
-    await application.save();
+    // Update invitation status
+    invitation.invitationStatus = action === "accept" ? "accepted" : "rejected";
+    invitation.respondedAt = new Date();
+    await invitation.save();
 
     let contract = null;
 
     // If accepted, create work contract
     if (action === "accept") {
       contract = new WorkContract({
-        clientId: req.clientProfile._id,
-        workerId: application.workerId._id,
-        jobId: application.jobId._id,
-        contractType: "job_application",
-        agreedRate: application.proposedRate,
-        description: application.jobId.description,
-        applicationId: application._id,
+        clientId: invitation.clientId._id,
+        workerId: req.workerProfile._id,
+        jobId: invitation.jobId?._id || null,
+        contractType: "direct_invitation",
+        agreedRate: invitation.proposedRate,
+        description: invitation.description,
+        invitationId: invitation._id,
         createdIP: req.ip,
       });
 
       await contract.save();
 
-      // Update job status to in_progress
-      await Job.findByIdAndUpdate(application.jobId._id, {
-        status: "in_progress",
-        hiredWorker: application.workerId._id,
-      });
+      // If job-specific, update job status
+      if (invitation.jobId) {
+        await Job.findByIdAndUpdate(invitation.jobId._id, {
+          status: "in_progress",
+          hiredWorker: req.workerProfile._id,
+        });
 
-      // Reject all other pending applications for this job
-      await JobApplication.updateMany(
-        {
-          jobId: application.jobId._id,
-          applicationStatus: "pending",
-          _id: { $ne: application._id },
-        },
-        {
-          applicationStatus: "rejected",
-          respondedAt: new Date(),
-        }
-      );
+        // Cancel other pending invitations for this job
+        await WorkerInvitation.updateMany(
+          {
+            jobId: invitation.jobId._id,
+            invitationStatus: "pending",
+            _id: { $ne: invitation._id },
+          },
+          {
+            invitationStatus: "cancelled",
+            respondedAt: new Date(),
+          }
+        );
+      }
     }
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Application response processed successfully", {
-      applicationId,
+    logger.info("Invitation response processed successfully", {
+      invitationId,
       action,
       contractId: contract?._id,
-      jobId: application.jobId._id,
-      workerId: application.workerId._id,
-      clientId: req.clientProfile._id,
+      jobId: invitation.jobId?._id,
+      workerId: req.workerProfile._id,
+      clientId: invitation.clientId._id,
       userId: req.user.id,
       ip: req.ip,
       processingTime: `${processingTime}ms`,
@@ -404,10 +446,10 @@ const respondToApplication = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Application ${action}ed successfully`,
-      code: `APPLICATION_${action.toUpperCase()}ED`,
+      message: `Invitation ${action}ed successfully`,
+      code: `INVITATION_${action.toUpperCase()}ED`,
       data: {
-        application: application.toSafeObject(),
+        invitation: invitation.toSafeObject(),
         contract: contract?.toSafeObject() || null,
       },
       meta: {
@@ -416,12 +458,12 @@ const respondToApplication = async (req, res) => {
       },
     });
   } catch (error) {
-    return handleApplicationError(error, res, "Application response", req);
+    return handleInvitationError(error, res, "Invitation response", req);
   }
 };
 
-// Get applications sent by worker
-const getWorkerApplications = async (req, res) => {
+// Get invitations sent by client
+const getClientInvitations = async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -439,89 +481,8 @@ const getWorkerApplications = async (req, res) => {
       });
     }
 
-    const { page, limit, status, sortBy, order } = sanitizeInput(value);
-
-    // Build filter
-    const filter = {
-      workerId: req.workerProfile._id,
-      isDeleted: false,
-    };
-
-    if (status) filter.applicationStatus = status;
-
-    const sortOrder = order === "asc" ? 1 : -1;
-
-    // Get applications with pagination
-    const applications = await JobApplication.find(filter)
-      .populate({
-        path: "jobId",
-        select: "description price location category status",
-        populate: {
-          path: "category",
-          select: "categoryName",
-        },
-      })
-      .populate({
-        path: "clientId",
-        select: "firstName lastName profilePicture",
-      })
-      .sort({ [sortBy]: sortOrder })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
-
-    const totalCount = await JobApplication.countDocuments(filter);
-
-    const processingTime = Date.now() - startTime;
-
-    res.status(200).json({
-      success: true,
-      message: "Worker applications retrieved successfully",
-      code: "WORKER_APPLICATIONS_RETRIEVED",
-      data: {
-        applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
-        }),
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          itemsPerPage: limit,
-          hasNextPage: page < Math.ceil(totalCount / limit),
-          hasPrevPage: page > 1,
-        },
-      },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    return handleApplicationError(error, res, "Get worker applications", req);
-  }
-};
-
-// Get applications received by client for their jobs
-const getClientApplications = async (req, res) => {
-  const startTime = Date.now();
-
-  try {
-    // Validate query
-    const { error, value } = querySchema.validate(req.query);
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        code: "VALIDATION_ERROR",
-        errors: error.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
-      });
-    }
-
-    const { page, limit, status, sortBy, order } = sanitizeInput(value);
+    const { page, limit, status, invitationType, sortBy, order } =
+      sanitizeInput(value);
 
     // Build filter
     const filter = {
@@ -529,42 +490,42 @@ const getClientApplications = async (req, res) => {
       isDeleted: false,
     };
 
-    if (status) filter.applicationStatus = status;
+    if (status) filter.invitationStatus = status;
+    if (invitationType) filter.invitationType = invitationType;
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // Get applications with pagination
-    const applications = await JobApplication.find(filter)
+    // Get invitations with pagination
+    const invitations = await WorkerInvitation.find(filter)
+      .populate({
+        path: "workerId",
+        select: "firstName lastName profilePicture skills averageRating",
+      })
       .populate({
         path: "jobId",
-        select: "description price location category status",
+        select: "description price location category",
         populate: {
           path: "category",
           select: "categoryName",
         },
-      })
-      .populate({
-        path: "workerId",
-        select:
-          "firstName lastName profilePicture skills averageRating totalJobsCompleted",
       })
       .sort({ [sortBy]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean();
 
-    const totalCount = await JobApplication.countDocuments(filter);
+    const totalCount = await WorkerInvitation.countDocuments(filter);
 
     const processingTime = Date.now() - startTime;
 
     res.status(200).json({
       success: true,
-      message: "Client applications retrieved successfully",
-      code: "CLIENT_APPLICATIONS_RETRIEVED",
+      message: "Client invitations retrieved successfully",
+      code: "CLIENT_INVITATIONS_RETRIEVED",
       data: {
-        applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
+        invitations: invitations.map((inv) => {
+          const { senderIP, ...safeInv } = inv;
+          return safeInv;
         }),
         pagination: {
           currentPage: page,
@@ -581,12 +542,97 @@ const getClientApplications = async (req, res) => {
       },
     });
   } catch (error) {
-    return handleApplicationError(error, res, "Get client applications", req);
+    return handleInvitationError(error, res, "Get client invitations", req);
   }
 };
 
-// Worker withdraws application
-const withdrawApplication = async (req, res) => {
+// Get invitations received by worker
+const getWorkerInvitations = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate query
+    const { error, value } = querySchema.validate(req.query);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { page, limit, status, invitationType, sortBy, order } =
+      sanitizeInput(value);
+
+    // Build filter - only show non-expired invitations
+    const filter = {
+      workerId: req.workerProfile._id,
+      isDeleted: false,
+      expiresAt: { $gt: new Date() },
+    };
+
+    if (status) filter.invitationStatus = status;
+    if (invitationType) filter.invitationType = invitationType;
+
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    // Get invitations with pagination
+    const invitations = await WorkerInvitation.find(filter)
+      .populate({
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+      })
+      .populate({
+        path: "jobId",
+        select: "description price location category",
+        populate: {
+          path: "category",
+          select: "categoryName",
+        },
+      })
+      .sort({ [sortBy]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const totalCount = await WorkerInvitation.countDocuments(filter);
+
+    const processingTime = Date.now() - startTime;
+
+    res.status(200).json({
+      success: true,
+      message: "Worker invitations retrieved successfully",
+      code: "WORKER_INVITATIONS_RETRIEVED",
+      data: {
+        invitations: invitations.map((inv) => {
+          const { senderIP, ...safeInv } = inv;
+          return safeInv;
+        }),
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          itemsPerPage: limit,
+          hasNextPage: page < Math.ceil(totalCount / limit),
+          hasPrevPage: page > 1,
+        },
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleInvitationError(error, res, "Get worker invitations", req);
+  }
+};
+
+// Client cancels invitation
+const cancelInvitation = async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -595,39 +641,39 @@ const withdrawApplication = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: "Invalid application ID",
+        message: "Invalid invitation ID",
         code: "INVALID_PARAM",
       });
     }
 
-    const { id: applicationId } = sanitizeInput(value);
+    const { id: invitationId } = sanitizeInput(value);
 
-    // Find application
-    const application = await JobApplication.findOne({
-      _id: applicationId,
-      workerId: req.workerProfile._id,
-      applicationStatus: "pending",
+    // Find invitation
+    const invitation = await WorkerInvitation.findOne({
+      _id: invitationId,
+      clientId: req.clientProfile._id,
+      invitationStatus: "pending",
       isDeleted: false,
     });
 
-    if (!application) {
+    if (!invitation) {
       return res.status(404).json({
         success: false,
-        message: "Application not found or cannot be withdrawn",
-        code: "APPLICATION_NOT_FOUND",
+        message: "Invitation not found or cannot be cancelled",
+        code: "INVITATION_NOT_FOUND",
       });
     }
 
     // Update status
-    application.applicationStatus = "withdrawn";
-    application.respondedAt = new Date();
-    await application.save();
+    invitation.invitationStatus = "cancelled";
+    invitation.respondedAt = new Date();
+    await invitation.save();
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Application withdrawn successfully", {
-      applicationId,
-      workerId: req.workerProfile._id,
+    logger.info("Invitation cancelled successfully", {
+      invitationId,
+      clientId: req.clientProfile._id,
       userId: req.user.id,
       ip: req.ip,
       processingTime: `${processingTime}ms`,
@@ -636,22 +682,22 @@ const withdrawApplication = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Application withdrawn successfully",
-      code: "APPLICATION_WITHDRAWN",
+      message: "Invitation cancelled successfully",
+      code: "INVITATION_CANCELLED",
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
-    return handleApplicationError(error, res, "Withdraw application", req);
+    return handleInvitationError(error, res, "Cancel invitation", req);
   }
 };
 
 module.exports = {
-  applyToJob,
-  respondToApplication,
-  getWorkerApplications,
-  getClientApplications,
-  withdrawApplication,
+  inviteWorker,
+  respondToInvitation,
+  getClientInvitations,
+  getWorkerInvitations,
+  cancelInvitation,
 };

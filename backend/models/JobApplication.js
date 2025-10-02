@@ -5,78 +5,49 @@ const jobApplicationSchema = new mongoose.Schema(
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
-      required: [true, "Job ID is required"],
+      required: true,
       index: true,
     },
     workerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Worker",
-      required: [true, "Worker ID is required"],
-      index: true,
-    },
-    credentialId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Credential",
-      required: [true, "Credential ID is required"],
+      required: true,
       index: true,
     },
     clientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Client",
-      required: [true, "Client ID is required"],
+      required: true,
       index: true,
     },
-    coverLetter: {
+    applicationStatus: {
       type: String,
-      required: [true, "Cover letter is required"],
-      trim: true,
-      minLength: [20, "Cover letter must be at least 20 characters"],
-      maxLength: [2000, "Cover letter cannot exceed 2000 characters"],
-    },
-    proposedPrice: {
-      type: Number,
-      required: [true, "Proposed price is required"],
-      min: [0, "Price cannot be negative"],
-      max: [1000000, "Price cannot exceed 1,000,000"],
-    },
-    estimatedDuration: {
-      value: {
-        type: Number,
-        required: [true, "Duration value is required"],
-        min: [1, "Duration must be at least 1"],
-        max: [365, "Duration cannot exceed 365"],
-      },
-      unit: {
-        type: String,
-        required: [true, "Duration unit is required"],
-        enum: {
-          values: ["hours", "days", "weeks", "months"],
-          message: "Duration unit must be hours, days, weeks, or months",
-        },
-      },
-    },
-    status: {
-      type: String,
-      enum: {
-        values: ["pending", "accepted", "rejected"],
-        message: "Status must be pending, accepted, rejected",
-      },
+      enum: ["pending", "accepted", "rejected", "withdrawn"],
       default: "pending",
       index: true,
+    },
+    proposedRate: {
+      type: Number,
+      required: true,
+      min: [0, "Proposed rate cannot be negative"],
+      max: [1000000, "Proposed rate cannot exceed 1,000,000"],
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: [10, "Message must be at least 10 characters"],
+      maxlength: [1000, "Message cannot exceed 1000 characters"],
     },
     appliedAt: {
       type: Date,
       default: Date.now,
       index: true,
     },
-    viewedByClient: {
-      type: Boolean,
-      default: false,
-    },
-    viewedAt: {
+    respondedAt: {
       type: Date,
+      default: null,
     },
-    // Tracking and analytics
     isDeleted: {
       type: Boolean,
       default: false,
@@ -84,11 +55,34 @@ const jobApplicationSchema = new mongoose.Schema(
     },
     deletedAt: {
       type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound indexes for efficient queries
+jobApplicationSchema.index({ jobId: 1, workerId: 1 }, { unique: true }); // Prevent duplicate applications
+jobApplicationSchema.index({ clientId: 1, applicationStatus: 1 });
+jobApplicationSchema.index({ workerId: 1, applicationStatus: 1 });
+jobApplicationSchema.index({ appliedAt: -1 });
+
+// Pre-save middleware for validation
+jobApplicationSchema.pre("save", function (next) {
+  if (this.applicationStatus !== "pending" && !this.respondedAt) {
+    this.respondedAt = new Date();
+  }
+  next();
+});
+
+// Instance methods
+jobApplicationSchema.methods.toSafeObject = function () {
+  const obj = this.toObject();
+  delete obj.applicantIP;
+  delete obj.__v;
+  return obj;
+};
 
 module.exports = mongoose.model("JobApplication", jobApplicationSchema);

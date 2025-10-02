@@ -1526,7 +1526,7 @@ const checkAuth = async (req, res) => {
         fullName: `${decryptedFirstName} ${decryptedLastName}`,
         userType: credential.userType,
         isAuthenticated: credential.isAuthenticated,
-        isVerified: credential.isVerified,
+        isVerified: user.isVerified,
         address: decryptedAddress,
         image: user.profilePicture?.url || null,
 

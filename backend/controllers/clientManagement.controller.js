@@ -94,9 +94,9 @@ const getClients = async (req, res) => {
     // Add status filter
     if (status !== "all") {
       if (status === "blocked") {
-        matchConditions["cred.isBlocked"] = true;
+        matchConditions["blocked"] = true;
       } else if (status === "active") {
-        matchConditions["cred.isBlocked"] = { $ne: true };
+        matchConditions["blocked"] = { $ne: true };
       }
     }
 
@@ -124,13 +124,13 @@ const getClients = async (req, res) => {
           contactNumber: 1,
           dateOfBirth: 1,
           maritalStatus: 1,
+          blocked: 1,
+          isVerified: 1,
+          verifiedAt: 1,
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
           userType: "$cred.userType",
-          isBlocked: "$cred.isBlocked",
-          blockReason: "$cred.blockReason",
-          blockedAt: "$cred.blockedAt",
         },
       },
     ];
