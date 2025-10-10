@@ -11,6 +11,7 @@ const Client = require("../models/Client");
 
 // Utils
 const logger = require("../utils/logger");
+const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 // ==================== JOI SCHEMAS ====================
 const applicationSchema = Joi.object({
@@ -480,8 +481,32 @@ const getWorkerApplications = async (req, res) => {
       code: "WORKER_APPLICATIONS_RETRIEVED",
       data: {
         applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
+          const { applicantIP, clientId, workerId, message, ...safeApp } = app;
+
+          // Decrypt client name if it exists
+          const decryptedClient = clientId
+            ? {
+              ...clientId,
+              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
+              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
+            }
+            : null;
+
+          // Decrypt worker name if needed
+          const decryptedWorker = workerId
+            ? {
+              ...workerId,
+              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
+              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
+            }
+            : null;
+
+          return {
+            ...safeApp,
+            clientId: decryptedClient,
+            workerId: decryptedWorker,
+            message, // if message is also encrypted, you can decrypt here too
+          };
         }),
         pagination: {
           currentPage: page,

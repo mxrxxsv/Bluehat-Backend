@@ -42,7 +42,6 @@ const ApplicationsPage = () => {
                 } else if (user.userType === "client") {
                     response = await getClientApplications();
                 }
-
                 setApplications(response?.data?.applications || []);
             } catch (err) {
                 console.error("❌ fetchApplications error:", err);
@@ -133,16 +132,16 @@ const ApplicationsPage = () => {
 
                                     {/* Job Title (for worker) */}
                                     {userType === "worker" && (
-                                        <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                                        <p className="text-xs sm:text-sm text-gray-600 flex items-center truncate gap-2 mt-1 ">
                                             <Briefcase className="w-4 h-4" />
-                                            {app.jobId?.description?.substring(0, 50) || "Job"}
+                                            {app.jobId?.description?.substring(0, 49) || "Job"}
                                         </p>
                                     )}
 
                                     {/* Cover Letter (preview only) */}
                                     <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2 mt-1">
                                         <FileText className="w-4 h-4" />
-                                        {app.coverLetter?.substring(0, 40) || "No cover letter"}...
+                                        {app.message?.substring(0, 40) || "No cover letter"}...
                                     </p>
                                 </div>
                             </div>
@@ -151,14 +150,14 @@ const ApplicationsPage = () => {
                             <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                                 {/* Status Badge */}
                                 <span
-                                    className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${app.status === "accepted"
+                                    className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${app.applicationStatus === "accepted"
                                             ? "bg-green-100 text-green-600"
-                                            : app.status === "rejected"
+                                            : app.applicationStatus === "rejected"
                                                 ? "bg-red-100 text-red-600"
                                                 : "bg-yellow-100 text-yellow-600"
                                         }`}
                                 >
-                                    {app.status === "pending" ? "Pending" : app.status}
+                                    {app.applicationStatus === "pending" ? "Pending" : app.applicationStatus}
                                 </span>
 
                                 {/* View Details Icon */}
@@ -209,14 +208,14 @@ const ApplicationsPage = () => {
                                 <p className="text-xs sm:text-sm text-gray-600">
                                     Status:{" "}
                                     <span
-                                        className={`font-medium ${selectedApp.status === "accepted"
+                                        className={`font-medium ${selectedApp.applicationStatus === "accepted"
                                                 ? "text-green-600"
-                                                : selectedApp.status === "rejected"
+                                                : selectedApp.applicationStatus === "rejected"
                                                     ? "text-red-600"
                                                     : "text-yellow-600"
                                             }`}
                                     >
-                                        {selectedApp.status}
+                                        {selectedApp.applicationStatus}
                                     </span>
                                 </p>
                             </div>
@@ -226,21 +225,21 @@ const ApplicationsPage = () => {
                         <div className="text-start py-4 shadow-sm rounded-md mb-4 px-2 space-y-3">
                             <p className="text-gray-700 flex items-start gap-2 text-sm sm:text-base">
                                 <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                                <span>{selectedApp.coverLetter || "No cover letter"}</span>
+                                <span>{selectedApp.message || "No cover letter"}</span>
                             </p>
 
                             <p className="text-gray-700 flex items-center gap-2 text-sm sm:text-base">
                                 <Briefcase className="w-5 h-5 text-gray-400" />
-                                <span>₱{selectedApp.proposedPrice}</span>
+                                <span>₱{selectedApp.proposedRate}</span>
                             </p>
 
-                            <p className="text-gray-700 flex items-center gap-2 text-sm sm:text-base">
+                            {/* <p className="text-gray-700 flex items-center gap-2 text-sm sm:text-base">
                                 <Clock className="w-5 h-5 text-gray-400" />
                                 <span>
                                     {selectedApp.estimatedDuration?.value}{" "}
                                     {selectedApp.estimatedDuration?.unit}
                                 </span>
-                            </p>
+                            </p> */}
                         </div>
 
                         {/* Applied Date */}
