@@ -196,7 +196,7 @@ const applyToJob = async (req, res) => {
     // Check if worker already applied
     const existingApplication = await JobApplication.findOne({
       jobId,
-      workerId: req.workerProfile._id,
+      workerId: req.workerProfile.id,
       isDeleted: false,
     });
 
@@ -209,7 +209,7 @@ const applyToJob = async (req, res) => {
     }
 
     // Check if worker is trying to apply to their own job (edge case)
-    if (job.clientId._id.toString() === req.workerProfile._id.toString()) {
+    if (job.clientId.id.toString() === req.workerProfile.id.toString()) {
       return res.status(403).json({
         success: false,
         message: "You cannot apply to your own job posting",
@@ -220,8 +220,8 @@ const applyToJob = async (req, res) => {
     // Create application
     const application = new JobApplication({
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      workerId: req.workerProfile.id,
+      clientId: job.clientId.id,
       proposedRate,
       message,
       applicantIP: req.ip,
@@ -249,10 +249,10 @@ const applyToJob = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Job application submitted successfully", {
-      applicationId: application._id,
+      applicationId: application.id,
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      workerId: req.workerProfile.id,
+      clientId: job.clientId.id,
       proposedRate,
       userId: req.user.id,
       ip: req.ip,

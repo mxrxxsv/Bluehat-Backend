@@ -25,7 +25,7 @@ const Verification = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [verificationNotes, setVerificationNotes] = useState("");
+  // const [verificationNotes, setVerificationNotes] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch pending verifications
@@ -57,13 +57,12 @@ const Verification = () => {
     if (!selectedWorker) return;
     try {
       setActionLoading(true);
-      await approveVerification(selectedWorker._id, verificationNotes);
+      await approveVerification(selectedWorker.credentialId);
       setPendingVerifications((prev) =>
-        prev.filter((w) => w._id !== selectedWorker._id)
+        prev.filter((w) => w.credentialId !== selectedWorker.credentialId)
       );
       setShowModal(false);
       setSelectedWorker(null);
-      setVerificationNotes("");
       alert("Worker verified successfully!");
     } catch (err) {
       console.error("Error approving worker:", err);
@@ -295,8 +294,8 @@ const Verification = () => {
           worker={selectedWorker}
           showRejectModal={showRejectModal}
           setShowRejectModal={setShowRejectModal}
-          verificationNotes={verificationNotes}
-          setVerificationNotes={setVerificationNotes}
+          // verificationNotes={verificationNotes}
+          // setVerificationNotes={setVerificationNotes}
           rejectionReason={rejectionReason}
           setRejectionReason={setRejectionReason}
           actionLoading={actionLoading}
@@ -305,7 +304,7 @@ const Verification = () => {
           onClose={() => {
             setShowModal(false);
             setSelectedWorker(null);
-            setVerificationNotes("");
+            // setVerificationNotes("");
             setRejectionReason("");
           }}
         />
@@ -319,8 +318,8 @@ const VerificationModal = ({
   worker,
   showRejectModal,
   setShowRejectModal,
-  verificationNotes,
-  setVerificationNotes,
+  // verificationNotes,
+  // setVerificationNotes,
   rejectionReason,
   setRejectionReason,
   actionLoading,
@@ -368,12 +367,12 @@ const VerificationModal = ({
 
         {/* Notes & Actions */}
         <div className="p-6 border-t border-gray-200 flex flex-col gap-4">
-          <textarea
+          {/* <textarea
             value={verificationNotes}
             onChange={(e) => setVerificationNotes(e.target.value)}
             placeholder="Add verification notes (optional)..."
             className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          /> */}
 
           <div className="flex gap-2 justify-end">
             <button

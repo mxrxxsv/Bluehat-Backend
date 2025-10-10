@@ -27,20 +27,24 @@ const JobDetails = () => {
 
   // Fetch job by ID
   useEffect(() => {
-    const fetchJob = async () => {
-      try {
-        const res = await getJobById(id);
-        const jobData = res.data.data || res.data;
-        setJob(jobData);
-      } catch (err) {
-        console.error("❌ Error fetching job:", err);
-        setError("Job not found.");
-      } finally {
-        setLoadingJob(false);
-      }
-    };
-    fetchJob();
-  }, [id]);
+  const fetchJob = async () => {
+    try {
+      const res = await getJobById(id);
+      const jobData = res.data.data || res.data;
+      setJob(jobData);
+
+      console.log("🟢 Fetched job:", jobData);
+      console.log("🔹 job.client:", jobData.client);
+    } catch (err) {
+      console.error("❌ Error fetching job:", err);
+      setError("Job not found.");
+    } finally {
+      setLoadingJob(false);
+    }
+  };
+  fetchJob();
+}, [id]);
+
 
   // Fetch current user
   useEffect(() => {
@@ -63,20 +67,29 @@ const JobDetails = () => {
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
 
-    if (!job?.id) return;
+    if (!job?.id) {
+      return;
+    }
+
+    if (coverLetter.trim().length < 20) {
+      return setSubmitError("Cover letter must be at least 20 characters.");
+    }
+
+    if (Number(proposedPrice) <= 0) {
+      return setSubmitError("Proposed price must be greater than 0.");
+    }
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      await applyToJob(job.id, {
-        coverLetter,
-        proposedPrice: Number(proposedPrice),
-        estimatedDuration: { value: Number(durationValue), unit: durationUnit },
+      const res = await applyToJob(job.id, {
+        proposedRate: Number(proposedPrice),
+        message: coverLetter.trim(),
       });
 
-      // Close modal and redirect to chat
       setShowModal(false);
+
       if (job.client?.credentialId?._id) {
         navigate(`/chat/${job.client.credentialId._id}`, {
           state: { clientName: job.client.name },
@@ -184,7 +197,7 @@ const JobDetails = () => {
           currentUser.userType === "worker" ? (
             <button
               onClick={() => setShowModal(true)}
-              className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+              className="bg-[#55b3f3] hover:bg-blue-300 text-white mt-2 md:mt-0 px-6 py-2  rounded-full shadow font-semibold cursor-pointer"
             >
               Apply
             </button>
@@ -242,7 +255,7 @@ const JobDetails = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
+              {/* <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="block text-sm font-medium">Duration</label>
                   <input
@@ -268,7 +281,7 @@ const JobDetails = () => {
                     <option value="months">Months</option>
                   </select>
                 </div>
-              </div>
+              </div> */}
 
               <button
                 type="submit"
