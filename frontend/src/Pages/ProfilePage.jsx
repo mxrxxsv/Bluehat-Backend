@@ -353,6 +353,75 @@ const ProfilePage = () => {
               </button>
             </div>
 
+             {/* ================= EXPERIENCE ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Work Experience
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddExperienceOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
+              </h3>
+              {currentUser.experience && currentUser.experience.length > 0 ? (
+                <div className="space-y-4">
+                  {currentUser.experience.map((exp) => (
+                    <div
+                      key={exp._id}
+                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+                    >
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {exp.position || "Unknown Position"}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {exp.companyName || "Unknown Company"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {exp.startYear} – {exp.endYear || "Present"}
+                        </p>
+                        <p className="text-gray-700 mt-2 text-sm">
+                          {exp.responsibilities || "No details provided."}
+                        </p>
+                      </div>
+
+                      {/* ✅ Delete button at bottom */}
+                      {isEditMode && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No work experience added yet.</p>
+              )}
+            </div>
+
+          
+
+          {isAddExperienceOpen && (
+            <AddExperience
+              onClose={() => setIsAddExperienceOpen(false)}
+              onAdd={(newExperience) =>
+                setCurrentUser((prev) => ({
+                  ...prev,
+                  experiences: [...(prev.experiences || []), newExperience],
+                }))
+              }
+              onRefresh={fetchExperiences}
+            />
+          )}
+
             {/* ================= SKILLS ================= */}
 
             <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
@@ -552,76 +621,7 @@ const ProfilePage = () => {
               />
             )}
 
-
-            {/* ================= EXPERIENCE ================= */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Work Experience
-                {isEditMode && (
-                  <button
-                    onClick={() => setIsAddExperienceOpen(true)}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    + Add
-                  </button>
-                )}
-              </h3>
-              {currentUser.experience && currentUser.experience.length > 0 ? (
-                <div className="space-y-4">
-                  {currentUser.experience.map((exp) => (
-                    <div
-                      key={exp._id}
-                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
-                    >
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-800">
-                          {exp.position || "Unknown Position"}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {exp.companyName || "Unknown Company"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {exp.startYear} – {exp.endYear || "Present"}
-                        </p>
-                        <p className="text-gray-700 mt-2 text-sm">
-                          {exp.responsibilities || "No details provided."}
-                        </p>
-                      </div>
-
-                      {/* ✅ Delete button at bottom */}
-                      {isEditMode && (
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No work experience added yet.</p>
-              )}
-            </div>
-
           </div>
-
-          {isAddExperienceOpen && (
-            <AddExperience
-              onClose={() => setIsAddExperienceOpen(false)}
-              onAdd={(newExperience) =>
-                setCurrentUser((prev) => ({
-                  ...prev,
-                  experiences: [...(prev.experiences || []), newExperience],
-                }))
-              }
-              onRefresh={fetchExperiences}
-            />
-          )}
-
 
         </>
       )}

@@ -261,7 +261,7 @@ const Advertisement = () => {
 
           <textarea
             placeholder="Description"
-            className="border border-gray-300 rounded-lg px-3 py-2 w-full"
+            className="border border-gray-300 rounded-lg px-3 py-2 w-full h-70"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -281,7 +281,7 @@ const Advertisement = () => {
               <img
                 src={`${editingAd.image.url}?v=${Date.now()}`}
                 alt="Current"
-                className="w-40 h-24 object-cover rounded-lg mt-1"
+                className="w-70 h-70 object-cover rounded-lg mt-1"
               />
             </div>
           )}
