@@ -505,7 +505,7 @@ const getWorkerApplications = async (req, res) => {
             ...safeApp,
             clientId: decryptedClient,
             workerId: decryptedWorker,
-            message, // if message is also encrypted, you can decrypt here too
+            message,
           };
         }),
         pagination: {
@@ -588,8 +588,32 @@ const getClientApplications = async (req, res) => {
       code: "CLIENT_APPLICATIONS_RETRIEVED",
       data: {
         applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
+          const { applicantIP, clientId, workerId, message, ...safeApp } = app;
+
+          // Decrypt client name if it exists
+          const decryptedClient = clientId
+            ? {
+              ...clientId,
+              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
+              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
+            }
+            : null;
+
+          // Decrypt worker name if needed
+          const decryptedWorker = workerId
+            ? {
+              ...workerId,
+              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
+              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
+            }
+            : null;
+
+          return {
+            ...safeApp,
+            clientId: decryptedClient,
+            workerId: decryptedWorker,
+            message,
+          };
         }),
         pagination: {
           currentPage: page,
