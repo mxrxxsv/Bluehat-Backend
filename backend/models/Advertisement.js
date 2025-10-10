@@ -6,36 +6,39 @@ const advertisementSchema = new mongoose.Schema(
       type: String,
       required: [true, "Title is required"],
       trim: true,
+      // ✅ Updated for encrypted data - much larger limit
       minlength: [3, "Title must be at least 3 characters"],
-      maxlength: [100, "Title cannot exceed 100 characters"],
-      // ✅ Add character validation
-      validate: {
-        validator: function (v) {
-          return /^[a-zA-Z0-9\s\-\.\,\!\?\(\)\'\"]+$/.test(v);
-        },
-        message: "Title contains invalid characters",
-      },
+      maxlength: [500, "Encrypted title cannot exceed 500 characters"], // Increased for encrypted data
+      // ✅ Remove character validation since encrypted data won't match patterns
+      // validate: {
+      //   validator: function (v) {
+      //     return /^[a-zA-Z0-9\s\-\.\,\!\?\(\)\'\"]+$/.test(v);
+      //   },
+      //   message: "Title contains invalid characters",
+      // },
     },
     companyName: {
       type: String,
       required: [true, "Company name is required"],
       trim: true,
+      // ✅ Updated for encrypted data
       minlength: [2, "Company name must be at least 2 characters"],
-      maxlength: [100, "Company name cannot exceed 100 characters"],
-      // ✅ Add character validation
-      validate: {
-        validator: function (v) {
-          return /^[a-zA-Z0-9\s\-\.\&\,]+$/.test(v);
-        },
-        message: "Company name contains invalid characters",
-      },
+      maxlength: [500, "Encrypted company name cannot exceed 500 characters"], // Increased for encrypted data
+      // ✅ Remove character validation since encrypted data won't match patterns
+      // validate: {
+      //   validator: function (v) {
+      //     return /^[a-zA-Z0-9\s\-\.\&\,]+$/.test(v);
+      //   },
+      //   message: "Company name contains invalid characters",
+      // },
     },
     description: {
       type: String,
       required: [true, "Description is required"],
       trim: true,
+      // ✅ Updated for encrypted data
       minlength: [10, "Description must be at least 10 characters"],
-      maxlength: [1000, "Description cannot exceed 1000 characters"],
+      maxlength: [2000, "Encrypted description cannot exceed 2000 characters"], // Increased for encrypted data
     },
     image: {
       url: {
@@ -58,18 +61,21 @@ const advertisementSchema = new mongoose.Schema(
       type: String,
       required: [true, "Link is required"],
       trim: true,
-      validate: {
-        validator: (v) => {
-          try {
-            // ✅ More robust URL validation
-            new URL(v);
-            return /^https?:\/\/.+/i.test(v);
-          } catch {
-            return false;
-          }
-        },
-        message: "Must be a valid HTTP/HTTPS URL",
-      },
+      // ✅ Updated for encrypted data - remove URL validation since encrypted data won't be valid URLs
+      maxlength: [1000, "Encrypted link cannot exceed 1000 characters"], // Increased for encrypted data
+      // ✅ Remove URL validation since encrypted data won't match URL patterns
+      // validate: {
+      //   validator: (v) => {
+      //     try {
+      //       // ✅ More robust URL validation
+      //       new URL(v);
+      //       return /^https?:\/\/.+/i.test(v);
+      //     } catch {
+      //       return false;
+      //     }
+      //   },
+      //   message: "Must be a valid HTTP/HTTPS URL",
+      // },
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

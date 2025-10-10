@@ -2,36 +2,24 @@ const Joi = require("joi");
 const xss = require("xss");
 const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
+const crypto = require("crypto");
 const logger = require("../utils/logger");
+const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 const Advertisement = require("../models/Advertisement");
 
 // ==================== JOI SCHEMAS ====================
 const advertisementSchema = Joi.object({
-  title: Joi.string()
-    .trim()
-    .min(3)
-    .max(100)
-    .pattern(/^[a-zA-Z0-9\s\-\.\,\!\?\(\)\'\"]+$/)
-    .required()
-    .messages({
-      "string.min": "Title must be at least 3 characters long",
-      "string.max": "Title must not exceed 100 characters",
-      "string.pattern.base": "Title contains invalid characters",
-      "any.required": "Title is required",
-    }),
-  companyName: Joi.string()
-    .trim()
-    .min(2)
-    .max(100)
-    .pattern(/^[a-zA-Z0-9\s\-\.\&\,]+$/)
-    .required()
-    .messages({
-      "string.min": "Company name must be at least 2 characters long",
-      "string.max": "Company name must not exceed 100 characters",
-      "string.pattern.base": "Company name contains invalid characters",
-      "any.required": "Company name is required",
-    }),
+  title: Joi.string().trim().min(3).max(100).required().messages({
+    "string.min": "Title must be at least 3 characters long",
+    "string.max": "Title must not exceed 100 characters",
+    "any.required": "Title is required",
+  }),
+  companyName: Joi.string().trim().min(2).max(100).required().messages({
+    "string.min": "Company name must be at least 2 characters long",
+    "string.max": "Company name must not exceed 100 characters",
+    "any.required": "Company name is required",
+  }),
   description: Joi.string().trim().min(10).max(1000).required().messages({
     "string.min": "Description must be at least 10 characters long",
     "string.max": "Description must not exceed 1000 characters",
@@ -47,18 +35,8 @@ const advertisementSchema = Joi.object({
 });
 
 const updateAdvertisementSchema = Joi.object({
-  title: Joi.string()
-    .trim()
-    .min(3)
-    .max(100)
-    .pattern(/^[a-zA-Z0-9\s\-\.\,\!\?\(\)\'\"]+$/)
-    .optional(),
-  companyName: Joi.string()
-    .trim()
-    .min(2)
-    .max(100)
-    .pattern(/^[a-zA-Z0-9\s\-\.\&\,]+$/)
-    .optional(),
+  title: Joi.string().trim().min(3).max(100).optional(),
+  companyName: Joi.string().trim().min(2).max(100).optional(),
   description: Joi.string().trim().min(10).max(1000).optional(),
   link: Joi.string()
     .uri({ scheme: ["http", "https"] })
@@ -211,6 +189,78 @@ const deleteImageFromCloudinary = async (public_id) => {
   }
 };
 
+// ==================== ENCRYPTION HELPERS ====================
+
+// Encrypt sensitive advertisement data
+const encryptAdData = (adData) => {
+  try {
+    const sensitiveFields = ["title", "companyName", "description", "link"];
+    const encryptedData = { ...adData };
+
+    sensitiveFields.forEach((field) => {
+      if (encryptedData[field] && typeof encryptedData[field] === "string") {
+        encryptedData[field] = encryptAES128(encryptedData[field]);
+        logger.debug(`Encrypted field: ${field}`, {
+          originalLength: adData[field].length,
+          encryptedLength: encryptedData[field].length,
+        });
+      }
+    });
+
+    return encryptedData;
+  } catch (error) {
+    logger.error("Advertisement data encryption failed", {
+      error: error.message,
+      stack: error.stack,
+    });
+    throw new Error("Failed to encrypt advertisement data");
+  }
+};
+
+// Decrypt sensitive advertisement data
+const decryptAdData = (encryptedAdData) => {
+  try {
+    const sensitiveFields = ["title", "companyName", "description", "link"];
+    const decryptedData = { ...encryptedAdData };
+
+    sensitiveFields.forEach((field) => {
+      if (decryptedData[field] && typeof decryptedData[field] === "string") {
+        try {
+          decryptedData[field] = decryptAES128(decryptedData[field]);
+        } catch (decryptError) {
+          logger.warn(`Failed to decrypt field: ${field}`, {
+            error: decryptError.message,
+            field: field,
+          });
+          // Keep original value if decryption fails (backward compatibility)
+        }
+      }
+    });
+
+    return decryptedData;
+  } catch (error) {
+    logger.error("Advertisement data decryption failed", {
+      error: error.message,
+      stack: error.stack,
+    });
+    // Return original data if decryption fails completely
+    return encryptedAdData;
+  }
+};
+
+// Decrypt array of advertisements
+const decryptAdArray = (encryptedAds) => {
+  return encryptedAds.map((ad) => {
+    if (ad.toObject) {
+      // Handle Mongoose documents
+      return decryptAdData(ad.toObject());
+    } else {
+      // Handle plain objects
+      return decryptAdData(ad);
+    }
+  });
+};
+
 // ==================== CONTROLLERS ====================
 
 const addAds = async (req, res) => {
@@ -255,6 +305,53 @@ const addAds = async (req, res) => {
       });
     }
 
+    // ✅ Use pre-validated data from middleware (no need to re-validate)
+    const { title, companyName, description, link } = req.validatedData;
+
+    logger.info("Using pre-validated advertisement data", {
+      adminId: req.admin._id,
+      title: title.substring(0, 20) + "...",
+      companyName: companyName.substring(0, 20) + "...",
+    });
+
+    // ✅ Check for duplicates BEFORE file upload
+    const duplicateCheckHash = crypto
+      .createHash("sha256")
+      .update(`${title.toLowerCase()}|${companyName.toLowerCase()}`)
+      .digest("hex");
+
+    const existingAds = await Advertisement.find({
+      isDeleted: false,
+    }).lean();
+
+    let isDuplicate = false;
+    for (const existingAd of existingAds) {
+      try {
+        const decryptedExisting = decryptAdData(existingAd);
+        if (
+          decryptedExisting.title?.toLowerCase() === title.toLowerCase() &&
+          decryptedExisting.companyName?.toLowerCase() ===
+            companyName.toLowerCase()
+        ) {
+          isDuplicate = true;
+          break;
+        }
+      } catch (decryptError) {
+        logger.warn("Could not decrypt ad for duplicate check", {
+          adId: existingAd._id,
+          error: decryptError.message,
+        });
+      }
+    }
+
+    if (isDuplicate) {
+      return res.status(409).json({
+        success: false,
+        message: "Advertisement with similar title and company already exists",
+        code: "DUPLICATE_ADVERTISEMENT",
+      });
+    }
+
     // ✅ File validation
     if (!req.file) {
       logger.warn("Advertisement creation attempted without image", {
@@ -291,70 +388,8 @@ const addAds = async (req, res) => {
       });
     }
 
-    // ✅ Joi validation
-    const { error, value } = advertisementSchema.validate(req.body, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
-
-    if (error) {
-      logger.warn("Advertisement validation failed", {
-        errors: error.details,
-        adminId: req.admin._id,
-        ip: req.ip,
-      });
-
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        code: "VALIDATION_ERROR",
-        errors: error.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-          value: detail.context?.value,
-        })),
-      });
-    }
-
-    const sanitizedData = sanitizeInput(value);
-    const { title, companyName, description, link } = sanitizedData;
-
-    // ✅ URL validation
-    try {
-      const url = new URL(link);
-      const blockedDomains = ["localhost", "127.0.0.1", "0.0.0.0"];
-      if (blockedDomains.includes(url.hostname)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid link domain",
-          code: "INVALID_DOMAIN",
-        });
-      }
-    } catch (urlError) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid link URL format",
-        code: "INVALID_URL",
-      });
-    }
-
-    // ✅ Check for duplicates
-    const existingAd = await Advertisement.findOne({
-      title: { $regex: new RegExp(`^${escapeRegex(title)}$`, "i") },
-      companyName: { $regex: new RegExp(`^${escapeRegex(companyName)}$`, "i") },
-      isDeleted: false,
-    });
-
-    if (existingAd) {
-      return res.status(409).json({
-        success: false,
-        message: "Advertisement with similar title and company already exists",
-        code: "DUPLICATE_ADVERTISEMENT",
-      });
-    }
-
-    // ✅ Upload image
-    logger.info("Starting image upload", {
+    // ✅ Now upload image AFTER all validations pass
+    logger.info("Starting image upload after validation", {
       filename: req.file.originalname,
       size: req.file.size,
       adminId: req.admin._id,
@@ -362,16 +397,30 @@ const addAds = async (req, res) => {
 
     const uploadResult = await uploadImageToCloudinary(req.file, req.admin._id);
 
-    // ✅ Create advertisement
-    const newAd = new Advertisement({
+    // ✅ Encrypt sensitive data before saving
+    const encryptedAdData = encryptAdData({
       title,
       companyName,
       description,
+      link,
+    });
+
+    logger.info("Advertisement data encrypted successfully", {
+      adminId: req.admin._id,
+      originalTitle: title.substring(0, 10) + "...",
+      encryptedTitle: encryptedAdData.title.substring(0, 20) + "...",
+    });
+
+    // ✅ Create advertisement with encrypted data
+    const newAd = new Advertisement({
+      title: encryptedAdData.title,
+      companyName: encryptedAdData.companyName,
+      description: encryptedAdData.description,
       image: {
         url: uploadResult.url,
         public_id: uploadResult.public_id,
       },
-      link,
+      link: encryptedAdData.link,
       uploadedBy: req.admin._id,
     });
 
@@ -390,11 +439,14 @@ const addAds = async (req, res) => {
       ip: req.ip,
     });
 
+    // ✅ Decrypt data for response
+    const decryptedAdData = decryptAdData(savedAd.toObject());
+
     res.status(201).json({
       success: true,
       message: "Advertisement created successfully",
       data: {
-        ...savedAd.toObject(),
+        ...decryptedAdData,
         imageInfo: {
           width: uploadResult.width,
           height: uploadResult.height,
@@ -405,6 +457,7 @@ const addAds = async (req, res) => {
       meta: {
         timestamp: new Date().toISOString(),
         processingTime: `${processingTime}ms`,
+        encrypted: true, // Indicate data was encrypted
       },
     });
   } catch (err) {
@@ -606,7 +659,7 @@ const updateAds = async (req, res) => {
     }
 
     // ✅ Combine all updates
-    const allUpdates = {
+    let allUpdates = {
       ...updateData,
       ...imageUpdateData,
       updatedAt: new Date(),
@@ -618,6 +671,23 @@ const updateAds = async (req, res) => {
         success: false,
         message: "No valid fields provided for update",
         code: "NO_UPDATE_FIELDS",
+      });
+    }
+
+    // ✅ Encrypt sensitive text fields if they are being updated
+    if (updateData && Object.keys(updateData).length > 0) {
+      const encryptedUpdateData = encryptAdData(updateData);
+      allUpdates = {
+        ...encryptedUpdateData,
+        ...imageUpdateData,
+        updatedAt: new Date(),
+      };
+
+      logger.info("Advertisement update data encrypted", {
+        adId: sanitizedId,
+        adminId: req.admin._id,
+        fieldsToUpdate: Object.keys(updateData),
+        encryptedFields: Object.keys(encryptedUpdateData),
       });
     }
 
@@ -639,13 +709,17 @@ const updateAds = async (req, res) => {
       ip: req.ip,
     });
 
+    // ✅ Decrypt data for response
+    const decryptedAdData = decryptAdData(updatedAd.toObject());
+
     res.status(200).json({
       success: true,
       message: "Advertisement updated successfully",
-      data: updatedAd,
+      data: decryptedAdData,
       meta: {
         timestamp: new Date().toISOString(),
         processingTime: `${processingTime}ms`,
+        encrypted: true, // Indicate data was encrypted
       },
     });
   } catch (err) {
@@ -815,29 +889,92 @@ const getAds = async (req, res) => {
     const sanitizedQuery = sanitizeInput(value);
     const { companyName, title, sortBy, order, page, limit } = sanitizedQuery;
 
-    const filter = {
-      isDeleted: false,
-      isActive: true,
-      ...(companyName && {
-        companyName: new RegExp(escapeRegex(companyName), "i"),
-      }),
-      ...(title && {
-        title: new RegExp(escapeRegex(title), "i"),
-      }),
-    };
+    // ✅ Modified search approach for encrypted data
+    let ads, total;
 
-    const [ads, total] = await Promise.all([
-      Advertisement.find(filter)
+    if (companyName || title) {
+      // When search is requested, fetch all active ads and filter after decryption
+      logger.info("Performing encrypted data search", {
+        searchTitle: title ? "***" : null,
+        searchCompany: companyName ? "***" : null,
+      });
+
+      const allAds = await Advertisement.find({
+        isDeleted: false,
+        isActive: true,
+      })
         .populate("uploadedBy", "firstName lastName userName")
         .sort({ [sortBy]: order === "asc" ? 1 : -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      Advertisement.countDocuments(filter),
-    ]);
+        .lean();
+
+      // Decrypt and filter
+      const decryptedAds = [];
+      for (const ad of allAds) {
+        try {
+          const decryptedAd = decryptAdData(ad);
+
+          // Apply search filters
+          let matches = true;
+          if (
+            title &&
+            !decryptedAd.title?.toLowerCase().includes(title.toLowerCase())
+          ) {
+            matches = false;
+          }
+          if (
+            companyName &&
+            !decryptedAd.companyName
+              ?.toLowerCase()
+              .includes(companyName.toLowerCase())
+          ) {
+            matches = false;
+          }
+
+          if (matches) {
+            decryptedAds.push(decryptedAd);
+          }
+        } catch (decryptError) {
+          logger.warn("Could not decrypt ad for search", {
+            adId: ad._id,
+            error: decryptError.message,
+          });
+        }
+      }
+
+      // Apply pagination to filtered results
+      total = decryptedAds.length;
+      const startIndex = (page - 1) * limit;
+      ads = decryptedAds.slice(startIndex, startIndex + limit);
+    } else {
+      // No search filters, use normal pagination
+      const baseFilter = {
+        isDeleted: false,
+        isActive: true,
+      };
+
+      const [fetchedAds, totalCount] = await Promise.all([
+        Advertisement.find(baseFilter)
+          .populate("uploadedBy", "firstName lastName userName")
+          .sort({ [sortBy]: order === "asc" ? 1 : -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        Advertisement.countDocuments(baseFilter),
+      ]);
+
+      // Decrypt the paginated results
+      ads = decryptAdArray(fetchedAds);
+      total = totalCount;
+    }
 
     const totalPages = Math.ceil(total / limit);
     const processingTime = Date.now() - startTime;
+
+    logger.info("Advertisements retrieved and decrypted", {
+      totalAds: ads.length,
+      searchPerformed: !!(companyName || title),
+      processingTime: `${processingTime}ms`,
+    });
 
     res.set({
       "Cache-Control": "public, max-age=300",
@@ -848,7 +985,7 @@ const getAds = async (req, res) => {
       success: true,
       message: "Advertisements retrieved successfully",
       data: {
-        advertisements: ads,
+        advertisements: ads, // Already decrypted
         pagination: {
           currentPage: page,
           totalPages,
@@ -868,6 +1005,7 @@ const getAds = async (req, res) => {
         timestamp: new Date().toISOString(),
         processingTime: `${processingTime}ms`,
         cached: false,
+        encrypted: true, // Indicate data was encrypted and decrypted
       },
     });
   } catch (err) {
@@ -917,6 +1055,14 @@ const getAdsByID = async (req, res) => {
       });
     }
 
+    // ✅ Decrypt advertisement data before returning
+    const decryptedAd = decryptAdData(ad);
+
+    logger.info("Single advertisement retrieved and decrypted", {
+      adId: sanitizedId,
+      title: decryptedAd.title?.substring(0, 20) + "...",
+    });
+
     res.set({
       "Cache-Control": "public, max-age=600",
       ETag: `"ad-${ad._id}-${ad.updatedAt}"`,
@@ -925,7 +1071,10 @@ const getAdsByID = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Advertisement retrieved successfully",
-      data: ad,
+      data: decryptedAd,
+      meta: {
+        encrypted: true, // Indicate data was encrypted and decrypted
+      },
     });
   } catch (err) {
     logger.error("Get advertisement by ID failed", {

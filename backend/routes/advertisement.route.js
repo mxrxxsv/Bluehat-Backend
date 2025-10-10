@@ -4,6 +4,7 @@ const helmet = require("helmet");
 
 // Use your existing middleware
 const upload = require("../middleware/adminUpload");
+const uploadAdvertisement = require("../middleware/advertisementUpload");
 const verifyAdmin = require("../middleware/verifyAdmin");
 const { authLimiter, verifyLimiter } = require("../utils/rateLimit");
 const logger = require("../utils/logger");
@@ -111,8 +112,8 @@ router.get("/:id", getAdsByID);
 router.post(
   "/",
   verifyLimiter, // ✅ 1. Rate limiting FIRST
-  verifyAdmin, // ✅ 2. Admin auth SECOND (BEFORE file upload!)
-  upload, // ✅ 3. File upload THIRD (after auth verified)
+  verifyAdmin, // ✅ 2. Admin auth SECOND
+  uploadAdvertisement, // ✅ 3. Upload + Validation combined (secure!)
   addAds // ✅ 4. Controller LAST
 );
 
