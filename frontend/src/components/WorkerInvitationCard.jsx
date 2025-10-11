@@ -63,12 +63,13 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
             alt={worker.name}
             className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
           />
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <div className="flex-1 text-left">
+            <h3 className="text-lg font-semibold text-[#545454] flex items-center gap-2">
               <User className="w-5 h-5 text-blue-500" />
               {worker.firstName} {worker.lastName}
             </h3>
-            {worker.rating && (
+
+            {worker.rating !== undefined && worker.rating !== null && (
               <div className="flex items-center gap-1 mt-1">
                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
                 <span className="text-sm text-gray-600">
@@ -76,6 +77,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
                 </span>
               </div>
             )}
+
             {worker.location && (
               <div className="flex items-center gap-1 mt-1">
                 <MapPin className="w-4 h-4 text-gray-500" />
@@ -132,7 +134,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
         {/* Invite Button */}
         <button
           onClick={() => setShowInviteModal(true)}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-[#55b3f3] text-white py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
           <Send className="w-4 h-4" />
           Invite to Job
@@ -141,7 +143,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Invite {worker.firstName} {worker.lastName}
@@ -181,7 +183,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                   disabled={sending}
                 >
                   Cancel
@@ -189,7 +191,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
                 <button
                   type="submit"
                   disabled={sending}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 bg-[#55b3f3] text-white py-2 px-4 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {sending ? (
                     <>

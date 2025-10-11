@@ -45,8 +45,8 @@ function App() {
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/applications" element={<ApplicationsPage />} />
-        <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} />
+        {/* <Route path="/applications" element={<ApplicationsPage />} /> */}
+        {/* <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} /> */}
         <Route path="/feedback/:contractId" element={<FeedbackPage />} />
         <Route path="/contracts" element={<ContractManagement />} />
 
@@ -69,6 +69,24 @@ function App() {
           element={
             <ProtectedRoute>
               <FindWork />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/applications"
+          element={
+            <ProtectedRoute>
+              <ApplicationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/invite-workers/:jobId"
+          element={
+            <ProtectedRoute>
+              <InviteWorkersPage />
             </ProtectedRoute>
           }
         />

@@ -297,7 +297,7 @@ const ApplicationsPage = () => {
 
   return (
     <div className="p-4 sm:p-6 mt-24 max-w-5xl mx-auto">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-[#545454] mb-6">
         {userType === "worker"
           ? "My Applications & Invitations"
           : "Applications & Invitations Sent"}
@@ -309,8 +309,8 @@ const ApplicationsPage = () => {
           onClick={() => setActiveTab("applications")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === "applications"
-              ? "bg-white text-blue-600 shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
+              ? "bg-white text-[#55b3f3] shadow-sm"
+              : "text-gray-600 hover:text-gray-800 cursor-pointer"
           }`}
         >
           Applications ({applications.length})
@@ -319,8 +319,8 @@ const ApplicationsPage = () => {
           onClick={() => setActiveTab("invitations")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === "invitations"
-              ? "bg-white text-blue-600 shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
+              ? "bg-white text-[#55b3f3] shadow-sm"
+              : "text-gray-600 hover:text-gray-800 cursor-pointer"
           }`}
         >
           {userType === "worker" ? "Invitations Received" : "Invitations Sent"}{" "}

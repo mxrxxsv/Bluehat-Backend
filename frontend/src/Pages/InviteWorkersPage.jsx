@@ -32,7 +32,7 @@ const InviteWorkersPage = () => {
           !authRes?.data?.success ||
           authRes.data.data.userType !== "client"
         ) {
-          navigate("/dashboard");
+          navigate("/find-work");
           return;
         }
 
@@ -40,7 +40,7 @@ const InviteWorkersPage = () => {
         await loadJobAndWorkers();
       } catch (error) {
         console.error("Failed to initialize page:", error);
-        navigate("/dashboard");
+        navigate("/find-work");
       }
     };
 
@@ -139,33 +139,84 @@ const InviteWorkersPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex justify-center items-center h-64 mt-24">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 py-8 mt-24 space-y-8 mt-35">
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-xl p-6 shadow-md animate-pulse">
+            <div className="h-6 w-1/3 bg-gray-200 rounded mb-3"></div>
+            <div className="h-4 w-2/3 bg-gray-200 rounded mb-4"></div>
+            <div className="flex flex-wrap gap-3">
+              <div className="h-4 w-24 bg-gray-200 rounded"></div>
+              <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              <div className="h-4 w-28 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+
+          {/* Search & Filter Skeleton */}
+          <div className="bg-white rounded-xl p-6 shadow-md animate-pulse">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="h-10 w-full bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Result Count Skeleton */}
+          <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+
+          {/* Worker Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white p-5 rounded-xl shadow-md animate-pulse flex flex-col items-start gap-3"
+              >
+                <div className="flex items-center gap-4 w-full">
+                  <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+
+                <div className="h-3 bg-gray-200 rounded w-4/5 mt-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/5"></div>
+
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                </div>
+
+                <div className="mt-4 h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <div className="min-h-screen">
 
-      <div className="max-w-7xl mx-auto px-4 py-8 mt-20">
+      <div className="max-w-7xl mx-auto px-4 py-8 mt-25">
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4"
+            onClick={() => navigate("/find-work")}
+            className="flex items-center gap-2 text-[#55b3f3] hover:text-sky-500 mb-4 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            Back
           </button>
 
           {job && (
             <div className="bg-white rounded-xl p-6 shadow-md">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              <h1 className="text-2xl font-bold text-[#545454] mb-2">
                 Invite Workers for: {job.title}
               </h1>
               <p className="text-gray-600 mb-4">{job.description}</p>
@@ -174,8 +225,8 @@ const InviteWorkersPage = () => {
                   <MapPin className="w-4 h-4" />
                   {job.location}
                 </span>
-                <span>Budget: ₱{job.budget}</span>
-                <span>Duration: {job.duration}</span>
+                {/* <span>Budget: ₱{job.budget}</span>
+                <span>Duration: {job.duration}</span> */}
               </div>
             </div>
           )}
@@ -227,7 +278,7 @@ const InviteWorkersPage = () => {
                 <option value="5">5 Stars</option>
               </select>
 
-              <select
+              {/* <select
                 value={filters.experienceLevel}
                 onChange={(e) =>
                   setFilters((prev) => ({
@@ -258,7 +309,7 @@ const InviteWorkersPage = () => {
                 <option value="Available">Available</option>
                 <option value="Busy">Busy</option>
                 <option value="Part-time">Part-time</option>
-              </select>
+              </select> */}
             </div>
           </div>
         </div>

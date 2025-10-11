@@ -93,7 +93,7 @@ const WorkerPortfolio = () => {
 
       <div className="flex items-start gap-6">
         <img
-          src={worker.profilePicture?.url || "https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg"}
+          src={worker.profilePicture?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
           alt={worker.fullName || "Worker"}
           onError={(e) => (e.target.src = "/default-profile.png")}
           className="w-24 h-24 rounded-full object-cover border"
