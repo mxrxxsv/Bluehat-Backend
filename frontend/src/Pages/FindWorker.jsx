@@ -288,7 +288,7 @@ const FindWorker = () => {
                       <div className="flex flex-col justify-between h-full mr-4" />
                       <div className="flex items-start gap-4 flex-1 text-[#252525]">
                         <img
-                          src={worker.profilePicture.url}
+                          src={worker.profilePicture.url || "https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg"}
                           alt={worker.fullName}
                           className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
                         />
@@ -348,8 +348,6 @@ const FindWorker = () => {
                           <span className="mt-0.5">{avgRating || 0}</span>
                         </p>
                       </div>
-
-
 
                       {/* <button
                         onClick={(e) => {

@@ -21,7 +21,7 @@ const WorkerPortfolio = () => {
       try {
         setLoading(true);
         const data = await getWorkerById(id);
-        setWorker(data.worker);
+        setWorker(data.worker || data);
         console.log(data);
       } catch (err) {
         setError(err.message || "Failed to fetch worker");
@@ -93,12 +93,14 @@ const WorkerPortfolio = () => {
 
       <div className="flex items-start gap-6">
         <img
-          src={worker?.profilePicture?.url}
-          alt={worker?.fullName || "Worker"}
-          className="w-32 h-32 object-cover rounded-full border"
+          src={worker.profilePicture?.url || "https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg"}
+          alt={worker.fullName || "Worker"}
+          onError={(e) => (e.target.src = "/default-profile.png")}
+          className="w-24 h-24 rounded-full object-cover border"
         />
 
-        <div className="flex-1 space-y-1 text-left mt-5">
+
+        <div className="flex-1 space-y-1 text-left ">
           <h1 className="text-sm md:text-3xl font-bold">{worker?.fullName}</h1>
           <p className="text-gray-700">{worker?.biography}</p>
           <p className="text-[12px] md:text-sm text-gray-500 flex flex-row">
@@ -253,16 +255,16 @@ const WorkerPortfolio = () => {
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-semibold text-left">Ratings & Reviews</h2>
           <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4 text-yellow-500"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
-                          </svg>
-                          <span className="mt-0.5">{averageRating} / 5</span>
-                        </p>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4 text-yellow-500"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
+            </svg>
+            <span className="mt-0.5">{averageRating} / 5</span>
+          </p>
         </div>
 
         <div className="space-y-2">
