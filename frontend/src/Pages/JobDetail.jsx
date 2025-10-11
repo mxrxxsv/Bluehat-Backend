@@ -188,14 +188,14 @@ const JobDetails = () => {
           currentUser.userType === "worker" ? (
             <button
               onClick={() => setShowModal(true)}
-              className="bg-[#55b3f3] hover:bg-blue-300 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+              className="bg-[#55b3f3] hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
             >
               Apply
             </button>
           ) : currentUser.userType === "client" ? (
             <button
               onClick={() => navigate(`/invite-workers/${job.id}`)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+              className="bg-[#55b3f3] hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
             >
               Invite Workers
             </button>
