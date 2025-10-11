@@ -16,6 +16,8 @@ const {
   getClientInvitations,
   getWorkerInvitations,
   cancelInvitation,
+  startInvitationDiscussion,
+  markInvitationAgreement,
 } = require("../controllers/workerInvitation.controller");
 
 // ==================== INVITATION ROUTES ====================
@@ -63,6 +65,39 @@ router.get(
   verifyToken,
   verifyWorker,
   getWorkerInvitations
+);
+
+// ==================== NEW AGREEMENT FLOW ROUTES ====================
+
+// Start discussion phase for invitation (worker only)
+router.patch(
+  "/:id/start-discussion",
+  hiringLimiter,
+  verifyToken,
+  verifyWorker,
+  startInvitationDiscussion
+);
+
+// Mark agreement status (both client and worker)
+router.patch(
+  "/:id/agreement",
+  hiringLimiter,
+  verifyToken,
+  (req, res, next) => {
+    // Allow both client and worker to access this endpoint
+    if (req.user.userType === "client" && req.clientProfile) {
+      return next();
+    }
+    if (req.user.userType === "worker" && req.workerProfile) {
+      return next();
+    }
+    return res.status(403).json({
+      success: false,
+      message: "Access denied",
+      code: "ACCESS_DENIED",
+    });
+  },
+  markInvitationAgreement
 );
 
 module.exports = router;

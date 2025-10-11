@@ -57,12 +57,27 @@ const workContractSchema = new mongoose.Schema(
     // Status tracking
     contractStatus: {
       type: String,
-      enum: ["active", "in_progress", "completed", "cancelled", "disputed"],
+      enum: [
+        "active",
+        "in_progress",
+        "awaiting_client_confirmation",
+        "completed",
+        "cancelled",
+        "disputed",
+      ],
       default: "active",
       index: true,
     },
 
     // Completion & feedback
+    workerCompletedAt: {
+      type: Date,
+      default: null,
+    },
+    clientConfirmedAt: {
+      type: Date,
+      default: null,
+    },
     completedAt: {
       type: Date,
       default: null,

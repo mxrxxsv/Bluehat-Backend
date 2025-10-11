@@ -16,9 +16,72 @@ const {
   getContractDetails,
   startWork,
   completeWork,
+  confirmWorkCompletion,
   submitFeedback,
   cancelContract,
 } = require("../controllers/workContract.controller");
+
+// Debug route to check contracts
+router.get("/debug/all", async (req, res) => {
+  try {
+    const WorkContract = require("../models/WorkContract");
+    const contracts = await WorkContract.find({}).populate([
+      { path: "clientId", select: "firstName lastName" },
+      { path: "workerId", select: "firstName lastName" },
+      { path: "jobId", select: "title description" },
+    ]);
+
+    res.json({
+      success: true,
+      count: contracts.length,
+      contracts: contracts.map((c) => ({
+        id: c._id,
+        status: c.contractStatus,
+        clientName: `${c.clientId.firstName} ${c.clientId.lastName}`,
+        workerName: `${c.workerId.firstName} ${c.workerId.lastName}`,
+        jobTitle: c.jobId?.title || "No job title",
+        agreedRate: c.agreedRate,
+        createdAt: c.createdAt,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Test contract retrieval with auth
+router.get("/debug/my", verifyToken, async (req, res) => {
+  try {
+    const WorkContract = require("../models/WorkContract");
+    const Client = require("../models/Client");
+    const Worker = require("../models/Worker");
+
+    let profile = null;
+    if (req.user.userType === "client") {
+      profile = await Client.findOne({ credentialId: req.user.id });
+    } else {
+      profile = await Worker.findOne({ credentialId: req.user.id });
+    }
+
+    const filter =
+      req.user.userType === "client"
+        ? { clientId: profile._id }
+        : { workerId: profile._id };
+
+    const contracts = await WorkContract.find(filter);
+
+    res.json({
+      success: true,
+      userType: req.user.userType,
+      profileId: profile?._id,
+      filter,
+      count: contracts.length,
+      contracts,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ==================== CONTRACT ROUTES ====================
 
@@ -100,6 +163,24 @@ router.patch(
       });
     }
     return completeWork(req, res);
+  }
+);
+
+// Client confirms work completion
+router.patch(
+  "/:id/confirm-completion",
+  contractActionLimiter,
+  verifyToken,
+  verifyClientOrWorker,
+  (req, res) => {
+    if (req.user.userType !== "client") {
+      return res.status(403).json({
+        success: false,
+        message: "Client access required",
+        code: "CLIENT_ACCESS_REQUIRED",
+      });
+    }
+    return confirmWorkCompletion(req, res);
   }
 );
 

@@ -17,12 +17,12 @@ const workerInvitationSchema = new mongoose.Schema(
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
-      default: null,
+      required: true, // Changed to required as per your requirement
       index: true,
     },
     invitationType: {
       type: String,
-      enum: ["job_specific", "general_hire"],
+      enum: ["job_specific"], // Removed general_hire as per your requirement
       required: true,
     },
     proposedRate: {
@@ -40,9 +40,35 @@ const workerInvitationSchema = new mongoose.Schema(
     },
     invitationStatus: {
       type: String,
-      enum: ["pending", "accepted", "rejected", "cancelled"],
+      enum: [
+        "pending",
+        "in_discussion",
+        "client_agreed",
+        "worker_agreed",
+        "both_agreed",
+        "accepted",
+        "rejected",
+        "cancelled",
+      ],
       default: "pending",
       index: true,
+    },
+    // New fields for messaging agreement flow
+    clientAgreed: {
+      type: Boolean,
+      default: false,
+    },
+    workerAgreed: {
+      type: Boolean,
+      default: false,
+    },
+    discussionStartedAt: {
+      type: Date,
+      default: null,
+    },
+    agreementCompletedAt: {
+      type: Date,
+      default: null,
     },
     sentAt: {
       type: Date,

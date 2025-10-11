@@ -70,21 +70,21 @@ const JobDetails = () => {
 
     try {
       await applyToJob(job.id, {
-        coverLetter,
-        proposedPrice: Number(proposedPrice),
-        estimatedDuration: { value: Number(durationValue), unit: durationUnit },
+        message: coverLetter,
+        proposedRate: Number(proposedPrice),
       });
 
-      // Close modal and redirect to chat
+      // Close modal and show success
       setShowModal(false);
-      if (job.client?.credentialId?._id) {
-        navigate(`/chat/${job.client.credentialId._id}`, {
-          state: { clientName: job.client.name },
-        });
-      }
+      alert(
+        "Application submitted successfully! You can now view it in the Applications page."
+      );
+
+      // Optionally navigate to applications page
+      navigate("/applications");
     } catch (err) {
       console.error("❌ Error applying:", err);
-      setSubmitError(err.response?.data?.message || "Failed to apply.");
+      setSubmitError(err.message || "Failed to apply.");
     } finally {
       setSubmitting(false);
     }
@@ -121,11 +121,13 @@ const JobDetails = () => {
             <div className="flex items-center gap-2">
               <img
                 src={
-                  typeof job.client?.profilePicture === "string" && job.client.profilePicture.trim() !== ""
+                  typeof job.client?.profilePicture === "string" &&
+                  job.client.profilePicture.trim() !== ""
                     ? job.client.profilePicture
-                    : job.client?.profilePicture?.url && job.client.profilePicture.url.trim() !== ""
-                      ? job.client.profilePicture.url
-                      : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                    : job.client?.profilePicture?.url &&
+                      job.client.profilePicture.url.trim() !== ""
+                    ? job.client.profilePicture.url
+                    : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
@@ -147,7 +149,9 @@ const JobDetails = () => {
             <span className="flex items-center justify-center w-5 h-5">
               <Briefcase size={20} className="text-blue-400" />
             </span>
-            <span className="text-sm md:text-lg mt-5 md:mt-0">{job.description}</span>
+            <span className="text-sm md:text-lg mt-5 md:mt-0">
+              {job.description}
+            </span>
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
@@ -188,6 +192,13 @@ const JobDetails = () => {
             >
               Apply
             </button>
+          ) : currentUser.userType === "client" ? (
+            <button
+              onClick={() => navigate(`/invite-workers/${job.id}`)}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+            >
+              Invite Workers
+            </button>
           ) : null
         ) : (
           <p className="text-red-500 font-medium">
@@ -217,7 +228,9 @@ const JobDetails = () => {
 
             <form onSubmit={handleSubmitApplication} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium">Cover Letter</label>
+                <label className="block text-sm font-medium">
+                  Cover Letter
+                </label>
                 <textarea
                   value={coverLetter}
                   onChange={(e) => setCoverLetter(e.target.value)}
@@ -230,7 +243,9 @@ const JobDetails = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">Proposed Price</label>
+                <label className="block text-sm font-medium">
+                  Proposed Price
+                </label>
                 <input
                   type="number"
                   value={proposedPrice}

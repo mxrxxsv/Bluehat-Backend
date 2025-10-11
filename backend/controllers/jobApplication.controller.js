@@ -8,6 +8,7 @@ const WorkContract = require("../models/WorkContract");
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
+const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
@@ -27,9 +28,19 @@ const applicationSchema = Joi.object({
 });
 
 const applicationResponseSchema = Joi.object({
-  action: Joi.string().valid("accept", "reject").required().messages({
-    "any.only": "Action must be either 'accept' or 'reject'",
-    "any.required": "Action is required",
+  action: Joi.string()
+    .valid("accept", "reject", "start_discussion")
+    .required()
+    .messages({
+      "any.only":
+        "Action must be either 'accept', 'reject', or 'start_discussion'",
+      "any.required": "Action is required",
+    }),
+});
+
+const agreementSchema = Joi.object({
+  agreed: Joi.boolean().required().messages({
+    "any.required": "Agreement status is required",
   }),
 });
 
@@ -56,6 +67,40 @@ const paramIdSchema = Joi.object({
 });
 
 // ==================== HELPER FUNCTIONS ====================
+const createConversationForContract = async (
+  clientId,
+  workerId,
+  contractId
+) => {
+  try {
+    // Check if conversation already exists
+    let conversation = await Conversation.findOne({
+      participants: { $all: [clientId, workerId] },
+      isDeleted: false,
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        participants: [clientId, workerId],
+        conversationType: "contract",
+        relatedContract: contractId,
+      });
+      await conversation.save();
+    }
+
+    return conversation;
+  } catch (error) {
+    logger.error("Failed to create conversation for contract", {
+      error: error.message,
+      clientId,
+      workerId,
+      contractId,
+    });
+    // Don't throw error - conversation creation shouldn't break contract creation
+    return null;
+  }
+};
+
 const sanitizeInput = (input) => {
   if (typeof input === "string") {
     return xss(input.trim(), {
@@ -345,14 +390,19 @@ const respondToApplication = async (req, res) => {
     }
 
     // Update application status
-    application.applicationStatus =
-      action === "accept" ? "accepted" : "rejected";
+    if (action === "start_discussion") {
+      application.applicationStatus = "in_discussion";
+      application.discussionStartedAt = new Date();
+    } else {
+      application.applicationStatus =
+        action === "accept" ? "accepted" : "rejected";
+    }
     application.respondedAt = new Date();
     await application.save();
 
     let contract = null;
 
-    // If accepted, create work contract
+    // If accepted directly (old flow) or start_discussion, create contract only if direct accept
     if (action === "accept") {
       contract = new WorkContract({
         clientId: req.clientProfile._id,
@@ -366,6 +416,13 @@ const respondToApplication = async (req, res) => {
       });
 
       await contract.save();
+
+      // Create conversation for contract
+      await createConversationForContract(
+        req.clientProfile._id,
+        application.workerId._id,
+        contract._id
+      );
 
       // Update job status to in_progress
       await Job.findByIdAndUpdate(application.jobId._id, {
@@ -648,10 +705,319 @@ const withdrawApplication = async (req, res) => {
   }
 };
 
+// ==================== NEW AGREEMENT FLOW FUNCTIONS ====================
+
+// Start discussion phase for application
+const startApplicationDiscussion = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { id: applicationId } = sanitizeInput(paramValue);
+
+    // Find application
+    const application = await JobApplication.findOne({
+      _id: applicationId,
+      clientId: req.clientProfile._id,
+      applicationStatus: "pending",
+      isDeleted: false,
+    }).populate([
+      {
+        path: "jobId",
+        select: "title description price location category status",
+      },
+      {
+        path: "workerId",
+        select: "firstName lastName profilePicture credentialId",
+      },
+    ]);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found or not accessible",
+        code: "APPLICATION_NOT_FOUND",
+      });
+    }
+
+    // Update to discussion phase
+    application.applicationStatus = "in_discussion";
+    application.discussionStartedAt = new Date();
+    await application.save();
+
+    logger.info("Application discussion started", {
+      applicationId,
+      jobId: application.jobId._id,
+      workerId: application.workerId._id,
+      clientId: req.clientProfile._id,
+      userId: req.user.id,
+      ip: req.ip,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Discussion phase started. You can now message each other.",
+      code: "DISCUSSION_STARTED",
+      data: {
+        application: application.toSafeObject(),
+        conversationInfo: {
+          participantCredentialId: application.workerId.credentialId,
+          participantUserType: "worker",
+        },
+      },
+    });
+  } catch (error) {
+    return handleApplicationError(
+      error,
+      res,
+      "Start application discussion",
+      req
+    );
+  }
+};
+
+// Mark agreement for application (client or worker)
+const markApplicationAgreement = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { error: bodyError, value: bodyValue } = agreementSchema.validate(
+      req.body
+    );
+    if (bodyError) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: bodyError.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { id: applicationId } = sanitizeInput(paramValue);
+    const { agreed } = sanitizeInput(bodyValue);
+
+    // Debug: Log the incoming request
+    logger.info("Agreement request received", {
+      applicationId,
+      agreed,
+      userType: req.user.userType,
+      userId: req.user.id,
+      clientId: req.clientProfile?._id,
+      workerId: req.workerProfile?._id,
+    });
+
+    // Find application - accessible by both client and worker
+    const query = {
+      _id: applicationId,
+      applicationStatus: {
+        $in: ["in_discussion", "client_agreed", "worker_agreed"],
+      },
+      isDeleted: false,
+    };
+
+    // Add user-specific filter
+    if (req.user.userType === "client") {
+      query.clientId = req.clientProfile._id;
+    } else if (req.user.userType === "worker") {
+      query.workerId = req.workerProfile._id;
+    }
+
+    // Debug: Log the query being used
+    logger.info("Agreement query", {
+      query,
+      userType: req.user.userType,
+    });
+
+    const application = await JobApplication.findOne(query).populate([
+      {
+        path: "jobId",
+        select: "title description price location status",
+      },
+      {
+        path: "workerId",
+        select: "firstName lastName profilePicture",
+      },
+      {
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+      },
+    ]);
+
+    if (!application) {
+      // Add debug information
+      logger.warn("Application not found for agreement", {
+        applicationId,
+        userType: req.user.userType,
+        userId: req.user.id,
+        clientId: req.clientProfile?._id,
+        workerId: req.workerProfile?._id,
+        query,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Application not found, not in agreement phase, or access denied",
+        code: "APPLICATION_NOT_FOUND",
+        debug: {
+          applicationId,
+          userType: req.user.userType,
+          statusRequired: "in_discussion, client_agreed, or worker_agreed",
+        },
+      });
+    }
+
+    // Update agreement status
+    if (req.user.userType === "client") {
+      application.clientAgreed = agreed;
+    } else {
+      application.workerAgreed = agreed;
+    }
+
+    // Determine new status
+    let newStatus = "in_discussion";
+    if (application.clientAgreed && application.workerAgreed) {
+      newStatus = "both_agreed";
+      application.agreementCompletedAt = new Date();
+    } else if (application.clientAgreed) {
+      newStatus = "client_agreed";
+    } else if (application.workerAgreed) {
+      newStatus = "worker_agreed";
+    }
+
+    application.applicationStatus = newStatus;
+    await application.save();
+
+    let contract = null;
+
+    // If both agreed, create contract automatically
+    if (newStatus === "both_agreed") {
+      contract = new WorkContract({
+        clientId: application.clientId._id,
+        workerId: application.workerId._id,
+        jobId: application.jobId._id,
+        contractType: "job_application",
+        agreedRate: application.proposedRate,
+        description: application.jobId.description,
+        applicationId: application._id,
+        createdIP: req.ip,
+      });
+
+      await contract.save();
+
+      // Create conversation for contract
+      await createConversationForContract(
+        application.clientId._id,
+        application.workerId._id,
+        contract._id
+      );
+
+      // Update job status
+      await Job.findByIdAndUpdate(application.jobId._id, {
+        status: "in_progress",
+        hiredWorker: application.workerId._id,
+      });
+
+      // Update application to accepted
+      application.applicationStatus = "accepted";
+      await application.save();
+
+      // Reject other pending applications
+      await JobApplication.updateMany(
+        {
+          jobId: application.jobId._id,
+          applicationStatus: {
+            $in: ["pending", "in_discussion", "client_agreed", "worker_agreed"],
+          },
+          _id: { $ne: application._id },
+        },
+        {
+          applicationStatus: "rejected",
+          respondedAt: new Date(),
+        }
+      );
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Application agreement updated", {
+      applicationId,
+      userType: req.user.userType,
+      agreed,
+      newStatus,
+      contractCreated: !!contract,
+      userId: req.user.id,
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: contract
+        ? "Both parties agreed! Work contract created successfully."
+        : `Agreement status updated. ${
+            newStatus === "client_agreed" || newStatus === "worker_agreed"
+              ? "Waiting for other party to agree."
+              : ""
+          }`,
+      code: contract ? "CONTRACT_CREATED" : "AGREEMENT_UPDATED",
+      data: {
+        application: application.toSafeObject(),
+        contract: contract?.toSafeObject() || null,
+        agreementStatus: {
+          clientAgreed: application.clientAgreed,
+          workerAgreed: application.workerAgreed,
+          status: newStatus,
+        },
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleApplicationError(
+      error,
+      res,
+      "Mark application agreement",
+      req
+    );
+  }
+};
+
 module.exports = {
   applyToJob,
   respondToApplication,
   getWorkerApplications,
   getClientApplications,
   withdrawApplication,
+  startApplicationDiscussion, // New
+  markApplicationAgreement, // New
 };
