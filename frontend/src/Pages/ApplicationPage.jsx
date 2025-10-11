@@ -71,7 +71,7 @@ const ApplicationsPage = () => {
         }
         setInvitations(invitationsResponse || []);
       } catch (err) {
-        console.error("❌ fetchData error:", err);
+        console.error("fetchData error:", err);
         setError(err.message || "Failed to load data");
       } finally {
         setLoading(false);
@@ -102,7 +102,7 @@ const ApplicationsPage = () => {
         if (updatedApp) setSelectedApp(updatedApp);
       }
     } catch (err) {
-      console.error("❌ Response failed:", err);
+      console.error("Response failed:", err);
       alert(err.message || "Failed to respond to application");
     }
   };
@@ -140,7 +140,7 @@ const ApplicationsPage = () => {
         }
       }
     } catch (err) {
-      console.error("❌ Start discussion failed:", err);
+      console.error("Start discussion failed:", err);
       alert(err.message || "Failed to start discussion");
     }
   };
@@ -175,7 +175,7 @@ const ApplicationsPage = () => {
         alert(response?.message || "Agreement status updated!");
       }
     } catch (err) {
-      console.error("❌ Agreement failed:", err);
+      console.error("Agreement failed:", err);
       alert(err.message || "Failed to update agreement");
     }
   };
@@ -203,7 +203,7 @@ const ApplicationsPage = () => {
         if (updatedInvitation) setSelectedInvitation(updatedInvitation);
       }
     } catch (err) {
-      console.error("❌ Invitation response failed:", err);
+      console.error("Invitation response failed:", err);
       alert(err.message || "Failed to respond to invitation");
     }
   };
@@ -241,7 +241,7 @@ const ApplicationsPage = () => {
         }
       }
     } catch (err) {
-      console.error("❌ Start invitation discussion failed:", err);
+      console.error("Start invitation discussion failed:", err);
       alert(err.message || "Failed to start discussion");
     }
   };
@@ -276,7 +276,7 @@ const ApplicationsPage = () => {
         alert(response?.message || "Agreement status updated!");
       }
     } catch (err) {
-      console.error("❌ Invitation agreement failed:", err);
+      console.error("Invitation agreement failed:", err);
       alert(err.message || "Failed to update agreement");
     }
   };
@@ -307,21 +307,19 @@ const ApplicationsPage = () => {
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
         <button
           onClick={() => setActiveTab("applications")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "applications"
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${activeTab === "applications"
               ? "bg-white text-[#55b3f3] shadow-sm"
               : "text-gray-600 hover:text-gray-800 cursor-pointer"
-          }`}
+            }`}
         >
           Applications ({applications.length})
         </button>
         <button
           onClick={() => setActiveTab("invitations")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "invitations"
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${activeTab === "invitations"
               ? "bg-white text-[#55b3f3] shadow-sm"
               : "text-gray-600 hover:text-gray-800 cursor-pointer"
-          }`}
+            }`}
         >
           {userType === "worker" ? "Invitations Received" : "Invitations Sent"}{" "}
           ({invitations.length})
@@ -351,9 +349,9 @@ const ApplicationsPage = () => {
                       src={
                         userType === "worker"
                           ? app.clientId?.profilePicture?.url ||
-                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                           : app.workerId?.profilePicture?.url ||
-                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                       }
                       alt="Avatar"
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
@@ -364,12 +362,10 @@ const ApplicationsPage = () => {
                       <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
                         <User className="w-4 h-4 text-blue-500" />
                         {userType === "worker"
-                          ? `${app.clientId?.firstName || ""} ${
-                              app.clientId?.lastName || ""
-                            }`
-                          : `${app.workerId?.firstName || ""} ${
-                              app.workerId?.lastName || ""
-                            }`}
+                          ? `${app.clientId?.firstName || ""} ${app.clientId?.lastName || ""
+                          }`
+                          : `${app.workerId?.firstName || ""} ${app.workerId?.lastName || ""
+                          }`}
                       </p>
 
                       {/* Job Title (for worker) */}
@@ -392,30 +388,29 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
-                      className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${
-                        app.applicationStatus === "accepted"
+                      className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${app.applicationStatus === "accepted"
                           ? "bg-green-100 text-green-600"
                           : app.applicationStatus === "rejected"
-                          ? "bg-red-100 text-red-600"
-                          : app.applicationStatus === "in_discussion"
-                          ? "bg-blue-100 text-blue-600"
-                          : app.applicationStatus === "client_agreed" ||
-                            app.applicationStatus === "worker_agreed"
-                          ? "bg-yellow-100 text-yellow-600"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
+                            ? "bg-red-100 text-red-600"
+                            : app.applicationStatus === "in_discussion"
+                              ? "bg-blue-100 text-blue-600"
+                              : app.applicationStatus === "client_agreed" ||
+                                app.applicationStatus === "worker_agreed"
+                                ? "bg-yellow-100 text-yellow-600"
+                                : "bg-gray-100 text-gray-600"
+                        }`}
                     >
                       {app.applicationStatus === "pending"
                         ? "Pending"
                         : app.applicationStatus === "in_discussion"
-                        ? "In Discussion"
-                        : app.applicationStatus === "client_agreed"
-                        ? "Client Agreed"
-                        : app.applicationStatus === "worker_agreed"
-                        ? "Worker Agreed"
-                        : app.applicationStatus === "both_agreed"
-                        ? "Both Agreed"
-                        : app.applicationStatus}
+                          ? "In Discussion"
+                          : app.applicationStatus === "client_agreed"
+                            ? "Client Agreed"
+                            : app.applicationStatus === "worker_agreed"
+                              ? "Worker Agreed"
+                              : app.applicationStatus === "both_agreed"
+                                ? "Both Agreed"
+                                : app.applicationStatus}
                     </span>
 
                     {/* View Details Icon */}
@@ -454,9 +449,9 @@ const ApplicationsPage = () => {
                       src={
                         userType === "worker"
                           ? invitation.clientId?.profilePicture?.url ||
-                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                           : invitation.workerId?.profilePicture?.url ||
-                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                       }
                       alt="Avatar"
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
@@ -467,12 +462,10 @@ const ApplicationsPage = () => {
                       <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
                         <User className="w-4 h-4 text-blue-500" />
                         {userType === "worker"
-                          ? `${invitation.clientId?.firstName || ""} ${
-                              invitation.clientId?.lastName || ""
-                            }`
-                          : `${invitation.workerId?.firstName || ""} ${
-                              invitation.workerId?.lastName || ""
-                            }`}
+                          ? `${invitation.clientId?.firstName || ""} ${invitation.clientId?.lastName || ""
+                          }`
+                          : `${invitation.workerId?.firstName || ""} ${invitation.workerId?.lastName || ""
+                          }`}
                       </p>
 
                       {/* Job Title */}
@@ -482,11 +475,6 @@ const ApplicationsPage = () => {
                           "Job"}
                       </p>
 
-                      {/* Proposed Rate */}
-                      <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
-                        Proposed Rate: ${invitation.proposedRate}
-                      </p>
-
                       {/* Description Preview */}
                       <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2 mt-1">
                         <FileText className="w-4 h-4" />
@@ -494,6 +482,12 @@ const ApplicationsPage = () => {
                           "No description"}
                         ...
                       </p>
+
+                      {/* Proposed Rate */}
+                      <p className="text-xs sm:text-sm flex text-gray-500 items-center font-medium mt-1">
+                        Proposed Rate: <span className="text-green-600 pl-1"> ${invitation.proposedRate}</span>
+                      </p>
+
                     </div>
                   </div>
 
@@ -501,36 +495,35 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        invitation.invitationStatus === "pending"
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${invitation.invitationStatus === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : invitation.invitationStatus === "accepted" ||
                             invitation.invitationStatus === "both_agreed"
-                          ? "bg-green-100 text-green-800"
-                          : invitation.invitationStatus === "rejected"
-                          ? "bg-red-100 text-red-800"
-                          : invitation.invitationStatus === "in_discussion" ||
-                            invitation.invitationStatus === "client_agreed" ||
-                            invitation.invitationStatus === "worker_agreed"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                            ? "bg-green-100 text-green-800"
+                            : invitation.invitationStatus === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : invitation.invitationStatus === "in_discussion" ||
+                                invitation.invitationStatus === "client_agreed" ||
+                                invitation.invitationStatus === "worker_agreed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                        }`}
                     >
                       {invitation.invitationStatus === "pending"
                         ? "Pending"
                         : invitation.invitationStatus === "in_discussion"
-                        ? "In Discussion"
-                        : invitation.invitationStatus === "client_agreed"
-                        ? "Client Agreed"
-                        : invitation.invitationStatus === "worker_agreed"
-                        ? "Worker Agreed"
-                        : invitation.invitationStatus === "both_agreed"
-                        ? "Both Agreed"
-                        : invitation.invitationStatus === "accepted"
-                        ? "Accepted"
-                        : invitation.invitationStatus === "rejected"
-                        ? "Rejected"
-                        : invitation.invitationStatus}
+                          ? "In Discussion"
+                          : invitation.invitationStatus === "client_agreed"
+                            ? "Client Agreed"
+                            : invitation.invitationStatus === "worker_agreed"
+                              ? "Worker Agreed"
+                              : invitation.invitationStatus === "both_agreed"
+                                ? "Both Agreed"
+                                : invitation.invitationStatus === "accepted"
+                                  ? "Accepted"
+                                  : invitation.invitationStatus === "rejected"
+                                    ? "Rejected"
+                                    : invitation.invitationStatus}
                     </span>
 
                     {/* View Details Icon */}
@@ -546,7 +539,7 @@ const ApplicationsPage = () => {
         </div>
       )}
 
-      {/* ✅ Modal for Full Details */}
+      {/* Modal for Full Details */}
       {selectedApp && (
         <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-50 px-3">
           <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg relative">
@@ -567,9 +560,9 @@ const ApplicationsPage = () => {
                 src={
                   userType === "worker"
                     ? selectedApp.clientId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                     : selectedApp.workerId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border object-cover"
@@ -583,28 +576,27 @@ const ApplicationsPage = () => {
                 <p className="text-xs sm:text-sm text-gray-600">
                   Status:{" "}
                   <span
-                    className={`font-medium ${
-                      selectedApp.applicationStatus === "accepted"
+                    className={`font-medium ${selectedApp.applicationStatus === "accepted"
                         ? "text-green-600"
                         : selectedApp.applicationStatus === "rejected"
-                        ? "text-red-600"
-                        : selectedApp.applicationStatus === "in_discussion"
-                        ? "text-blue-600"
-                        : selectedApp.applicationStatus === "client_agreed" ||
-                          selectedApp.applicationStatus === "worker_agreed"
-                        ? "text-yellow-600"
-                        : "text-gray-600"
-                    }`}
+                          ? "text-red-600"
+                          : selectedApp.applicationStatus === "in_discussion"
+                            ? "text-blue-600"
+                            : selectedApp.applicationStatus === "client_agreed" ||
+                              selectedApp.applicationStatus === "worker_agreed"
+                              ? "text-yellow-600"
+                              : "text-gray-600"
+                      }`}
                   >
                     {selectedApp.applicationStatus === "in_discussion"
                       ? "In Discussion"
                       : selectedApp.applicationStatus === "client_agreed"
-                      ? "Client Agreed"
-                      : selectedApp.applicationStatus === "worker_agreed"
-                      ? "Worker Agreed"
-                      : selectedApp.applicationStatus === "both_agreed"
-                      ? "Both Agreed"
-                      : selectedApp.applicationStatus}
+                        ? "Client Agreed"
+                        : selectedApp.applicationStatus === "worker_agreed"
+                          ? "Worker Agreed"
+                          : selectedApp.applicationStatus === "both_agreed"
+                            ? "Both Agreed"
+                            : selectedApp.applicationStatus}
                   </span>
                 </p>
               </div>
@@ -700,39 +692,39 @@ const ApplicationsPage = () => {
             {/* Agreement status display */}
             {(selectedApp.applicationStatus === "client_agreed" ||
               selectedApp.applicationStatus === "worker_agreed") && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-5 h-5 text-yellow-600" />
-                  <h3 className="font-semibold text-yellow-800">
-                    Waiting for Agreement
-                  </h3>
-                </div>
-                <p className="text-sm text-yellow-700 mb-3">
-                  {selectedApp.applicationStatus === "client_agreed"
-                    ? "Client has agreed. Waiting for worker to agree."
-                    : "Worker has agreed. Waiting for client to agree."}
-                </p>
-                {((userType === "client" &&
-                  selectedApp.applicationStatus === "worker_agreed") ||
-                  (userType === "worker" &&
-                    selectedApp.applicationStatus === "client_agreed")) && (
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={() => handleAgreement(selectedApp._id, true)}
-                      className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 cursor-pointer text-sm"
-                    >
-                      <ThumbsUp className="w-4 h-4" /> I Agree Too!
-                    </button>
-                    <button
-                      onClick={() => handleAgreement(selectedApp._id, false)}
-                      className="flex items-center gap-1 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 cursor-pointer text-sm"
-                    >
-                      <ThumbsDown className="w-4 h-4" /> I Don't Agree
-                    </button>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-5 h-5 text-yellow-600" />
+                    <h3 className="font-semibold text-yellow-800">
+                      Waiting for Agreement
+                    </h3>
                   </div>
-                )}
-              </div>
-            )}
+                  <p className="text-sm text-yellow-700 mb-3">
+                    {selectedApp.applicationStatus === "client_agreed"
+                      ? "Client has agreed. Waiting for worker to agree."
+                      : "Worker has agreed. Waiting for client to agree."}
+                  </p>
+                  {((userType === "client" &&
+                    selectedApp.applicationStatus === "worker_agreed") ||
+                    (userType === "worker" &&
+                      selectedApp.applicationStatus === "client_agreed")) && (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          onClick={() => handleAgreement(selectedApp._id, true)}
+                          className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 cursor-pointer text-sm"
+                        >
+                          <ThumbsUp className="w-4 h-4" /> I Agree Too!
+                        </button>
+                        <button
+                          onClick={() => handleAgreement(selectedApp._id, false)}
+                          className="flex items-center gap-1 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 cursor-pointer text-sm"
+                        >
+                          <ThumbsDown className="w-4 h-4" /> I Don't Agree
+                        </button>
+                      </div>
+                    )}
+                </div>
+              )}
 
             {/* Success state */}
             {selectedApp.applicationStatus === "accepted" && (
@@ -753,7 +745,7 @@ const ApplicationsPage = () => {
         </div>
       )}
 
-      {/* ✅ Modal for Invitation Details */}
+      {/* Modal for Invitation Details */}
       {selectedInvitation && (
         <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-50 px-3">
           <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg relative">
@@ -768,52 +760,52 @@ const ApplicationsPage = () => {
               Invitation Details
             </h2>
 
-            {/* User Info */}
-            <div className="flex items-center gap-3 sm:gap-4 mb-4">
-              <img
-                src={
-                  userType === "worker"
-                    ? selectedInvitation.clientId?.profilePicture?.url ||
+            {/* Invitation Details Card */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6">
+              {/* User Info */}
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+                <img
+                  src={
+                    userType === "worker"
+                      ? selectedInvitation.clientId?.profilePicture?.url ||
                       "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                    : selectedInvitation.workerId?.profilePicture?.url ||
+                      : selectedInvitation.workerId?.profilePicture?.url ||
                       "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                }
-                alt="Profile"
-                className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border"
-              />
-              <div>
-                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
-                  {userType === "worker"
-                    ? `${selectedInvitation.clientId?.firstName || ""} ${
-                        selectedInvitation.clientId?.lastName || ""
+                  }
+                  alt="Profile"
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-gray-300 shadow-sm"
+                />
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-base sm:text-lg">
+                    {userType === "worker"
+                      ? `${selectedInvitation.clientId?.firstName || ""} ${selectedInvitation.clientId?.lastName || ""
                       }`
-                    : `${selectedInvitation.workerId?.firstName || ""} ${
-                        selectedInvitation.workerId?.lastName || ""
+                      : `${selectedInvitation.workerId?.firstName || ""} ${selectedInvitation.workerId?.lastName || ""
                       }`}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  {userType === "worker" ? "Client" : "Worker"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 flex items-center">
+                    {userType === "worker" ? "Client" : "Worker"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Job Info */}
+              <div className="mb-5">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Job Description</h4>
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs sm:text-sm text-gray-600 shadow-inner">
+                  {selectedInvitation.jobId?.description || "No job description available."}
+                </div>
+              </div>
+
+              {/* Proposed Rate */}
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Proposed Rate</h4>
+                <p className="text-xl font-semibold text-green-600 tracking-wide">
+                  ${selectedInvitation.proposedRate || "0"}
                 </p>
               </div>
             </div>
 
-            {/* Job Info */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-800 text-sm mb-1">Job:</h4>
-              <p className="text-xs sm:text-sm text-gray-600">
-                {selectedInvitation.jobId?.description || "No job description"}
-              </p>
-            </div>
-
-            {/* Proposed Rate */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-800 text-sm mb-1">
-                Proposed Rate:
-              </h4>
-              <p className="text-lg font-semibold text-green-600">
-                ${selectedInvitation.proposedRate}
-              </p>
-            </div>
 
             {/* Invitation Description */}
             <div className="mb-4">
@@ -831,36 +823,35 @@ const ApplicationsPage = () => {
                 Status:
               </h4>
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  selectedInvitation.invitationStatus === "pending"
+                className={`px-3 py-1 rounded-full text-sm font-medium ${selectedInvitation.invitationStatus === "pending"
                     ? "bg-yellow-100 text-yellow-800"
                     : selectedInvitation.invitationStatus === "accepted" ||
                       selectedInvitation.invitationStatus === "both_agreed"
-                    ? "bg-green-100 text-green-800"
-                    : selectedInvitation.invitationStatus === "rejected"
-                    ? "bg-red-100 text-red-800"
-                    : selectedInvitation.invitationStatus === "in_discussion" ||
-                      selectedInvitation.invitationStatus === "client_agreed" ||
-                      selectedInvitation.invitationStatus === "worker_agreed"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
+                      ? "bg-green-100 text-green-800"
+                      : selectedInvitation.invitationStatus === "rejected"
+                        ? "bg-red-100 text-red-800"
+                        : selectedInvitation.invitationStatus === "in_discussion" ||
+                          selectedInvitation.invitationStatus === "client_agreed" ||
+                          selectedInvitation.invitationStatus === "worker_agreed"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                  }`}
               >
                 {selectedInvitation.invitationStatus === "pending"
                   ? "Pending"
                   : selectedInvitation.invitationStatus === "in_discussion"
-                  ? "In Discussion"
-                  : selectedInvitation.invitationStatus === "client_agreed"
-                  ? "Client Agreed"
-                  : selectedInvitation.invitationStatus === "worker_agreed"
-                  ? "Worker Agreed"
-                  : selectedInvitation.invitationStatus === "both_agreed"
-                  ? "Both Agreed"
-                  : selectedInvitation.invitationStatus === "accepted"
-                  ? "Accepted"
-                  : selectedInvitation.invitationStatus === "rejected"
-                  ? "Rejected"
-                  : selectedInvitation.invitationStatus}
+                    ? "In Discussion"
+                    : selectedInvitation.invitationStatus === "client_agreed"
+                      ? "Client Agreed"
+                      : selectedInvitation.invitationStatus === "worker_agreed"
+                        ? "Worker Agreed"
+                        : selectedInvitation.invitationStatus === "both_agreed"
+                          ? "Both Agreed"
+                          : selectedInvitation.invitationStatus === "accepted"
+                            ? "Accepted"
+                            : selectedInvitation.invitationStatus === "rejected"
+                              ? "Rejected"
+                              : selectedInvitation.invitationStatus}
               </span>
             </div>
 
@@ -872,7 +863,7 @@ const ApplicationsPage = () => {
                     onClick={() =>
                       handleInvitationResponse(selectedInvitation._id, "accept")
                     }
-                    className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Accept
@@ -881,7 +872,7 @@ const ApplicationsPage = () => {
                     onClick={() =>
                       handleStartInvitationDiscussion(selectedInvitation._id)
                     }
-                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
                     Discuss
@@ -890,7 +881,7 @@ const ApplicationsPage = () => {
                     onClick={() =>
                       handleInvitationResponse(selectedInvitation._id, "reject")
                     }
-                    className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <XCircle className="w-4 h-4" />
                     Reject
@@ -905,7 +896,7 @@ const ApplicationsPage = () => {
                   onClick={() =>
                     handleInvitationAgreement(selectedInvitation._id, true)
                   }
-                  className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ThumbsUp className="w-4 h-4" />
                   Agree
@@ -914,7 +905,7 @@ const ApplicationsPage = () => {
                   onClick={() =>
                     handleInvitationAgreement(selectedInvitation._id, false)
                   }
-                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ThumbsDown className="w-4 h-4" />
                   Disagree
@@ -925,14 +916,14 @@ const ApplicationsPage = () => {
             {/* Agreement Status Messages */}
             {(selectedInvitation.invitationStatus === "client_agreed" ||
               selectedInvitation.invitationStatus === "worker_agreed") && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-blue-800 text-sm font-medium">
-                  {selectedInvitation.invitationStatus === "client_agreed"
-                    ? "Client has agreed. Waiting for worker to agree."
-                    : "Worker has agreed. Waiting for client to agree."}
-                </p>
-              </div>
-            )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-blue-800 text-sm font-medium">
+                    {selectedInvitation.invitationStatus === "client_agreed"
+                      ? "Client has agreed. Waiting for worker to agree."
+                      : "Worker has agreed. Waiting for client to agree."}
+                  </p>
+                </div>
+              )}
 
             {/* Client Agreement Buttons */}
             {userType === "client" &&
@@ -946,7 +937,7 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, true)
                       }
-                      className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsUp className="w-4 h-4" />
                       Agree to Terms
@@ -955,7 +946,7 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, false)
                       }
-                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsDown className="w-4 h-4" />
                       Decline Terms
@@ -976,7 +967,7 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, true)
                       }
-                      className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsUp className="w-4 h-4" />
                       Agree to Terms
@@ -985,7 +976,7 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, false)
                       }
-                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsDown className="w-4 h-4" />
                       Decline Terms
@@ -997,20 +988,20 @@ const ApplicationsPage = () => {
             {/* Status Messages */}
             {(selectedInvitation.invitationStatus === "accepted" ||
               selectedInvitation.invitationStatus === "both_agreed") && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                <p className="text-green-800 text-sm font-medium">
-                  ✅{" "}
-                  {selectedInvitation.invitationStatus === "both_agreed"
-                    ? "Both parties agreed! Work contract has been created."
-                    : "Invitation accepted! Work can now begin."}
-                </p>
-              </div>
-            )}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                  <p className="text-green-800 text-sm font-medium">
+                    {" "}
+                    {selectedInvitation.invitationStatus === "both_agreed"
+                      ? "Both parties agreed! Work contract has been created."
+                      : "Invitation accepted! Work can now begin."}
+                  </p>
+                </div>
+              )}
 
             {selectedInvitation.invitationStatus === "rejected" && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                 <p className="text-red-800 text-sm font-medium">
-                  ❌ Invitation was rejected.
+                   Invitation was rejected.
                 </p>
               </div>
             )}
