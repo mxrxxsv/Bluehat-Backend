@@ -12,6 +12,7 @@ const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
+const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 // ==================== JOI SCHEMAS ====================
 const invitationSchema = Joi.object({
@@ -532,8 +533,7 @@ const getClientInvitations = async (req, res) => {
       });
     }
 
-    const { page, limit, status, invitationType, sortBy, order } =
-      sanitizeInput(value);
+    const { page, limit, status, invitationType, sortBy, order } = sanitizeInput(value);
 
     // Build filter
     const filter = {
@@ -546,7 +546,7 @@ const getClientInvitations = async (req, res) => {
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // Get invitations with pagination
+    // Fetch invitations
     const invitations = await WorkerInvitation.find(filter)
       .populate({
         path: "workerId",
@@ -566,18 +566,42 @@ const getClientInvitations = async (req, res) => {
       .lean();
 
     const totalCount = await WorkerInvitation.countDocuments(filter);
-
     const processingTime = Date.now() - startTime;
+
+    // 🧠 Decrypt worker’s firstName & lastName (if encrypted)
+    const decryptedInvitations = invitations.map((inv) => {
+      const { senderIP, ...safeInv } = inv;
+
+      if (safeInv.workerId) {
+        const worker = safeInv.workerId;
+        try {
+          if (worker.firstName) worker.firstName = decryptAES128(worker.firstName);
+          if (worker.lastName) worker.lastName = decryptAES128(worker.lastName);
+        } catch (err) {
+          console.warn("⚠️ Decryption failed for worker name:", err.message);
+        }
+      }
+
+      // 🧩 Optional: also decrypt client name if included
+      if (safeInv.clientId) {
+        const client = safeInv.clientId;
+        try {
+          if (client.firstName) client.firstName = decryptAES128(client.firstName);
+          if (client.lastName) client.lastName = decryptAES128(client.lastName);
+        } catch (err) {
+          console.warn("⚠️ Decryption failed for client name:", err.message);
+        }
+      }
+
+      return safeInv;
+    });
 
     res.status(200).json({
       success: true,
       message: "Client invitations retrieved successfully",
       code: "CLIENT_INVITATIONS_RETRIEVED",
       data: {
-        invitations: invitations.map((inv) => {
-          const { senderIP, ...safeInv } = inv;
-          return safeInv;
-        }),
+        invitations: decryptedInvitations,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -631,7 +655,7 @@ const getWorkerInvitations = async (req, res) => {
 
     const sortOrder = order === "asc" ? 1 : -1;
 
-    // Get invitations with pagination
+    // Fetch invitations
     const invitations = await WorkerInvitation.find(filter)
       .populate({
         path: "clientId",
@@ -651,18 +675,32 @@ const getWorkerInvitations = async (req, res) => {
       .lean();
 
     const totalCount = await WorkerInvitation.countDocuments(filter);
-
     const processingTime = Date.now() - startTime;
+
+    // 🧠 Decrypt client’s first & last name before sending
+    const decryptedInvitations = invitations.map((inv) => {
+      const { senderIP, ...safeInv } = inv;
+
+      if (safeInv.clientId) {
+        try {
+          if (safeInv.clientId.firstName)
+            safeInv.clientId.firstName = decryptAES128(safeInv.clientId.firstName);
+          if (safeInv.clientId.lastName)
+            safeInv.clientId.lastName = decryptAES128(safeInv.clientId.lastName);
+        } catch (err) {
+          console.warn("⚠️ Decryption failed for client name:", err.message);
+        }
+      }
+
+      return safeInv;
+    });
 
     res.status(200).json({
       success: true,
       message: "Worker invitations retrieved successfully",
       code: "WORKER_INVITATIONS_RETRIEVED",
       data: {
-        invitations: invitations.map((inv) => {
-          const { senderIP, ...safeInv } = inv;
-          return safeInv;
-        }),
+        invitations: decryptedInvitations,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -1022,6 +1060,6 @@ module.exports = {
   getClientInvitations,
   getWorkerInvitations,
   cancelInvitation,
-  startInvitationDiscussion, // New
-  markInvitationAgreement, // New
+  startInvitationDiscussion, 
+  markInvitationAgreement, 
 };
