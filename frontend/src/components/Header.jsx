@@ -42,14 +42,17 @@ const Header = () => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Keep "mousedown" for immediate outside detection
+    document.addEventListener("click", handleClickOutside);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
+
   }, []);
+
 
   useEffect(() => {
     const excludeAuthPages = ["/setup-2fa", "/verify-email"];
@@ -106,12 +109,14 @@ const Header = () => {
   const showAuthButtons = !user;
   const hideOp = opPages.includes(currentPath);
 
-  const goToProfile = () => {
+  const goToProfile = (e) => {
+    e.stopPropagation();
     setShowDropdown(false);
     navigate("/profile");
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (e) => {
+    e.stopPropagation();
     try {
       await Logout();
       setUser(null);
@@ -121,6 +126,7 @@ const Header = () => {
       alert("Logout failed");
     }
   };
+
 
   if (authLoading) {
     return (
@@ -205,7 +211,7 @@ const Header = () => {
                       {/* {user?.fname || user?.email} */}
                     </span>
 
-                    <div className="relative" ref={dropdownRef}>
+                    <div className="relative z-[1050]" ref={dropdownRef}>
                       {/* <img
                         src={profile}
                         alt="Profile"
@@ -220,7 +226,10 @@ const Header = () => {
                           }
                           alt="Avatar"
                           className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                          onClick={() => setShowDropdown(!showDropdown)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDropdown(!showDropdown);
+                          }}
                         />
                       </div>
                       {showDropdown && (
@@ -228,7 +237,10 @@ const Header = () => {
                           <ul className="py-2 text-sm text-gray-700">
                             <li>
                               <button
-                                onClick={goToProfile}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  goToProfile(e);
+                                }}
                                 className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
                               >
                                 Profile
@@ -236,7 +248,10 @@ const Header = () => {
                             </li>
                             <li>
                               <button
-                                onClick={handleLogout}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLogout(e);
+                                }}
                                 className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 cursor-pointer"
                               >
                                 Logout
@@ -339,7 +354,7 @@ const Header = () => {
                         <ul className="py-2 text-sm text-gray-700">
                           <li>
                             <button
-                              onClick={goToProfile}
+                              onClick={(e) => goToProfile(e)}
                               className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             >
                               Profile
@@ -363,8 +378,8 @@ const Header = () => {
                   <Link
                     to="/find-work"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Find Work
@@ -374,8 +389,8 @@ const Header = () => {
                   <Link
                     to="/find-workers"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Find Worker
@@ -385,8 +400,8 @@ const Header = () => {
                   <Link
                     to="/ads"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     Advertisement
@@ -396,8 +411,8 @@ const Header = () => {
                   <Link
                     to="/applications"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     {user?.userType === "worker"
@@ -409,8 +424,8 @@ const Header = () => {
                   <Link
                     to="/contracts"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
-                        ? "text-sky-500"
-                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                      ? "text-sky-500"
+                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                       }`}
                   >
                     My Contracts
