@@ -15,6 +15,7 @@ const Header = () => {
   const notificationRef = useRef(null);
   const location = useLocation();
   const currentPath = location.pathname;
+  const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
   const handleNotificationClick = () => {
     setShowNotifications((prev) => !prev);
@@ -52,11 +53,7 @@ const Header = () => {
 
   useEffect(() => {
     const excludeAuthPages = ["/setup-2fa", "/verify-email"];
-
-    if (excludeAuthPages.includes(location.pathname)) {
-      console.log("Skipping auth check for:", location.pathname);
-      return; // Don't check auth on these pages
-    }
+    if (excludeAuthPages.includes(location.pathname)) return;
 
     checkAuth()
       .then((res) => {
@@ -64,31 +61,25 @@ const Header = () => {
           const user = res.data.data;
           setUser(user);
 
-          if (user.userType === "worker") {
-            setMenuLabel("My Applications");
-          } else if (user.userType === "client") {
-            setMenuLabel("Applications Received");
-          } else {
-            setMenuLabel("Applications");
-          }
+          if (user.userType === "worker") setMenuLabel("My Applications");
+          else if (user.userType === "client") setMenuLabel("Applications Received");
+          else setMenuLabel("Applications");
         }
       })
       .catch(() => {
         const publicPages = [
-          "/",
-          "/home",
-          "/login",
-          "/signup",
-          "/workersignup",
-          "/clientsignup",
-          "/forgetpass",
-          "/workerquestion",
+          "/", "/home", "/login", "/signup",
+          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion",
         ];
         if (!publicPages.includes(location.pathname)) {
           navigate("/login");
         }
+      })
+      .finally(() => {
+        setAuthLoading(false); // ✅ mark done
       });
   }, [location.pathname, navigate]);
+
 
   // Sample notifications
   const notifications = [
@@ -123,7 +114,7 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       await Logout();
-      setUser(null); // <-- clear local user state
+      setUser(null);
       setShowDropdown(false);
       navigate("/home");
     } catch (err) {
@@ -131,7 +122,17 @@ const Header = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <header className="w-full fixed top-0 left-0 z-20 bg-[#f4f6f6] h-[80px]">
+
+      </header>
+    );
+  }
+
+
   return (
+
     <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
         <Link
@@ -249,6 +250,44 @@ const Header = () => {
                 </>
               )}
 
+              {/* Mobile Messages & Notifications */}
+              {!showAuthButtons && (
+                <div className="flex md:hidden items-center gap-1">
+                  <Link to="/chat">
+                    <Mail className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer" />
+                  </Link>
+
+                  <div className="relative">
+                    <Bell
+                      className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer"
+                      onClick={handleNotificationClick}
+                    />
+
+                    {showNotifications && (
+                      <div
+                        ref={notificationRef}
+                        className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-50"
+                      >
+                        <div className="p-4 text-sm text-gray-700">
+                          <p className="font-semibold mb-2">Notifications</p>
+                          <ul className="space-y-2">
+                            {notifications.map((notification, index) => (
+                              <li
+                                key={index}
+                                className="p-2 hover:bg-gray-100 rounded-md text-left"
+                              >
+                                {notification}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+
               <button
                 type="button"
                 className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
@@ -273,22 +312,60 @@ const Header = () => {
                   />
                 </svg>
               </button>
+
+
             </div>
             <nav
-              className={`items-left pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${
-                isOpen ? "block" : "hidden"
-              } bg-white`}
+              className={`pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${isOpen ? "block" : "hidden"
+                } bg-white`}
               id="navbar-sticky"
             >
-              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left">
+              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left relative">
+                {/* Mobile Profile Avatar beside first link */}
+                {!showAuthButtons && (
+                  <div className="absolute right-4 top-3 md:hidden" ref={dropdownRef}>
+                    <img
+                      src={
+                        user?.image ||
+                        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                      }
+                      alt="Avatar"
+                      className="w-9 h-9 rounded-full object-cover cursor-pointer"
+                      onClick={() => setShowDropdown(!showDropdown)}
+                    />
+
+                    {showDropdown && (
+                      <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <ul className="py-2 text-sm text-gray-700">
+                          <li>
+                            <button
+                              onClick={goToProfile}
+                              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                            >
+                              Profile
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              onClick={handleLogout}
+                              className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            >
+                              Logout
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <li>
                   <Link
                     to="/find-work"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/find-work")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Find Work
                   </Link>
@@ -296,11 +373,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/find-workers"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/find-workers")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Find Worker
                   </Link>
@@ -308,11 +384,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/ads"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/ads")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     Advertisement
                   </Link>
@@ -320,11 +395,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/applications"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/applications")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     {user?.userType === "worker"
                       ? "My Applications"
@@ -334,11 +408,10 @@ const Header = () => {
                 <li>
                   <Link
                     to="/contracts"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${
-                      isActive("/contracts")
+                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
                         ? "text-sky-500"
                         : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                    }`}
+                      }`}
                   >
                     My Contracts
                   </Link>

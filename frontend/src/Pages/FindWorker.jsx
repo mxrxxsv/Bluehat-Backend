@@ -244,7 +244,7 @@ const FindWorker = () => {
                   <option value="1">★ & up</option>
                 </select>
 
-                <select
+                {/* <select
                   className="w-48 h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
                   value={filtering.priceRange}
                   onChange={(e) =>
@@ -259,7 +259,7 @@ const FindWorker = () => {
                   <option value="500">₱500 and above</option>
                   <option value="1000">₱1000 and above</option>
                   <option value="5000">₱5000 and above</option>
-                </select>
+                </select> */}
               </div>
             </div>
 
@@ -288,7 +288,7 @@ const FindWorker = () => {
                       <div className="flex flex-col justify-between h-full mr-4" />
                       <div className="flex items-start gap-4 flex-1 text-[#252525]">
                         <img
-                          src={worker.profilePicture.url || "https://st3.depositphotos.com/6672868/13701/v/450/depositphotos_137014128-stock-illustration-user-profile-icon.jpg"}
+                          src={worker.profilePicture.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
                           alt={worker.fullName}
                           className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
                         />

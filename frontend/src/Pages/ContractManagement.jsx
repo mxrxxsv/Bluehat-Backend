@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Loader,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -198,19 +199,16 @@ const ContractManagement = () => {
     );
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">Loading contracts...</div>
-        </div>
+      <div className="flex justify-center items-center h-64 mt-20">
+        <Loader className="w-6 h-6 animate-spin text-blue-500" />
       </div>
     );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Contracts</h1>
@@ -222,7 +220,7 @@ const ContractManagement = () => {
         {contracts.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-[#545454] mb-2">
               No contracts found
             </h3>
             <p className="text-gray-500">
