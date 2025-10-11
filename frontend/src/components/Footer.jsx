@@ -4,7 +4,7 @@ const Footer = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    if (currentPath !== "/home") return null;
+    if (currentPath !== "/") return null;
 
     return (
         <footer className="bg-gradient-to-r from-[#f4f6f6] to-[#cfe8f7] text-gray-800 px-4 py-5">

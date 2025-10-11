@@ -12,6 +12,7 @@ const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
+const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 // ==================== JOI SCHEMAS ====================
 const applicationSchema = Joi.object({
@@ -241,7 +242,7 @@ const applyToJob = async (req, res) => {
     // Check if worker already applied
     const existingApplication = await JobApplication.findOne({
       jobId,
-      workerId: req.workerProfile._id,
+      workerId: req.workerProfile.id,
       isDeleted: false,
     });
 
@@ -254,7 +255,7 @@ const applyToJob = async (req, res) => {
     }
 
     // Check if worker is trying to apply to their own job (edge case)
-    if (job.clientId._id.toString() === req.workerProfile._id.toString()) {
+    if (job.clientId.id.toString() === req.workerProfile.id.toString()) {
       return res.status(403).json({
         success: false,
         message: "You cannot apply to your own job posting",
@@ -265,8 +266,8 @@ const applyToJob = async (req, res) => {
     // Create application
     const application = new JobApplication({
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      workerId: req.workerProfile.id,
+      clientId: job.clientId.id,
       proposedRate,
       message,
       applicantIP: req.ip,
@@ -294,10 +295,10 @@ const applyToJob = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Job application submitted successfully", {
-      applicationId: application._id,
+      applicationId: application.id,
       jobId,
-      workerId: req.workerProfile._id,
-      clientId: job.clientId._id,
+      workerId: req.workerProfile.id,
+      clientId: job.clientId.id,
       proposedRate,
       userId: req.user.id,
       ip: req.ip,
@@ -537,8 +538,32 @@ const getWorkerApplications = async (req, res) => {
       code: "WORKER_APPLICATIONS_RETRIEVED",
       data: {
         applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
+          const { applicantIP, clientId, workerId, message, ...safeApp } = app;
+
+          // Decrypt client name if it exists
+          const decryptedClient = clientId
+            ? {
+              ...clientId,
+              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
+              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
+            }
+            : null;
+
+          // Decrypt worker name if needed
+          const decryptedWorker = workerId
+            ? {
+              ...workerId,
+              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
+              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
+            }
+            : null;
+
+          return {
+            ...safeApp,
+            clientId: decryptedClient,
+            workerId: decryptedWorker,
+            message,
+          };
         }),
         pagination: {
           currentPage: page,
@@ -620,8 +645,32 @@ const getClientApplications = async (req, res) => {
       code: "CLIENT_APPLICATIONS_RETRIEVED",
       data: {
         applications: applications.map((app) => {
-          const { applicantIP, ...safeApp } = app;
-          return safeApp;
+          const { applicantIP, clientId, workerId, message, ...safeApp } = app;
+
+          // Decrypt client name if it exists
+          const decryptedClient = clientId
+            ? {
+              ...clientId,
+              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
+              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
+            }
+            : null;
+
+          // Decrypt worker name if needed
+          const decryptedWorker = workerId
+            ? {
+              ...workerId,
+              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
+              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
+            }
+            : null;
+
+          return {
+            ...safeApp,
+            clientId: decryptedClient,
+            workerId: decryptedWorker,
+            message,
+          };
         }),
         pagination: {
           currentPage: page,

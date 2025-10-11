@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/applications",
-  withCredentials: true,
+  baseURL: "http://localhost:5000/applications", 
+  withCredentials: true, 
 });
 
 // ==================== JOB APPLICATION API ====================
@@ -40,29 +40,7 @@ export const getClientApplications = async (params = {}) => {
 // Respond to job application (Client accepts/rejects or starts discussion)
 export const respondToApplication = async (applicationId, responseData) => {
   try {
-    const response = await API.patch(`/${applicationId}/respond`, responseData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: "Network error" };
-  }
-};
-
-// ==================== NEW AGREEMENT FLOW API ====================
-
-// Start discussion phase for application (Client only)
-export const startApplicationDiscussion = async (applicationId) => {
-  try {
-    const response = await API.patch(`/${applicationId}/start-discussion`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: "Network error" };
-  }
-};
-
-// Mark agreement status for application (Both client and worker)
-export const markApplicationAgreement = async (applicationId, agreed) => {
-  try {
-    const response = await API.patch(`/${applicationId}/agreement`, { agreed });
+    const response = await API.patch(`/respond/${applicationId}/respond`, responseData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { success: false, message: "Network error" };
