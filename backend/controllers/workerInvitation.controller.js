@@ -32,6 +32,7 @@ const invitationSchema = Joi.object({
     "string.max": "Description cannot exceed 2000 characters",
     "any.required": "Description is required",
   }),
+  invitationType: Joi.string().valid("job_specific").optional(), // Add as optional since backend sets it
 });
 
 const invitationResponseSchema = Joi.object({
@@ -329,7 +330,7 @@ const inviteWorker = async (req, res) => {
       workerId,
       clientId: req.clientProfile._id,
       jobId,
-      invitationType,
+      invitationType: "job_specific",
       proposedRate,
       userId: req.user.id,
       ip: req.ip,

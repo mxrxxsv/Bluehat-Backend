@@ -6,7 +6,13 @@ import {
   startApplicationDiscussion,
   markApplicationAgreement,
 } from "../api/jobApplication";
-import { getMyInvitations } from "../api/applications.jsx";
+import {
+  getMyInvitations,
+  getMySentInvitations,
+  respondToInvitation,
+  startInvitationDiscussion,
+  markInvitationAgreement,
+} from "../api/applications.jsx";
 import {
   Loader,
   User,
@@ -24,7 +30,6 @@ import {
 } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { createOrGetConversation } from "../api/message";
-import { useNavigate } from "react-router-dom";
 
 const ApplicationsPage = () => {
   const [applications, setApplications] = useState([]);
@@ -33,11 +38,11 @@ const ApplicationsPage = () => {
   const [error, setError] = useState(null);
   const [userType, setUserType] = useState(null);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [selectedInvitation, setSelectedInvitation] = useState(null);
   const [activeTab, setActiveTab] = useState("applications");
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchApplications = async () => {
+    const fetchData = async () => {
       try {
         const res = await checkAuth();
         if (!res?.data?.success) {
@@ -48,23 +53,32 @@ const ApplicationsPage = () => {
         const user = res.data.data;
         setUserType(user.userType);
 
-        let response;
+        // Fetch applications
+        let applicationsResponse;
         if (user.userType === "worker") {
-          response = await getWorkerApplications();
+          applicationsResponse = await getWorkerApplications();
         } else if (user.userType === "client") {
-          response = await getClientApplications();
+          applicationsResponse = await getClientApplications();
         }
+        setApplications(applicationsResponse?.data?.applications || []);
 
-        setApplications(response?.data?.applications || []);
+        // Fetch invitations
+        let invitationsResponse;
+        if (user.userType === "worker") {
+          invitationsResponse = await getMyInvitations();
+        } else if (user.userType === "client") {
+          invitationsResponse = await getMySentInvitations();
+        }
+        setInvitations(invitationsResponse || []);
       } catch (err) {
-        console.error("❌ fetchApplications error:", err);
-        setError(err.message || "Failed to load applications");
+        console.error("❌ fetchData error:", err);
+        setError(err.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchApplications();
+    fetchData();
   }, []);
 
   const handleResponse = async (applicationId, action) => {
@@ -166,6 +180,107 @@ const ApplicationsPage = () => {
     }
   };
 
+  // ==================== INVITATION HANDLERS ====================
+  const handleInvitationResponse = async (invitationId, action) => {
+    try {
+      await respondToInvitation(invitationId, { action });
+
+      // Refresh invitations to get updated status
+      const user = await checkAuth();
+      let response;
+      if (user.data.data.userType === "worker") {
+        response = await getMyInvitations();
+      } else if (user.data.data.userType === "client") {
+        response = await getMySentInvitations();
+      }
+      setInvitations(response || []);
+
+      // Update selected invitation if it's the one we just responded to
+      if (selectedInvitation?._id === invitationId) {
+        const updatedInvitation = response?.find(
+          (inv) => inv._id === invitationId
+        );
+        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+      }
+    } catch (err) {
+      console.error("❌ Invitation response failed:", err);
+      alert(err.message || "Failed to respond to invitation");
+    }
+  };
+
+  const handleStartInvitationDiscussion = async (invitationId) => {
+    try {
+      const response = await startInvitationDiscussion(invitationId);
+
+      // Refresh invitations
+      const user = await checkAuth();
+      let invitationsResponse;
+      if (user.data.data.userType === "worker") {
+        invitationsResponse = await getMyInvitations();
+      } else if (user.data.data.userType === "client") {
+        invitationsResponse = await getMySentInvitations();
+      }
+      setInvitations(invitationsResponse || []);
+
+      // Update selected invitation
+      if (selectedInvitation?._id === invitationId) {
+        const updatedInvitation = invitationsResponse?.find(
+          (inv) => inv._id === invitationId
+        );
+        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+      }
+
+      // Create or get conversation for messaging
+      if (response?.data?.conversationInfo) {
+        try {
+          await createOrGetConversation(response.data.conversationInfo);
+          alert("Discussion started! You can now message each other.");
+        } catch (msgErr) {
+          console.warn("Conversation creation failed:", msgErr);
+          alert("Discussion started, but messaging may not be available.");
+        }
+      }
+    } catch (err) {
+      console.error("❌ Start invitation discussion failed:", err);
+      alert(err.message || "Failed to start discussion");
+    }
+  };
+
+  const handleInvitationAgreement = async (invitationId, agreed) => {
+    try {
+      const response = await markInvitationAgreement(invitationId, { agreed });
+
+      // Refresh invitations
+      const user = await checkAuth();
+      let invitationsResponse;
+      if (user.data.data.userType === "worker") {
+        invitationsResponse = await getMyInvitations();
+      } else if (user.data.data.userType === "client") {
+        invitationsResponse = await getMySentInvitations();
+      }
+      setInvitations(invitationsResponse || []);
+
+      // Update selected invitation
+      if (selectedInvitation?._id === invitationId) {
+        const updatedInvitation = invitationsResponse?.find(
+          (inv) => inv._id === invitationId
+        );
+        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+      }
+
+      if (response?.data?.contract) {
+        alert(
+          "🎉 Both parties agreed! Work contract has been created successfully!"
+        );
+      } else {
+        alert(response?.message || "Agreement status updated!");
+      }
+    } catch (err) {
+      console.error("❌ Invitation agreement failed:", err);
+      alert(err.message || "Failed to update agreement");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64 mt-20">
@@ -184,105 +299,250 @@ const ApplicationsPage = () => {
     <div className="p-4 sm:p-6 mt-24 max-w-5xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">
         {userType === "worker"
-          ? "My Job Applications"
-          : "Applications Received"}
+          ? "My Applications & Invitations"
+          : "Applications & Invitations Sent"}
       </h1>
 
-      {applications.length === 0 ? (
-        <p className="text-gray-500 text-center sm:text-left">
-          {userType === "worker"
-            ? "You have not applied to any jobs yet."
-            : "No applications received yet."}
-        </p>
-      ) : (
-        <div className="grid gap-4 sm:gap-5">
-          {applications.map((app) => (
-            <div
-              key={app._id}
-              onClick={() => setSelectedApp(app)}
-              className="bg-white shadow-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-lg transition-all duration-200 cursor-pointer group"
-            >
-              {/* LEFT SIDE INFO */}
-              <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
-                <img
-                  src={
-                    userType === "worker"
-                      ? app.clientId?.profilePicture?.url ||
-                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                      : app.workerId?.profilePicture?.url ||
-                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                  }
-                  alt="Avatar"
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
-                />
+      {/* Tabs */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+        <button
+          onClick={() => setActiveTab("applications")}
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "applications"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          Applications ({applications.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("invitations")}
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "invitations"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          {userType === "worker" ? "Invitations Received" : "Invitations Sent"}{" "}
+          ({invitations.length})
+        </button>
+      </div>
 
-                <div>
-                  {/* Worker or Client Name */}
-                  <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
-                    <User className="w-4 h-4 text-blue-500" />
-                    {userType === "worker"
-                      ? `${app.clientId?.firstName || ""} ${
-                          app.clientId?.lastName || ""
-                        }`
-                      : `${app.workerId?.firstName || ""} ${
-                          app.workerId?.lastName || ""
-                        }`}
-                  </p>
-
-                  {/* Job Title (for worker) */}
-                  {userType === "worker" && (
-                    <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
-                      <Briefcase className="w-4 h-4" />
-                      {app.jobId?.description?.substring(0, 50) || "Job"}
-                    </p>
-                  )}
-
-                  {/* Cover Letter (preview only) */}
-                  <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2 mt-1">
-                    <FileText className="w-4 h-4" />
-                    {app.message?.substring(0, 40) || "No message"}...
-                  </p>
-                </div>
-              </div>
-
-              {/* RIGHT SIDE - STATUS / VIEW */}
-              <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
-                {/* Status Badge */}
-                <span
-                  className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${
-                    app.applicationStatus === "accepted"
-                      ? "bg-green-100 text-green-600"
-                      : app.applicationStatus === "rejected"
-                      ? "bg-red-100 text-red-600"
-                      : app.applicationStatus === "in_discussion"
-                      ? "bg-blue-100 text-blue-600"
-                      : app.applicationStatus === "client_agreed" ||
-                        app.applicationStatus === "worker_agreed"
-                      ? "bg-yellow-100 text-yellow-600"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
+      {/* Content based on active tab */}
+      {activeTab === "applications" && (
+        <div>
+          {applications.length === 0 ? (
+            <p className="text-gray-500 text-center sm:text-left">
+              {userType === "worker"
+                ? "You have not applied to any jobs yet."
+                : "No applications received yet."}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:gap-5">
+              {applications.map((app) => (
+                <div
+                  key={app._id}
+                  onClick={() => setSelectedApp(app)}
+                  className="bg-white shadow-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-lg transition-all duration-200 cursor-pointer group"
                 >
-                  {app.applicationStatus === "pending"
-                    ? "Pending"
-                    : app.applicationStatus === "in_discussion"
-                    ? "In Discussion"
-                    : app.applicationStatus === "client_agreed"
-                    ? "Client Agreed"
-                    : app.applicationStatus === "worker_agreed"
-                    ? "Worker Agreed"
-                    : app.applicationStatus === "both_agreed"
-                    ? "Both Agreed"
-                    : app.applicationStatus}
-                </span>
+                  {/* LEFT SIDE INFO */}
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
+                    <img
+                      src={
+                        userType === "worker"
+                          ? app.clientId?.profilePicture?.url ||
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          : app.workerId?.profilePicture?.url ||
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      }
+                      alt="Avatar"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
+                    />
 
-                {/* View Details Icon */}
-                <div className="flex items-center gap-1 text-blue-500 group-hover:text-blue-600 text-xs sm:text-sm font-medium">
-                  <Eye className="w-4 h-4" />
-                  View
+                    <div>
+                      {/* Worker or Client Name */}
+                      <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+                        <User className="w-4 h-4 text-blue-500" />
+                        {userType === "worker"
+                          ? `${app.clientId?.firstName || ""} ${
+                              app.clientId?.lastName || ""
+                            }`
+                          : `${app.workerId?.firstName || ""} ${
+                              app.workerId?.lastName || ""
+                            }`}
+                      </p>
+
+                      {/* Job Title (for worker) */}
+                      {userType === "worker" && (
+                        <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                          <Briefcase className="w-4 h-4" />
+                          {app.jobId?.description?.substring(0, 50) || "Job"}
+                        </p>
+                      )}
+
+                      {/* Cover Letter (preview only) */}
+                      <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2 mt-1">
+                        <FileText className="w-4 h-4" />
+                        {app.message?.substring(0, 40) || "No message"}...
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* RIGHT SIDE - STATUS / VIEW */}
+                  <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
+                    {/* Status Badge */}
+                    <span
+                      className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${
+                        app.applicationStatus === "accepted"
+                          ? "bg-green-100 text-green-600"
+                          : app.applicationStatus === "rejected"
+                          ? "bg-red-100 text-red-600"
+                          : app.applicationStatus === "in_discussion"
+                          ? "bg-blue-100 text-blue-600"
+                          : app.applicationStatus === "client_agreed" ||
+                            app.applicationStatus === "worker_agreed"
+                          ? "bg-yellow-100 text-yellow-600"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {app.applicationStatus === "pending"
+                        ? "Pending"
+                        : app.applicationStatus === "in_discussion"
+                        ? "In Discussion"
+                        : app.applicationStatus === "client_agreed"
+                        ? "Client Agreed"
+                        : app.applicationStatus === "worker_agreed"
+                        ? "Worker Agreed"
+                        : app.applicationStatus === "both_agreed"
+                        ? "Both Agreed"
+                        : app.applicationStatus}
+                    </span>
+
+                    {/* View Details Icon */}
+                    <div className="flex items-center gap-1 text-blue-500 group-hover:text-blue-600 text-xs sm:text-sm font-medium">
+                      <Eye className="w-4 h-4" />
+                      View
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
+      )}
+
+      {/* Invitations Tab */}
+      {activeTab === "invitations" && (
+        <div>
+          {invitations.length === 0 ? (
+            <p className="text-gray-500 text-center sm:text-left">
+              {userType === "worker"
+                ? "You have not received any invitations yet."
+                : "You have not sent any invitations yet."}
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:gap-5">
+              {invitations.map((invitation) => (
+                <div
+                  key={invitation._id}
+                  onClick={() => setSelectedInvitation(invitation)}
+                  className="bg-white shadow-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                >
+                  {/* LEFT SIDE INFO */}
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
+                    <img
+                      src={
+                        userType === "worker"
+                          ? invitation.clientId?.profilePicture?.url ||
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                          : invitation.workerId?.profilePicture?.url ||
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      }
+                      alt="Avatar"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
+                    />
+
+                    <div>
+                      {/* Client or Worker Name */}
+                      <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+                        <User className="w-4 h-4 text-blue-500" />
+                        {userType === "worker"
+                          ? `${invitation.clientId?.firstName || ""} ${
+                              invitation.clientId?.lastName || ""
+                            }`
+                          : `${invitation.workerId?.firstName || ""} ${
+                              invitation.workerId?.lastName || ""
+                            }`}
+                      </p>
+
+                      {/* Job Title */}
+                      <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                        <Briefcase className="w-4 h-4" />
+                        {invitation.jobId?.description?.substring(0, 50) ||
+                          "Job"}
+                      </p>
+
+                      {/* Proposed Rate */}
+                      <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
+                        Proposed Rate: ${invitation.proposedRate}
+                      </p>
+
+                      {/* Description Preview */}
+                      <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-2 mt-1">
+                        <FileText className="w-4 h-4" />
+                        {invitation.description?.substring(0, 40) ||
+                          "No description"}
+                        ...
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* RIGHT SIDE - STATUS */}
+                  <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
+                    {/* Status Badge */}
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        invitation.invitationStatus === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : invitation.invitationStatus === "accepted" ||
+                            invitation.invitationStatus === "both_agreed"
+                          ? "bg-green-100 text-green-800"
+                          : invitation.invitationStatus === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : invitation.invitationStatus === "in_discussion" ||
+                            invitation.invitationStatus === "client_agreed" ||
+                            invitation.invitationStatus === "worker_agreed"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {invitation.invitationStatus === "pending"
+                        ? "Pending"
+                        : invitation.invitationStatus === "in_discussion"
+                        ? "In Discussion"
+                        : invitation.invitationStatus === "client_agreed"
+                        ? "Client Agreed"
+                        : invitation.invitationStatus === "worker_agreed"
+                        ? "Worker Agreed"
+                        : invitation.invitationStatus === "both_agreed"
+                        ? "Both Agreed"
+                        : invitation.invitationStatus === "accepted"
+                        ? "Accepted"
+                        : invitation.invitationStatus === "rejected"
+                        ? "Rejected"
+                        : invitation.invitationStatus}
+                    </span>
+
+                    {/* View Details Icon */}
+                    <div className="flex items-center gap-1 text-blue-500 group-hover:text-blue-600 text-xs sm:text-sm font-medium">
+                      <Eye className="w-4 h-4" />
+                      View
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -486,6 +746,271 @@ const ApplicationsPage = () => {
                 <p className="text-sm text-green-700 mt-1">
                   Both parties have agreed. A work contract has been created and
                   the work can begin.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Modal for Invitation Details */}
+      {selectedInvitation && (
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-50 px-3">
+          <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg relative">
+            <button
+              onClick={() => setSelectedInvitation(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
+              Invitation Details
+            </h2>
+
+            {/* User Info */}
+            <div className="flex items-center gap-3 sm:gap-4 mb-4">
+              <img
+                src={
+                  userType === "worker"
+                    ? selectedInvitation.clientId?.profilePicture?.url ||
+                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                    : selectedInvitation.workerId?.profilePicture?.url ||
+                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                }
+                alt="Profile"
+                className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border"
+              />
+              <div>
+                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+                  {userType === "worker"
+                    ? `${selectedInvitation.clientId?.firstName || ""} ${
+                        selectedInvitation.clientId?.lastName || ""
+                      }`
+                    : `${selectedInvitation.workerId?.firstName || ""} ${
+                        selectedInvitation.workerId?.lastName || ""
+                      }`}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {userType === "worker" ? "Client" : "Worker"}
+                </p>
+              </div>
+            </div>
+
+            {/* Job Info */}
+            <div className="mb-4">
+              <h4 className="font-medium text-gray-800 text-sm mb-1">Job:</h4>
+              <p className="text-xs sm:text-sm text-gray-600">
+                {selectedInvitation.jobId?.description || "No job description"}
+              </p>
+            </div>
+
+            {/* Proposed Rate */}
+            <div className="mb-4">
+              <h4 className="font-medium text-gray-800 text-sm mb-1">
+                Proposed Rate:
+              </h4>
+              <p className="text-lg font-semibold text-green-600">
+                ${selectedInvitation.proposedRate}
+              </p>
+            </div>
+
+            {/* Invitation Description */}
+            <div className="mb-4">
+              <h4 className="font-medium text-gray-800 text-sm mb-1">
+                Message:
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                {selectedInvitation.description || "No message provided"}
+              </p>
+            </div>
+
+            {/* Status */}
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-800 text-sm mb-1">
+                Status:
+              </h4>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  selectedInvitation.invitationStatus === "pending"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : selectedInvitation.invitationStatus === "accepted" ||
+                      selectedInvitation.invitationStatus === "both_agreed"
+                    ? "bg-green-100 text-green-800"
+                    : selectedInvitation.invitationStatus === "rejected"
+                    ? "bg-red-100 text-red-800"
+                    : selectedInvitation.invitationStatus === "in_discussion" ||
+                      selectedInvitation.invitationStatus === "client_agreed" ||
+                      selectedInvitation.invitationStatus === "worker_agreed"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {selectedInvitation.invitationStatus === "pending"
+                  ? "Pending"
+                  : selectedInvitation.invitationStatus === "in_discussion"
+                  ? "In Discussion"
+                  : selectedInvitation.invitationStatus === "client_agreed"
+                  ? "Client Agreed"
+                  : selectedInvitation.invitationStatus === "worker_agreed"
+                  ? "Worker Agreed"
+                  : selectedInvitation.invitationStatus === "both_agreed"
+                  ? "Both Agreed"
+                  : selectedInvitation.invitationStatus === "accepted"
+                  ? "Accepted"
+                  : selectedInvitation.invitationStatus === "rejected"
+                  ? "Rejected"
+                  : selectedInvitation.invitationStatus}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            {userType === "worker" &&
+              selectedInvitation.invitationStatus === "pending" && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+                  <button
+                    onClick={() =>
+                      handleInvitationResponse(selectedInvitation._id, "accept")
+                    }
+                    className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Accept
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleStartInvitationDiscussion(selectedInvitation._id)
+                    }
+                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Discuss
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleInvitationResponse(selectedInvitation._id, "reject")
+                    }
+                    className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </button>
+                </div>
+              )}
+
+            {/* Agreement Buttons for Discussion Phase */}
+            {selectedInvitation.invitationStatus === "in_discussion" && (
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+                <button
+                  onClick={() =>
+                    handleInvitationAgreement(selectedInvitation._id, true)
+                  }
+                  className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                >
+                  <ThumbsUp className="w-4 h-4" />
+                  Agree
+                </button>
+                <button
+                  onClick={() =>
+                    handleInvitationAgreement(selectedInvitation._id, false)
+                  }
+                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                >
+                  <ThumbsDown className="w-4 h-4" />
+                  Disagree
+                </button>
+              </div>
+            )}
+
+            {/* Agreement Status Messages */}
+            {(selectedInvitation.invitationStatus === "client_agreed" ||
+              selectedInvitation.invitationStatus === "worker_agreed") && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-blue-800 text-sm font-medium">
+                  {selectedInvitation.invitationStatus === "client_agreed"
+                    ? "Client has agreed. Waiting for worker to agree."
+                    : "Worker has agreed. Waiting for client to agree."}
+                </p>
+              </div>
+            )}
+
+            {/* Client Agreement Buttons */}
+            {userType === "client" &&
+              (selectedInvitation.invitationStatus === "in_discussion" ||
+                selectedInvitation.invitationStatus === "worker_agreed" ||
+                (selectedInvitation.invitationStatus === "client_agreed" &&
+                  userType === "client")) && (
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <button
+                      onClick={() =>
+                        handleInvitationAgreement(selectedInvitation._id, true)
+                      }
+                      className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    >
+                      <ThumbsUp className="w-4 h-4" />
+                      Agree to Terms
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleInvitationAgreement(selectedInvitation._id, false)
+                      }
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      Decline Terms
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            {/* Worker Agreement Buttons */}
+            {userType === "worker" &&
+              (selectedInvitation.invitationStatus === "in_discussion" ||
+                selectedInvitation.invitationStatus === "client_agreed" ||
+                (selectedInvitation.invitationStatus === "worker_agreed" &&
+                  userType === "worker")) && (
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <button
+                      onClick={() =>
+                        handleInvitationAgreement(selectedInvitation._id, true)
+                      }
+                      className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    >
+                      <ThumbsUp className="w-4 h-4" />
+                      Agree to Terms
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleInvitationAgreement(selectedInvitation._id, false)
+                      }
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      Decline Terms
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            {/* Status Messages */}
+            {(selectedInvitation.invitationStatus === "accepted" ||
+              selectedInvitation.invitationStatus === "both_agreed") && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <p className="text-green-800 text-sm font-medium">
+                  ✅{" "}
+                  {selectedInvitation.invitationStatus === "both_agreed"
+                    ? "Both parties agreed! Work contract has been created."
+                    : "Invitation accepted! Work can now begin."}
+                </p>
+              </div>
+            )}
+
+            {selectedInvitation.invitationStatus === "rejected" && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-red-800 text-sm font-medium">
+                  ❌ Invitation was rejected.
                 </p>
               </div>
             )}

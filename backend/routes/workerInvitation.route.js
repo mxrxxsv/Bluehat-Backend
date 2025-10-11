@@ -3,7 +3,11 @@ const router = express.Router();
 
 // Middleware
 const verifyToken = require("../middleware/verifyToken");
-const { verifyWorker, verifyClient } = require("../middleware/verifyHiring");
+const {
+  verifyWorker,
+  verifyClient,
+  verifyClientOrWorker,
+} = require("../middleware/verifyHiring");
 const {
   invitationLimiter,
   hiringLimiter,
@@ -83,20 +87,7 @@ router.patch(
   "/:id/agreement",
   hiringLimiter,
   verifyToken,
-  (req, res, next) => {
-    // Allow both client and worker to access this endpoint
-    if (req.user.userType === "client" && req.clientProfile) {
-      return next();
-    }
-    if (req.user.userType === "worker" && req.workerProfile) {
-      return next();
-    }
-    return res.status(403).json({
-      success: false,
-      message: "Access denied",
-      code: "ACCESS_DENIED",
-    });
-  },
+  verifyClientOrWorker,
   markInvitationAgreement
 );
 

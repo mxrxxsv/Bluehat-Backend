@@ -63,11 +63,23 @@ export const markApplicationAgreement = async (applicationId) => {
 export const getMyInvitations = async () => {
   try {
     const response = await InvitationAPI.get("/worker/received");
-    return response.data.invitations || [];
+    return response.data.data.invitations || [];
   } catch (error) {
     console.error("Get invitations failed:", error);
     throw new Error(
       error.response?.data?.message || "Failed to load invitations"
+    );
+  }
+};
+
+export const getMySentInvitations = async () => {
+  try {
+    const response = await InvitationAPI.get("/client/sent");
+    return response.data.data.invitations || [];
+  } catch (error) {
+    console.error("Get sent invitations failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to load sent invitations"
     );
   }
 };
@@ -86,6 +98,21 @@ export const inviteWorker = async (invitationData) => {
   }
 };
 
+export const respondToInvitation = async (invitationId, actionData) => {
+  try {
+    const response = await InvitationAPI.patch(
+      `/${invitationId}/respond`,
+      actionData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Respond to invitation failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to respond to invitation"
+    );
+  }
+};
+
 export const startInvitationDiscussion = async (invitationId) => {
   try {
     const response = await InvitationAPI.patch(
@@ -100,9 +127,12 @@ export const startInvitationDiscussion = async (invitationId) => {
   }
 };
 
-export const markInvitationAgreement = async (invitationId) => {
+export const markInvitationAgreement = async (invitationId, data) => {
   try {
-    const response = await InvitationAPI.patch(`/${invitationId}/agreement`);
+    const response = await InvitationAPI.patch(
+      `/${invitationId}/agreement`,
+      data
+    );
     return response.data;
   } catch (error) {
     console.error("Mark invitation agreement failed:", error);
@@ -117,7 +147,9 @@ export default {
   startApplicationDiscussion,
   markApplicationAgreement,
   getMyInvitations,
+  getMySentInvitations,
   inviteWorker,
+  respondToInvitation,
   startInvitationDiscussion,
   markInvitationAgreement,
 };

@@ -52,13 +52,18 @@ const InviteWorkersPage = () => {
       setLoading(true);
 
       // Load job details
-      const jobData = await getJobById(jobId);
+      const jobResponse = await getJobById(jobId);
+      const jobData = jobResponse.data.data || jobResponse.data;
       setJob(jobData);
 
       // Load available workers
       const workerData = await searchWorkers();
-      setWorkers(workerData);
-      setFilteredWorkers(workerData);
+
+      // Extract workers array from response
+      const workersArray = workerData.workers || [];
+
+      setWorkers(workersArray);
+      setFilteredWorkers(workersArray);
     } catch (error) {
       console.error("Failed to load data:", error);
       alert("Failed to load data. Please try again.");
