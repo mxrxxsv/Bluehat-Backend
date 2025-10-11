@@ -8,6 +8,7 @@ const WorkContract = require("../models/WorkContract");
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
+const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
@@ -16,18 +17,10 @@ const logger = require("../utils/logger");
 const invitationSchema = Joi.object({
   jobId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional()
-    .allow(null)
+    .required() // Changed to required per your requirement
     .messages({
       "string.pattern.base": "Invalid job ID format",
-    }),
-  invitationType: Joi.string()
-    .valid("job_specific", "general_hire")
-    .required()
-    .messages({
-      "any.only":
-        "Invitation type must be either 'job_specific' or 'general_hire'",
-      "any.required": "Invitation type is required",
+      "any.required": "Job ID is required",
     }),
   proposedRate: Joi.number().min(0).max(1000000).required().messages({
     "number.min": "Proposed rate cannot be negative",
@@ -39,12 +32,23 @@ const invitationSchema = Joi.object({
     "string.max": "Description cannot exceed 2000 characters",
     "any.required": "Description is required",
   }),
+  invitationType: Joi.string().valid("job_specific").optional(), // Add as optional since backend sets it
 });
 
 const invitationResponseSchema = Joi.object({
-  action: Joi.string().valid("accept", "reject").required().messages({
-    "any.only": "Action must be either 'accept' or 'reject'",
-    "any.required": "Action is required",
+  action: Joi.string()
+    .valid("accept", "reject", "start_discussion")
+    .required()
+    .messages({
+      "any.only":
+        "Action must be either 'accept', 'reject', or 'start_discussion'",
+      "any.required": "Action is required",
+    }),
+});
+
+const agreementSchema = Joi.object({
+  agreed: Joi.boolean().required().messages({
+    "any.required": "Agreement status is required",
   }),
 });
 
@@ -145,6 +149,41 @@ const handleInvitationError = (
 
 // ==================== CONTROLLERS ====================
 
+// Helper function to create conversation for contract
+const createConversationForContract = async (
+  clientId,
+  workerId,
+  contractId
+) => {
+  try {
+    // Check if conversation already exists
+    let conversation = await Conversation.findOne({
+      participants: { $all: [clientId, workerId] },
+      isDeleted: false,
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        participants: [clientId, workerId],
+        conversationType: "contract",
+        relatedContract: contractId,
+      });
+      await conversation.save();
+    }
+
+    return conversation;
+  } catch (error) {
+    logger.error("Failed to create conversation for contract", {
+      error: error.message,
+      clientId,
+      workerId,
+      contractId,
+    });
+    // Don't throw error - conversation creation shouldn't break contract creation
+    return null;
+  }
+};
+
 // Client invites worker
 const inviteWorker = async (req, res) => {
   const startTime = Date.now();
@@ -183,14 +222,13 @@ const inviteWorker = async (req, res) => {
     }
 
     const { id: workerId } = sanitizeInput(paramValue);
-    const { jobId, invitationType, proposedRate, description } =
-      sanitizeInput(bodyValue);
+    const { jobId, proposedRate, description } = sanitizeInput(bodyValue);
 
-    // Validate job-specific invitation has jobId
-    if (invitationType === "job_specific" && !jobId) {
+    // Validate required job ID (since we only allow job_specific now)
+    if (!jobId) {
       return res.status(400).json({
         success: false,
-        message: "Job ID is required for job-specific invitations",
+        message: "Job ID is required for invitations",
         code: "JOB_ID_REQUIRED",
       });
     }
@@ -256,12 +294,12 @@ const inviteWorker = async (req, res) => {
       });
     }
 
-    // Create invitation
+    // Create invitation (only job_specific now)
     const invitation = new WorkerInvitation({
       clientId: req.clientProfile._id,
       workerId,
       jobId,
-      invitationType,
+      invitationType: "job_specific", // Fixed to job_specific only
       proposedRate,
       description,
       senderIP: req.ip,
@@ -292,7 +330,7 @@ const inviteWorker = async (req, res) => {
       workerId,
       clientId: req.clientProfile._id,
       jobId,
-      invitationType,
+      invitationType: "job_specific",
       proposedRate,
       userId: req.user.id,
       ip: req.ip,
@@ -386,13 +424,19 @@ const respondToInvitation = async (req, res) => {
     }
 
     // Update invitation status
-    invitation.invitationStatus = action === "accept" ? "accepted" : "rejected";
+    if (action === "start_discussion") {
+      invitation.invitationStatus = "in_discussion";
+      invitation.discussionStartedAt = new Date();
+    } else {
+      invitation.invitationStatus =
+        action === "accept" ? "accepted" : "rejected";
+    }
     invitation.respondedAt = new Date();
     await invitation.save();
 
     let contract = null;
 
-    // If accepted, create work contract
+    // If accepted directly (old flow), create contract only if direct accept
     if (action === "accept") {
       contract = new WorkContract({
         clientId: invitation.clientId._id,
@@ -406,6 +450,13 @@ const respondToInvitation = async (req, res) => {
       });
 
       await contract.save();
+
+      // Create conversation for contract
+      await createConversationForContract(
+        invitation.clientId._id,
+        req.workerProfile._id,
+        contract._id
+      );
 
       // If job-specific, update job status
       if (invitation.jobId) {
@@ -694,10 +745,283 @@ const cancelInvitation = async (req, res) => {
   }
 };
 
+// ==================== NEW AGREEMENT FLOW FUNCTIONS ====================
+
+// Start discussion phase for invitation
+const startInvitationDiscussion = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invitation ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { id: invitationId } = sanitizeInput(paramValue);
+
+    // Find invitation
+    const invitation = await WorkerInvitation.findOne({
+      _id: invitationId,
+      workerId: req.workerProfile._id,
+      invitationStatus: "pending",
+      isDeleted: false,
+      expiresAt: { $gt: new Date() },
+    }).populate([
+      {
+        path: "jobId",
+        select: "title description price location category status",
+      },
+      {
+        path: "clientId",
+        select: "firstName lastName profilePicture credentialId",
+      },
+    ]);
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: "Invitation not found or not accessible",
+        code: "INVITATION_NOT_FOUND",
+      });
+    }
+
+    // Update to discussion phase
+    invitation.invitationStatus = "in_discussion";
+    invitation.discussionStartedAt = new Date();
+    await invitation.save();
+
+    logger.info("Invitation discussion started", {
+      invitationId,
+      jobId: invitation.jobId._id,
+      workerId: req.workerProfile._id,
+      clientId: invitation.clientId._id,
+      userId: req.user.id,
+      ip: req.ip,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Discussion phase started. You can now message each other.",
+      code: "DISCUSSION_STARTED",
+      data: {
+        invitation: invitation.toSafeObject(),
+        conversationInfo: {
+          participantCredentialId: invitation.clientId.credentialId,
+          participantUserType: "client",
+        },
+      },
+    });
+  } catch (error) {
+    return handleInvitationError(
+      error,
+      res,
+      "Start invitation discussion",
+      req
+    );
+  }
+};
+
+// Mark agreement for invitation (client or worker)
+const markInvitationAgreement = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invitation ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { error: bodyError, value: bodyValue } = agreementSchema.validate(
+      req.body
+    );
+    if (bodyError) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: bodyError.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { id: invitationId } = sanitizeInput(paramValue);
+    const { agreed } = sanitizeInput(bodyValue);
+
+    // Find invitation - accessible by both client and worker
+    const query = {
+      _id: invitationId,
+      invitationStatus: {
+        $in: ["in_discussion", "client_agreed", "worker_agreed"],
+      },
+      isDeleted: false,
+      expiresAt: { $gt: new Date() },
+    };
+
+    // Add user-specific filter
+    if (req.user.userType === "client") {
+      query.clientId = req.clientProfile._id;
+    } else if (req.user.userType === "worker") {
+      query.workerId = req.workerProfile._id;
+    }
+
+    const invitation = await WorkerInvitation.findOne(query).populate([
+      {
+        path: "jobId",
+        select: "title description price location status",
+      },
+      {
+        path: "workerId",
+        select: "firstName lastName profilePicture",
+      },
+      {
+        path: "clientId",
+        select: "firstName lastName profilePicture",
+      },
+    ]);
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: "Invitation not found or not in agreement phase",
+        code: "INVITATION_NOT_FOUND",
+      });
+    }
+
+    // Update agreement status
+    if (req.user.userType === "client") {
+      invitation.clientAgreed = agreed;
+    } else {
+      invitation.workerAgreed = agreed;
+    }
+
+    // Determine new status
+    let newStatus = "in_discussion";
+    if (invitation.clientAgreed && invitation.workerAgreed) {
+      newStatus = "both_agreed";
+      invitation.agreementCompletedAt = new Date();
+    } else if (invitation.clientAgreed) {
+      newStatus = "client_agreed";
+    } else if (invitation.workerAgreed) {
+      newStatus = "worker_agreed";
+    }
+
+    invitation.invitationStatus = newStatus;
+    await invitation.save();
+
+    let contract = null;
+
+    // If both agreed, create contract automatically
+    if (newStatus === "both_agreed") {
+      contract = new WorkContract({
+        clientId: invitation.clientId._id,
+        workerId: invitation.workerId._id,
+        jobId: invitation.jobId._id,
+        contractType: "direct_invitation",
+        agreedRate: invitation.proposedRate,
+        description: invitation.description,
+        invitationId: invitation._id,
+        createdIP: req.ip,
+      });
+
+      await contract.save();
+
+      // Create conversation for contract
+      await createConversationForContract(
+        invitation.clientId._id,
+        invitation.workerId._id,
+        contract._id
+      );
+
+      // Update job status
+      await Job.findByIdAndUpdate(invitation.jobId._id, {
+        status: "in_progress",
+        hiredWorker: invitation.workerId._id,
+      });
+
+      // Update invitation to accepted
+      invitation.invitationStatus = "accepted";
+      await invitation.save();
+
+      // Cancel other pending invitations for this job
+      await WorkerInvitation.updateMany(
+        {
+          jobId: invitation.jobId._id,
+          invitationStatus: {
+            $in: ["pending", "in_discussion", "client_agreed", "worker_agreed"],
+          },
+          _id: { $ne: invitation._id },
+        },
+        {
+          invitationStatus: "cancelled",
+          respondedAt: new Date(),
+        }
+      );
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Invitation agreement updated", {
+      invitationId,
+      userType: req.user.userType,
+      agreed,
+      newStatus,
+      contractCreated: !!contract,
+      userId: req.user.id,
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: contract
+        ? "Both parties agreed! Work contract created successfully."
+        : `Agreement status updated. ${
+            newStatus === "client_agreed" || newStatus === "worker_agreed"
+              ? "Waiting for other party to agree."
+              : ""
+          }`,
+      code: contract ? "CONTRACT_CREATED" : "AGREEMENT_UPDATED",
+      data: {
+        invitation: invitation.toSafeObject(),
+        contract: contract?.toSafeObject() || null,
+        agreementStatus: {
+          clientAgreed: invitation.clientAgreed,
+          workerAgreed: invitation.workerAgreed,
+          status: newStatus,
+        },
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleInvitationError(error, res, "Mark invitation agreement", req);
+  }
+};
+
 module.exports = {
   inviteWorker,
   respondToInvitation,
   getClientInvitations,
   getWorkerInvitations,
   cancelInvitation,
+  startInvitationDiscussion, // New
+  markInvitationAgreement, // New
 };

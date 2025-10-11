@@ -3,7 +3,11 @@ const router = express.Router();
 
 // Middleware
 const verifyToken = require("../middleware/verifyToken");
-const { verifyWorker, verifyClient } = require("../middleware/verifyHiring");
+const {
+  verifyWorker,
+  verifyClient,
+  verifyClientOrWorker,
+} = require("../middleware/verifyHiring");
 const {
   invitationLimiter,
   hiringLimiter,
@@ -16,6 +20,8 @@ const {
   getClientInvitations,
   getWorkerInvitations,
   cancelInvitation,
+  startInvitationDiscussion,
+  markInvitationAgreement,
 } = require("../controllers/workerInvitation.controller");
 
 // ==================== INVITATION ROUTES ====================
@@ -63,6 +69,26 @@ router.get(
   verifyToken,
   verifyWorker,
   getWorkerInvitations
+);
+
+// ==================== NEW AGREEMENT FLOW ROUTES ====================
+
+// Start discussion phase for invitation (worker only)
+router.patch(
+  "/:id/start-discussion",
+  hiringLimiter,
+  verifyToken,
+  verifyWorker,
+  startInvitationDiscussion
+);
+
+// Mark agreement status (both client and worker)
+router.patch(
+  "/:id/agreement",
+  hiringLimiter,
+  verifyToken,
+  verifyClientOrWorker,
+  markInvitationAgreement
 );
 
 module.exports = router;

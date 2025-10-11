@@ -22,9 +22,35 @@ const jobApplicationSchema = new mongoose.Schema(
     },
     applicationStatus: {
       type: String,
-      enum: ["pending", "accepted", "rejected", "withdrawn"],
+      enum: [
+        "pending",
+        "in_discussion",
+        "client_agreed",
+        "worker_agreed",
+        "both_agreed",
+        "accepted",
+        "rejected",
+        "withdrawn",
+      ],
       default: "pending",
       index: true,
+    },
+    // New fields for messaging agreement flow
+    clientAgreed: {
+      type: Boolean,
+      default: false,
+    },
+    workerAgreed: {
+      type: Boolean,
+      default: false,
+    },
+    discussionStartedAt: {
+      type: Date,
+      default: null,
+    },
+    agreementCompletedAt: {
+      type: Date,
+      default: null,
     },
     proposedRate: {
       type: Number,

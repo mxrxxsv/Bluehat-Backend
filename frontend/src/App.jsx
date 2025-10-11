@@ -23,6 +23,9 @@ import ProtectedRoute from "./components/ProtectedRoutes";
 import Setup2FA from "./components/Setup2FA";
 import VerifyEmail from "./components/VerifyEmail";
 import ApplicationsPage from "./Pages/ApplicationPage";
+import InviteWorkersPage from "./Pages/InviteWorkersPage";
+import FeedbackPage from "./Pages/FeedbackPage";
+import ContractManagement from "./Pages/ContractManagement";
 function App() {
   return (
     <>
@@ -43,6 +46,9 @@ function App() {
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/applications" element={<ApplicationsPage />} />
+        <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} />
+        <Route path="/feedback/:contractId" element={<FeedbackPage />} />
+        <Route path="/contracts" element={<ContractManagement />} />
 
         {/* <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />

@@ -1,30 +1,67 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000", // change to your backend base URL
-  withCredentials: true, // if you are using cookies/session auth
+  baseURL: "http://localhost:5000/workers",
+  withCredentials: true,
 });
 
-// ============ GET ALL WORKERS WITH FILTERS ============
-export const getWorkers = async (params = {}) => {
+// Get all workers (matches backend getAllWorkers)
+export const getWorkers = async (filters = {}) => {
   try {
-    const response = await API.get("/workers", {
-      params, // e.g. { page: 1, limit: 12, status: "available", city: "Manila" }
-    });
-    return response.data.data; // { workers, pagination, statistics, filters }
+    const response = await API.get("/", { params: filters });
+    return response.data.data || { workers: [], pagination: {} };
   } catch (error) {
-    console.error("Error fetching workers:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Get workers failed:", error);
+    throw new Error(error.response?.data?.message || "Failed to get workers");
   }
 };
 
-// ============ GET SINGLE WORKER BY ID ============
+// Search workers with filters (alias for getWorkers)
+export const searchWorkers = async (filters = {}) => {
+  return getWorkers(filters);
+};
+
+// Get worker by ID
 export const getWorkerById = async (workerId) => {
   try {
-    const response = await API.get(`/workers/${workerId}`);
-    return response.data.data; // detailed worker object
+    const response = await API.get(`/${workerId}`);
+    return response.data.data.worker;
   } catch (error) {
-    console.error("Error fetching worker by ID:", error.response?.data || error.message);
-    throw error.response?.data || error;
+    console.error("Get worker failed:", error);
+    throw new Error(error.response?.data?.message || "Failed to get worker");
   }
+};
+
+// Update worker profile
+export const updateWorkerProfile = async (workerId, profileData) => {
+  try {
+    const response = await API.put(`/${workerId}`, profileData);
+    return response.data.worker;
+  } catch (error) {
+    console.error("Update worker profile failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to update profile"
+    );
+  }
+};
+
+// Get worker dashboard data
+export const getWorkerDashboard = async () => {
+  try {
+    const response = await API.get("/dashboard");
+    return response.data;
+  } catch (error) {
+    console.error("Get worker dashboard failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to get dashboard data"
+    );
+  }
+};
+
+export default {
+  getWorkers,
+  searchWorkers,
+  getWorkerById,
+  updateWorkerProfile,
+  getWorkerDashboard,
 };

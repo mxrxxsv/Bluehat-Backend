@@ -7,6 +7,7 @@ const WorkContract = require("../models/WorkContract");
 const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
+const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
@@ -533,10 +534,9 @@ const completeWork = async (req, res) => {
       });
     }
 
-    // Update contract
-    contract.contractStatus = "completed";
-    contract.completedAt = new Date();
-    contract.actualEndDate = new Date();
+    // Update contract - mark as awaiting client confirmation
+    contract.contractStatus = "awaiting_client_confirmation";
+    contract.workerCompletedAt = new Date();
     await contract.save();
 
     // Update job status if linked to a job
@@ -559,8 +559,8 @@ const completeWork = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Work completed successfully",
-      code: "WORK_COMPLETED",
+      message: "Work marked as completed. Awaiting client confirmation.",
+      code: "WORK_COMPLETION_SUBMITTED",
       data: contract.toSafeObject(),
       meta: {
         processingTime: `${processingTime}ms`,
@@ -569,6 +569,79 @@ const completeWork = async (req, res) => {
     });
   } catch (error) {
     return handleContractError(error, res, "Complete work", req);
+  }
+};
+
+// Client confirms work completion
+const confirmWorkCompletion = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate parameters
+    const { error, value } = paramIdSchema.validate(req.params);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid contract ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { id: contractId } = sanitizeInput(value);
+
+    // Find contract
+    const contract = await WorkContract.findOne({
+      _id: contractId,
+      clientId: req.clientProfile._id,
+      contractStatus: "awaiting_client_confirmation",
+      isDeleted: false,
+    });
+
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Contract not found or not awaiting confirmation",
+        code: "CONTRACT_NOT_FOUND",
+      });
+    }
+
+    // Update contract to completed
+    contract.contractStatus = "completed";
+    contract.completedAt = new Date();
+    contract.actualEndDate = new Date();
+    contract.clientConfirmedAt = new Date();
+    await contract.save();
+
+    // Update job status if linked to a job
+    if (contract.jobId) {
+      await Job.findByIdAndUpdate(contract.jobId, {
+        status: "completed",
+      });
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Work completion confirmed by client", {
+      contractId,
+      clientId: req.clientProfile._id,
+      userId: req.user.id,
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Work completion confirmed successfully",
+      code: "WORK_COMPLETION_CONFIRMED",
+      data: contract.toSafeObject(),
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleContractError(error, res, "Confirm work completion", req);
   }
 };
 
@@ -790,6 +863,7 @@ module.exports = {
   getContractDetails,
   startWork,
   completeWork,
+  confirmWorkCompletion,
   submitFeedback,
   cancelContract,
 };

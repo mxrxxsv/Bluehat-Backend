@@ -37,7 +37,7 @@ export const getClientApplications = async (params = {}) => {
   }
 };
 
-// Respond to job application (Client accepts/rejects)
+// Respond to job application (Client accepts/rejects or starts discussion)
 export const respondToApplication = async (applicationId, responseData) => {
   try {
     const response = await API.patch(`/respond/${applicationId}/respond`, responseData);

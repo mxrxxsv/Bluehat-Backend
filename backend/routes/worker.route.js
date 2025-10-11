@@ -44,6 +44,14 @@ const workerDetailsLimiter = rateLimit({
 router.get("/", workerListLimiter, getAllWorkers);
 
 /**
+ * @route   GET /workers/search
+ * @desc    Search workers with filters (alias for GET /workers with search)
+ * @access  Public
+ * @query   page, limit, skills, status, city, province, sortBy, order, search, includeUnverified
+ */
+router.get("/search", workerListLimiter, getAllWorkers);
+
+/**
  * @route   GET /workers/:id
  * @desc    Get single ID-verified worker details by ID
  * @access  Public
