@@ -6,7 +6,7 @@ const logger = require("./logger");
 // ✅ General purpose auth limiter (login/signup/profile updates)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 1000, // 100 requests per window
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase()?.trim();
     return email || req.ip;
