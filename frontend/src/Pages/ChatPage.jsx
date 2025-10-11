@@ -442,7 +442,7 @@ const ChatPage = () => {
             {/* SIDEBAR */}
             <aside
                 ref={sidebarRef}
-                className={`absolute top-55 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                     } sm:translate-x-0 overflow-clip h-full md:h-[500px]`}
                 aria-label="Sidebar"
             >
@@ -458,7 +458,7 @@ const ChatPage = () => {
                                     <button
                                         onClick={() => {
                                             setSelectedContactId(otherCred);
-                                            setIsSidebarOpen(false); 
+                                            setIsSidebarOpen(false);
                                         }}
 
                                         className={`flex items-center w-full p-3 text-gray-900 rounded-lg border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
@@ -481,27 +481,35 @@ const ChatPage = () => {
             <div className="w-full h-full">
                 <div className="flex flex-row items-center justify-between mt-8 px-6 md:px-12 mt-30">
                     <p className="text-[24px] md:text-[32px] font-medium text-sky-500">Message</p>
-                    {currentUser?.userType === "client" && (
+                    {/* {currentUser?.userType === "client" && (
                         <button
                             className="p-2 bg-sky-500 rounded-[12px] text-white cursor-pointer shadow-sm"
                             onClick={() => setShowModal(true)}
                         >
                             Hire Now
                         </button>
-                    )}
+                    )} */}
                 </div>
+
+                <div className="flex items-center pl-4">
 
                 <button
                     ref={buttonRef}
                     type="button"
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="relative right-42 p-2 mt-2 ms-3 text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 z-35"
+                    className="p-2 text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 >
-                    <svg className="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                        className="w-6 h-6"
+                        aria-hidden="true"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                    >
                         <path
                             clipRule="evenodd"
                             fillRule="evenodd"
-                            d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 
+                            d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 
+                            1.5H2.75A.75.75 0 012 4.75zm0 
                             10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 
                             1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 
                             0 01.75-.75h14.5a.75.75 0 010 
@@ -509,6 +517,7 @@ const ChatPage = () => {
                         />
                     </svg>
                 </button>
+                </div>
 
                 {/* CHAT MESSAGES */}
                 <div className="p-4 sm:ml-64 overflow-hidden">
