@@ -209,7 +209,7 @@ const ContractManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-30">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Contracts</h1>
           <p className="text-gray-600 mt-2">
@@ -239,7 +239,7 @@ const ContractManagement = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      <h3 className="text-xl font-semibold flex items-center text-gray-900 mb-2">
                         {contract.description || "Contract Work"}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
@@ -257,7 +257,7 @@ const ContractManagement = () => {
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mb-3">
+                      <p className="text-sm flex items-center text-gray-500 mb-3">
                         Contract ID: {contract._id}
                       </p>
                     </div>
@@ -267,10 +267,10 @@ const ContractManagement = () => {
                   {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3 mb-4">
                     {/* Debug info - remove after testing */}
-                    <div className="text-xs text-gray-400 w-full mb-2">
+                    {/* <div className="text-xs text-gray-400 w-full mb-2">
                       Debug: Status={contract.contractStatus}, User=
                       {currentUser?.userType}
-                    </div>
+                    </div> */}
 
                     {/* Worker actions */}
                     {currentUser?.userType === "worker" && (
