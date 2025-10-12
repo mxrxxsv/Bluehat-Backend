@@ -211,8 +211,8 @@ const ContractManagement = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-30">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Contracts</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-[#545454]">My Contracts</h1>
+          <p className="text-[#545454] mt-2">
             Manage your work contracts and track project progress
           </p>
         </div>
@@ -234,19 +234,20 @@ const ContractManagement = () => {
             {contracts.map((contract) => (
               <div
                 key={contract._id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-[20px] shadow-sm border border-gray-200 overflow-hidden"
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold flex items-center text-gray-900 mb-2">
-                        {contract.description || "Contract Work"}
+                      <h3 className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2">
+                        {contract.jobId.description || "Contract Work"}
                       </h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                      <div className="flex flex-col items-left gap-4 text-sm text-gray-600 mb-3">
                         <div className="flex items-center gap-1">
-                          <DollarSign size={16} />
-                          <span className="font-medium">
-                            ${contract.agreedRate}
+                          {/* <DollarSign size={14} /> */}
+                          Aggreed Rate:
+                          <span className="font-medium text-gray-900 ">
+                            ₱{contract.agreedRate}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -257,7 +258,10 @@ const ContractManagement = () => {
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm flex items-center text-gray-500 mb-3">
+                      <p className="text-sm flex items-center text-left text-gray-500 mb-3">
+                        Contract Type: {contract.contractType}
+                      </p>
+                      <p className="text-sm flex items-center text-left text-gray-500 mb-3">
                         Contract ID: {contract._id}
                       </p>
                     </div>
@@ -287,7 +291,7 @@ const ContractManagement = () => {
                         {contract.contractStatus === "in_progress" && (
                           <button
                             onClick={() => handleCompleteWork(contract._id)}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
                           >
                             <CheckCircle size={16} className="mr-2" />
                             Request Completion
