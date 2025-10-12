@@ -20,6 +20,8 @@ import {
   confirmWorkCompletion,
   submitFeedback,
 } from "../api/feedback.jsx";
+import worker from '../assets/worker.png';
+import client from '../assets/client.png';
 import { checkAuth } from "../api/auth";
 
 const ContractManagement = () => {
@@ -362,9 +364,10 @@ const ContractManagement = () => {
                   {/* Show feedback if exists */}
                   {(contract.clientFeedback || contract.workerFeedback) && (
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-gray-900">Feedback</h4>
+                      <h4 className="font-medium text-[#545454] mb-4">Feedback</h4>
                       {contract.clientFeedback && (
-                        <div className="border-l-4 border-blue-400 pl-4">
+                        <div className="bg-white p-2 border-l-4 border-sky-500 pl-4 shadow-sm">
+                          <img className="w-5 h-5 text-gray-500 mx-auto mb-3" src={client} alt="client" />
                           <p className="text-sm font-medium text-gray-900">
                             Client Feedback:
                           </p>
@@ -392,7 +395,8 @@ const ContractManagement = () => {
                         </div>
                       )}
                       {contract.workerFeedback && (
-                        <div className="border-l-4 border-green-400 pl-4">
+                        <div className="bg-white p-2 border-l-4 border-green-500 pl-4 shadow-sm">
+                          <img className="w-5 h-5 text-gray-500 mx-auto mb-3" src={worker} alt="worker" />
                           <p className="text-sm font-medium text-gray-900">
                             Worker Feedback:
                           </p>
@@ -482,16 +486,16 @@ const ContractManagement = () => {
               {/* Buttons */}
               <div className="flex gap-3 justify-end">
                 <button
-                  onClick={handleSubmitFeedback}
-                  className="px-4 py-2 bg-sky-500 text-white rounded-md hover:bg-sky-600 transition cursor-pointer"
-                >
-                  Submit Feedback
-                </button>
-                <button
                   onClick={() => setFeedbackModal({ show: false, contract: null })}
                   className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100 transition cursor-pointer"
                 >
                   Cancel
+                </button>
+                <button
+                  onClick={handleSubmitFeedback}
+                  className="px-4 py-2 bg-sky-500 text-white rounded-md hover:bg-sky-600 transition cursor-pointer"
+                >
+                  Submit Feedback
                 </button>
               </div>
             </div>
