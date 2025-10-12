@@ -111,6 +111,7 @@ const Header = () => {
 
   const goToProfile = (e) => {
     e.stopPropagation();
+    setIsOpen(false)
     setShowDropdown(false);
     navigate("/profile");
   };
@@ -376,6 +377,7 @@ const Header = () => {
 
                 <li>
                   <Link
+                    onClick={() => setIsOpen(false)}
                     to="/find-work"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
                       ? "text-sky-500"
@@ -387,6 +389,7 @@ const Header = () => {
                 </li>
                 <li>
                   <Link
+                    onClick={() => setIsOpen(false)}
                     to="/find-workers"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
                       ? "text-sky-500"
@@ -398,6 +401,7 @@ const Header = () => {
                 </li>
                 <li>
                   <Link
+                    onClick={() => setIsOpen(false)}
                     to="/ads"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
                       ? "text-sky-500"
@@ -409,6 +413,7 @@ const Header = () => {
                 </li>
                 <li>
                   <Link
+                    onClick={() => setIsOpen(false)}
                     to="/applications"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
                       ? "text-sky-500"
@@ -422,6 +427,7 @@ const Header = () => {
                 </li>
                 <li>
                   <Link
+                    onClick={() => setIsOpen(false)}
                     to="/contracts"
                     className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
                       ? "text-sky-500"
