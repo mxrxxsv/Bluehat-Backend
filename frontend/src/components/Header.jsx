@@ -17,6 +17,8 @@ const Header = () => {
   const currentPath = location.pathname;
   const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
+
+
   const handleNotificationClick = () => {
     setShowNotifications((prev) => !prev);
   };
@@ -184,7 +186,10 @@ const Header = () => {
 
                     <Bell
                       className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
-                      onClick={handleNotificationClick}
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        setShowNotifications((prev) => !prev);
+                      }}
                     />
 
                     {showNotifications && (
@@ -276,7 +281,10 @@ const Header = () => {
                   <div className="relative">
                     <Bell
                       className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer"
-                      onClick={handleNotificationClick}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNotifications((prev) => !prev);
+                      }}
                     />
 
                     {showNotifications && (
