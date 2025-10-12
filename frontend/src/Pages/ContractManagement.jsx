@@ -282,7 +282,7 @@ const ContractManagement = () => {
                         {contract.contractStatus === "active" && (
                           <button
                             onClick={() => handleStartWork(contract._id)}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors"
                           >
                             <Clock size={16} className="mr-2" />
                             Start Work
@@ -291,7 +291,7 @@ const ContractManagement = () => {
                         {contract.contractStatus === "in_progress" && (
                           <button
                             onClick={() => handleCompleteWork(contract._id)}
-                            className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                            className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
                           >
                             <CheckCircle size={16} className="mr-2" />
                             Request Completion
@@ -299,18 +299,18 @@ const ContractManagement = () => {
                         )}
                         {contract.contractStatus ===
                           "awaiting_client_confirmation" && (
-                          <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded-md">
-                            <Clock size={16} className="mr-2" />
-                            Waiting for client confirmation
-                          </div>
-                        )}
+                            <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded-md">
+                              <Clock size={16} className="mr-2" />
+                              Waiting for client confirmation
+                            </div>
+                          )}
                         {contract.contractStatus === "completed" &&
                           !contract.workerFeedback && (
                             <button
                               onClick={() =>
                                 setFeedbackModal({ show: true, contract })
                               }
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                              className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
                             >
                               <Star size={16} className="mr-2" />
                               Submit Feedback
@@ -324,23 +324,23 @@ const ContractManagement = () => {
                       <>
                         {contract.contractStatus ===
                           "awaiting_client_confirmation" && (
-                          <button
-                            onClick={() =>
-                              handleConfirmCompletion(contract._id)
-                            }
-                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                          >
-                            <CheckCircle size={16} className="mr-2" />
-                            Confirm Completion
-                          </button>
-                        )}
+                            <button
+                              onClick={() =>
+                                handleConfirmCompletion(contract._id)
+                              }
+                              className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                            >
+                              <CheckCircle size={16} className="mr-2" />
+                              Confirm Completion
+                            </button>
+                          )}
                         {contract.contractStatus === "completed" &&
                           !contract.clientFeedback && (
                             <button
                               onClick={() =>
                                 setFeedbackModal({ show: true, contract })
                               }
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                              className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
                             >
                               <Star size={16} className="mr-2" />
                               Submit Feedback
@@ -428,36 +428,39 @@ const ContractManagement = () => {
         )}
         {/* Feedback Modal */}
         {feedbackModal.show && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">Submit Feedback</h3>
+          <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-[90%] max-w-md mx-auto shadow-xl">
+              <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">
+                Submit Feedback
+              </h3>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Rating</label>
-                <div className="flex gap-1">
+              {/* Rating Section */}
+              <div className="mb-4 text-center">
+                <label className="block text-sm font-medium mb-3 text-gray-700">
+                  Rating
+                </label>
+                <div className="flex items-center justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       onClick={() => setFeedback({ ...feedback, rating: star })}
-                      className={`p-1 ${
-                        star <= feedback.rating
+                      className={`p-1 transition-transform transform hover:scale-110 cursor-pointer ${star <= feedback.rating
                           ? "text-yellow-400"
-                          : "text-gray-300"
-                      }`}
+                          : "text-gray-300 hover:text-yellow-300"
+                        }`}
                     >
                       <Star
-                        size={24}
-                        className={
-                          star <= feedback.rating ? "fill-current" : ""
-                        }
+                        size={26}
+                        className={star <= feedback.rating ? "fill-current" : ""}
                       />
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
+              {/* Comment Section */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium mb-2 text-gray-700">
                   Comment
                 </label>
                 <textarea
@@ -465,30 +468,30 @@ const ContractManagement = () => {
                   onChange={(e) =>
                     setFeedback({ ...feedback, comment: e.target.value })
                   }
-                  className="w-full p-2 border rounded-md h-24"
+                  className="w-full p-3 border border-gray-300 rounded-md h-28 focus:ring-2 focus:ring-sky-400 focus:outline-none text-sm resize-none"
                   placeholder="Share your experience (minimum 5 characters)..."
                   required
                   minLength={5}
+                  maxLength={1000}
                 />
-                <div className="text-xs text-gray-500 mt-1">
-                  {feedback.comment.length}/1000 characters (minimum 5)
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {feedback.comment.length}/1000 characters
                 </div>
               </div>
 
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() =>
-                    setFeedbackModal({ show: false, contract: null })
-                  }
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
+              {/* Buttons */}
+              <div className="flex gap-3 justify-end">
                 <button
                   onClick={handleSubmitFeedback}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 bg-sky-500 text-white rounded-md hover:bg-sky-600 transition cursor-pointer"
                 >
                   Submit Feedback
+                </button>
+                <button
+                  onClick={() => setFeedbackModal({ show: false, contract: null })}
+                  className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
