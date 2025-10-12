@@ -15,6 +15,7 @@ import axios from "axios";
 import AddressInput from "../components/AddressInput";
 import PortfolioSetup from "../components/PortfolioSetup";
 import IDSetup from "../components/IDSetup";
+import VerificationNotice from "../components/VerificationNotice";
 
 const currentUser = {
   avatar:
@@ -189,6 +190,7 @@ const FindWork = () => {
       try {
         const res = await checkAuth();
         const userData = res.data?.data;
+        console.log("Fetched user data:", userData);
 
         setUser(userData);
 
@@ -248,6 +250,7 @@ const FindWork = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+      <VerificationNotice user={user} />
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <Search className="relative left-2 top-11.5 md:left-12 md:top-2.5 text-gray-400 w-5 h-5 z-10" />
