@@ -81,7 +81,7 @@ const Header = () => {
         }
       })
       .finally(() => {
-        setAuthLoading(false); 
+        setAuthLoading(false);
       });
   }, [location.pathname, navigate]);
 
@@ -188,7 +188,7 @@ const Header = () => {
                     <Bell
                       className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
                       onClick={(e) => {
-                        e.stopPropagation(); 
+                        e.stopPropagation();
                         setShowNotifications((prev) => !prev);
                       }}
                     />
@@ -252,6 +252,24 @@ const Header = () => {
                               >
                                 Profile
                               </button>
+                            </li>
+                            <li>
+                              <Link
+                                to="/applications"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                              >
+                                {user?.userType === "worker"
+                                  ? "My Applications"
+                                  : "Applications Received"}
+                              </Link>
+                            </li>
+                            <li>
+                              <Link
+                                to="/contracts"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                              >
+                                My Contracts
+                              </Link>
                             </li>
                             <li>
                               <button
@@ -420,7 +438,7 @@ const Header = () => {
                     Advertisement
                   </Link>
                 </li>
-                <li>
+                {/* <li>
                   <Link
                     onClick={() => setIsOpen(false)}
                     to="/applications"
@@ -445,7 +463,7 @@ const Header = () => {
                   >
                     My Contracts
                   </Link>
-                </li>
+                </li> */}
               </ul>
             </nav>
           </>
