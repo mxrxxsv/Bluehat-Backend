@@ -34,6 +34,9 @@ const FindWork = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+
+
   const [newJob, setNewJob] = useState({
     description: "",
     location: "",
@@ -104,8 +107,9 @@ const FindWork = () => {
   // EXTRACTED: Fetch jobs function for reuse
   const fetchJobs = async (useCache = true) => {
     try {
+      setLoading(true);
       const options = { page: 1, limit: 20, status: "open" };
-      if (!useCache) options._t = Date.now(); 
+      if (!useCache) options._t = Date.now();
       const response = await getAllJobs(options);
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs
@@ -114,6 +118,10 @@ const FindWork = () => {
       setLastRefreshTime(new Date());
     } catch (err) {
       console.error("Error fetching jobs:", err);
+    } finally {
+      setTimeout(() => {
+      setLoading(false);
+    }, 1000);
     }
   };
 
@@ -247,6 +255,50 @@ const FindWork = () => {
       );
     })
     : [];
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+        <div className="space-y-4 pb-4 animate-pulse">
+          {/* Search Bar Skeleton */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="w-full md:w-1/2 h-10 bg-gray-200 rounded-[18px]" />
+            <div className="w-full md:w-1/4 h-10 bg-gray-200 rounded-md" />
+          </div>
+
+          {/* Post Box Skeleton */}
+          <div className="bg-white shadow rounded-[20px] p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-200" />
+              <div className="flex-1 bg-gray-100 h-10 rounded-full" />
+            </div>
+          </div>
+
+          {/* Job Cards Skeleton (repeat 3 times) */}
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-gray-200 rounded w-1/4" />
+              </div>
+              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2" />
+              <div className="flex gap-2 mt-3">
+                <div className="h-6 bg-gray-200 rounded-full w-24" />
+                <div className="h-6 bg-gray-200 rounded-full w-20" />
+              </div>
+              <div className="flex justify-between items-center mt-4">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-gray-200 rounded w-1/6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">

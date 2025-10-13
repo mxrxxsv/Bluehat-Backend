@@ -1784,9 +1784,13 @@ const resetPassword = async (req, res) => {
 
     const { token, password } = sanitizeInput(value);
 
+    // const user = await Credential.findOne({
+    //   resetPasswordToken: token,
+    //   resetPasswordExpires: { $gt: Date.now() },
+    // });
+    
     const user = await Credential.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {

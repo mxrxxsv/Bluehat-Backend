@@ -16,6 +16,7 @@ import Login from "./Pages/Login";
 import WorkerSignup from "./Pages/WorkerSignup";
 import ClientSignup from "./Pages/ClientSignup";
 import ForgetPass from "./Pages/ForgetPass";
+import ResetPassword from "./Pages/ResetPassword";
 import WorkerQuestion from "./Pages/WorkerQuestion";
 import Footer from "./components/Footer";
 import ProfilePage from "./Pages/ProfilePage";
@@ -42,6 +43,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/workersignup" element={<WorkerSignup />} />
         <Route path="/clientsignup" element={<ClientSignup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />

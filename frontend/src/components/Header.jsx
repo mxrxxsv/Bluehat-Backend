@@ -74,14 +74,14 @@ const Header = () => {
       .catch(() => {
         const publicPages = [
           "/", "/home", "/login", "/signup",
-          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion",
+          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion", "/reset-password"
         ];
         if (!publicPages.includes(location.pathname)) {
           navigate("/login");
         }
       })
       .finally(() => {
-        setAuthLoading(false); // ✅ mark done
+        setAuthLoading(false);
       });
   }, [location.pathname, navigate]);
 
@@ -105,6 +105,7 @@ const Header = () => {
     "/clientsignup",
     "/forgetpass",
     "/workerquestion",
+    "/reset-password",
     "/setup-2fa",
   ];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];
@@ -187,7 +188,7 @@ const Header = () => {
                     <Bell
                       className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
                       onClick={(e) => {
-                        e.stopPropagation(); 
+                        e.stopPropagation();
                         setShowNotifications((prev) => !prev);
                       }}
                     />
@@ -251,6 +252,24 @@ const Header = () => {
                               >
                                 Profile
                               </button>
+                            </li>
+                            <li>
+                              <Link
+                                to="/applications"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                              >
+                                {user?.userType === "worker"
+                                  ? "My Applications"
+                                  : "Applications Received"}
+                              </Link>
+                            </li>
+                            <li>
+                              <Link
+                                to="/contracts"
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                              >
+                                My Contracts
+                              </Link>
                             </li>
                             <li>
                               <button
@@ -419,7 +438,7 @@ const Header = () => {
                     Advertisement
                   </Link>
                 </li>
-                <li>
+                <li className="md:hidden">
                   <Link
                     onClick={() => setIsOpen(false)}
                     to="/applications"
@@ -433,7 +452,7 @@ const Header = () => {
                       : "Applications Received"}
                   </Link>
                 </li>
-                <li>
+                <li className="md:hidden">
                   <Link
                     onClick={() => setIsOpen(false)}
                     to="/contracts"
