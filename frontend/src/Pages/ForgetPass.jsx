@@ -3,15 +3,25 @@ import { forgotPassword } from "../api/auth";
 
 const ForgetPassword = () => {
   const [email, setEmail] = useState("");
+  const [modal, setModal] = useState({ show: false, message: "", type: "success" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const response = await forgotPassword({ email });
-      alert(response.data.message || "Password reset link sent to your email!");
+      setModal({
+        show: true,
+        message: "Password reset link sent to your email!",
+        type: "success",
+      });
       setEmail("");
+      setTimeout(() => setModal({ ...modal, show: false }), 3000);
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to send reset link.");
+      setModal({
+        show: true,
+        message: error.response?.data?.message || "Failed to send reset link.",
+        type: "error",
+      });
       console.error(error);
     }
   };
@@ -51,6 +61,28 @@ const ForgetPassword = () => {
           </button>
         </form>
       </div>
+
+      {/* ✅ Modal Popup */}
+      {modal.show && (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-40 z-50">
+          <div className="bg-white rounded-lg shadow-md p-6 w-80 text-center">
+            <h3
+              className={`text-lg font-semibold mb-2 ${
+                modal.type === "success" ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {modal.type === "success" ? "Success!" : "Error"}
+            </h3>
+            <p className="text-gray-700 mb-4">{modal.message}</p>
+            <button
+              onClick={() => setModal({ ...modal, show: false })}
+              className="px-4 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-blue-400 cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
