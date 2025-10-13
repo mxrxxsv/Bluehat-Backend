@@ -438,7 +438,7 @@ const Header = () => {
                     Advertisement
                   </Link>
                 </li>
-                {/* <li>
+                <li className="md:hidden">
                   <Link
                     onClick={() => setIsOpen(false)}
                     to="/applications"
@@ -452,7 +452,7 @@ const Header = () => {
                       : "Applications Received"}
                   </Link>
                 </li>
-                <li>
+                <li className="md:hidden">
                   <Link
                     onClick={() => setIsOpen(false)}
                     to="/contracts"
@@ -463,7 +463,7 @@ const Header = () => {
                   >
                     My Contracts
                   </Link>
-                </li> */}
+                </li>
               </ul>
             </nav>
           </>
