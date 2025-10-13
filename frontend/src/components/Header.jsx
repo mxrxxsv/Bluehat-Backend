@@ -74,14 +74,14 @@ const Header = () => {
       .catch(() => {
         const publicPages = [
           "/", "/home", "/login", "/signup",
-          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion",
+          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion", "/reset-password"
         ];
         if (!publicPages.includes(location.pathname)) {
           navigate("/login");
         }
       })
       .finally(() => {
-        setAuthLoading(false); // ✅ mark done
+        setAuthLoading(false); 
       });
   }, [location.pathname, navigate]);
 
@@ -105,6 +105,7 @@ const Header = () => {
     "/clientsignup",
     "/forgetpass",
     "/workerquestion",
+    "/reset-password",
     "/setup-2fa",
   ];
   // const authPages = ["/HomePage", "/FindWork", "/JobDetail", "/FindWorker", "/AdsPage", "/WorkerPortfolio", "/ChatPage"];

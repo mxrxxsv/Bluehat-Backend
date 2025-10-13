@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useState, useRef } from "react";
-import { signup, verify, resendCode } from "../api/auth";
+import { signup, verify, resendEmailVerification } from "../api/auth";
 import { Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import PortfolioSetup from "../components/PortfolioSetup";
@@ -307,7 +307,7 @@ const WorkerSignup = () => {
     setIsLoading(true);
     try {
       // Fixed: Added userType to match the second code format
-      await resendCode({ email: formData.email, userType: formData.userType });
+      await resendEmailVerification({ email: formData.email, userType: formData.userType });
       setOtp(["", "", "", "", "", ""]);
       setTimer(60);
       setSuccessMessage("A new code has been sent to your email.");
