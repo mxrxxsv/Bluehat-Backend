@@ -90,12 +90,12 @@ const ClientManagement = () => {
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
   const handleStatusFilter = (status) => {
     setStatusFilter(status);
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1); 
   };
 
   const handleSort = (field) => {
@@ -105,7 +105,7 @@ const ClientManagement = () => {
       setSortBy(field);
       setSortOrder("asc");
     }
-    setCurrentPage(1); // Reset to first page when sorting
+    setCurrentPage(1); 
   };
 
   const goToPage = (page) => {
@@ -143,10 +143,10 @@ const ClientManagement = () => {
     try {
       setActionLoading(true);
 
-      const response = await blockClient(blockingClient.credentialId, {
+      const response = await blockClient(blockingClient._id, {
         reason: blockReason.trim(),
       });
-
+  
       if (response.success) {
         // Refresh the clients list
         await fetchClients();
@@ -175,7 +175,7 @@ const ClientManagement = () => {
     try {
       setActionLoading(true);
 
-      const response = await unblockClient(client.credentialId);
+      const response = await unblockClient(client._id);
 
       if (response.success) {
         // Refresh the clients list
@@ -419,7 +419,7 @@ const ClientManagement = () => {
                       </td>
                       <td className="px-6 py-3 capitalize">{client.sex}</td>
                       <td className="px-6 py-3">
-                        {client.isBlocked ? (
+                        {client.blocked ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             <Ban className="w-3 h-3 mr-1" />
                             Blocked
@@ -445,7 +445,7 @@ const ClientManagement = () => {
                             <Eye className="w-3 h-3" />
                             View
                           </button>
-                          {client.isBlocked ? (
+                          {client.blocked ? (
                             <button
                               onClick={() => handleUnblockClient(client)}
                               disabled={actionLoading}
@@ -567,7 +567,7 @@ const ClientManagement = () => {
                       <p className="text-sm text-gray-500 capitalize">
                         {selectedClient.userType}
                       </p>
-                      {selectedClient.isBlocked ? (
+                      {selectedClient.blocked ? (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 cursor-pointer">
                           <Ban className="w-3 h-3 mr-1" />
                           Blocked
@@ -583,7 +583,7 @@ const ClientManagement = () => {
                 </div>
 
                 {/* Block Reason */}
-                {selectedClient.isBlocked && selectedClient.blockReason && (
+                {selectedClient.blocked && selectedClient.blockReason && (
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                     <h4 className="font-medium text-red-800 mb-1">
                       Block Reason
@@ -690,7 +690,7 @@ const ClientManagement = () => {
 
               {/* Modal Actions */}
               <div className="flex justify-end gap-2 mt-6">
-                {selectedClient.isBlocked ? (
+                {selectedClient.blocked ? (
                   <button
                     onClick={() => {
                       handleUnblockClient(selectedClient);
