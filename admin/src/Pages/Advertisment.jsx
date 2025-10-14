@@ -146,15 +146,9 @@ const Advertisement = () => {
       setLoading(true);
 
       if (editingAd) {
-        const res = await updateAdvertisement(editingAd._id, formData);
-        const updated =
-          res.data?.data || { ...editingAd, title, companyName, description, link };
+        await updateAdvertisement(editingAd._id, formData);
 
-        setAds((prev) =>
-          prev.map((ad) =>
-            ad._id === editingAd._id ? { ...updated, _id: editingAd._id } : ad
-          )
-        );
+        await fetchAds();
 
         // SUCCESS MODAL (Update)
         setSuccessMsg("Advertisement updated successfully.");
@@ -185,29 +179,29 @@ const Advertisement = () => {
   };
 
   const confirmDelete = async () => {
-  if (!deleteId) return;
-  try {
-    setDeleteLoading(true);
-    const res = await deleteAdvertisement(deleteId);
+    if (!deleteId) return;
+    try {
+      setDeleteLoading(true);
+      const res = await deleteAdvertisement(deleteId);
 
-    if (res.data?.success) {
-      // Remove locally (optional) or fetch again
-      await fetchAds();
+      if (res.data?.success) {
+        // Remove locally (optional) or fetch again
+        await fetchAds();
 
-      setSuccessMsg("Advertisement deleted successfully.");
-      setSuccessOpen(true);
-    } else {
-      alert(res.data?.message || "Failed to delete advertisement");
+        setSuccessMsg("Advertisement deleted successfully.");
+        setSuccessOpen(true);
+      } else {
+        alert(res.data?.message || "Failed to delete advertisement");
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Failed to delete advertisement");
+    } finally {
+      setDeleteLoading(false);
+      setConfirmOpen(false);
+      setDeleteId(null);
     }
-  } catch (error) {
-    console.error(error);
-    alert(error.response?.data?.message || "Failed to delete advertisement");
-  } finally {
-    setDeleteLoading(false);
-    setConfirmOpen(false);
-    setDeleteId(null);
-  }
-};
+  };
 
 
 
