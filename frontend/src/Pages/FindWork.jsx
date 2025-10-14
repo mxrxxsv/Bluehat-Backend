@@ -265,12 +265,14 @@ const FindWork = () => {
           </div>
 
           {/* Post Box Skeleton */}
+          {user?.userType === "client" && (
           <div className="bg-white shadow rounded-[20px] p-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-200" />
               <div className="flex-1 bg-gray-100 h-10 rounded-full" />
             </div>
           </div>
+          )}
 
           {/* Job Cards Skeleton (repeat 3 times) */}
           {[1, 2, 3].map((i) => (
@@ -321,22 +323,25 @@ const FindWork = () => {
       </div>
 
       {/* Post Box */}
-      <div
-        onClick={() => setIsModalOpen(true)}
-        className="bg-white shadow rounded-[20px] p-4 mb-6 cursor-pointer hover:shadow-md transition"
-      >
-        <div className="flex items-center gap-3">
-          <img
-            src={user?.image || currentUser.avatar}
-            alt="Avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
+      {user?.userType === "client" && (
+        <div
+          onClick={() => setIsModalOpen(true)}
+          className="bg-white shadow rounded-[20px] p-4 mb-6 cursor-pointer hover:shadow-md transition"
+        >
+          <div className="flex items-center gap-3">
+            <img
+              src={user?.image || currentUser.avatar}
+              alt="Avatar"
+              className="w-10 h-10 rounded-full object-cover"
+            />
 
-          <div className="flex-1 bg-gray-100 px-4 py-2 rounded-full text-gray-500 text-left">
-            Post a work...
+            <div className="flex-1 bg-gray-100 px-4 py-2 rounded-full text-gray-500 text-left">
+              Post a work...
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
 
       {/* Modal */}
       {isModalOpen && (
