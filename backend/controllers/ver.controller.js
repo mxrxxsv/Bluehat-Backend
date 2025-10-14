@@ -1248,7 +1248,7 @@ const login = async (req, res) => {
 
     if (!isPasswordCorrect) {
       // Increment login attempts on failed password
-      await matchingUser.incLoginAttempts();
+      await matchingUser.loginAttempts();
 
       logger.warn("Failed login attempt - invalid password", {
         email: email,
@@ -1654,7 +1654,7 @@ const forgotPassword = async (req, res) => {
     // ✅ Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 1000 * 60 * 15; // 15 minutes
+    user.resetPasswordExpiresAt = Date.now() + 1000 * 60 * 15; // 15 minutes
     await user.save();
 
     // ✅ Get user profile for first name
@@ -1784,13 +1784,9 @@ const resetPassword = async (req, res) => {
 
     const { token, password } = sanitizeInput(value);
 
-    // const user = await Credential.findOne({
-    //   resetPasswordToken: token,
-    //   resetPasswordExpires: { $gt: Date.now() },
-    // });
-    
     const user = await Credential.findOne({
       resetPasswordToken: token,
+      resetPasswordExpiresAt: { $gt: Date.now() },
     });
 
     if (!user) {
@@ -1810,7 +1806,7 @@ const resetPassword = async (req, res) => {
     // ✅ Hash new password and clear reset fields
     user.password = await bcrypt.hash(password, SALT_RATE);
     user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    user.resetPasswordExpiresAt = undefined;
 
     // ✅ Reset any lockout fields
     user.loginAttempts = 0;
