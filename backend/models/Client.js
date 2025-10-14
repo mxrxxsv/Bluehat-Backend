@@ -86,7 +86,8 @@ const ClientSchema = new mongoose.Schema(
     },
     blockReason: {
       type: String,
-      default: null,
+      required: false,
+      default: "",
     },
     isVerified: {
       type: Boolean,
