@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Joi = require("joi");
 const xss = require("xss");
-const Worker = require("../models/Worker"); // ✅ Change to Worker model
+const Worker = require("../models/Worker");
 const Credential = require("../models/Credential");
 const { decryptAES128 } = require("../utils/encipher");
 const logger = require("../utils/logger");
@@ -202,6 +202,7 @@ const getWorkers = async (req, res) => {
           rating: 1,
           totalRatings: 1,
           blocked: 1,
+          blockReason: 1,
           skillsByCategory: 1,
           experience: 1,
           biography: 1,
@@ -326,51 +327,10 @@ const getWorkers = async (req, res) => {
         $group: {
           _id: null,
           total: { $sum: 1 },
-          verified: {
-            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
-          },
-          unverified: {
-            $sum: { $cond: [{ $eq: ["$isVerified", false] }, 1, 0] },
-          },
-          pending: {
-            $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0],
-            },
-          },
-          rejected: {
-            $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "rejected"] }, 1, 0],
-            },
-          },
-          notSubmitted: {
-            $sum: {
-              $cond: [{ $eq: ["$verificationStatus", "not_submitted"] }, 1, 0],
-            },
-          },
-          available: {
-            $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] },
-          },
-          working: {
-            $sum: { $cond: [{ $eq: ["$status", "working"] }, 1, 0] },
-          },
-          notAvailable: {
-            $sum: { $cond: [{ $eq: ["$status", "not available"] }, 1, 0] },
-          },
-          blocked: {
-            $sum: { $cond: [{ $eq: ["$blocked", true] }, 1, 0] },
-          },
-          active: {
-            $sum: { $cond: [{ $ne: ["$blocked", true] }, 1, 0] },
-          },
-          averageRating: {
-            $avg: {
-              $cond: [
-                { $gt: ["$totalRatings", 0] },
-                { $divide: ["$rating", "$totalRatings"] },
-                0,
-              ],
-            },
-          },
+          blocked: { $sum: { $cond: [{ $eq: ["$blocked", true] }, 1, 0] } },
+          active: { $sum: { $cond: [{ $ne: ["$blocked", true] }, 1, 0] } },
+          approved: { $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] } },
+          pending: { $sum: { $cond: [{ $eq: ["$verificationStatus", "pending"] }, 1, 0] } },
         },
       },
     ]);
@@ -378,47 +338,20 @@ const getWorkers = async (req, res) => {
     const statistics =
       statsAggregation.length > 0
         ? {
-            total: statsAggregation[0].total,
-            verification: {
-              verified: statsAggregation[0].verified,
-              unverified: statsAggregation[0].unverified,
-              pending: statsAggregation[0].pending,
-              rejected: statsAggregation[0].rejected,
-              notSubmitted: statsAggregation[0].notSubmitted,
-            },
-            workStatus: {
-              available: statsAggregation[0].available,
-              working: statsAggregation[0].working,
-              notAvailable: statsAggregation[0].notAvailable,
-            },
-            blockStatus: {
-              blocked: statsAggregation[0].blocked,
-              active: statsAggregation[0].active,
-            },
-            averageRating: parseFloat(
-              (statsAggregation[0].averageRating || 0).toFixed(2)
-            ),
-          }
+          total: statsAggregation[0].total,
+          blocked: statsAggregation[0].blocked,
+          active: statsAggregation[0].active,
+          approved: statsAggregation[0].approved,
+          pending: statsAggregation[0].pending,
+        }
         : {
-            total: 0,
-            verification: {
-              verified: 0,
-              unverified: 0,
-              pending: 0,
-              rejected: 0,
-              notSubmitted: 0,
-            },
-            workStatus: {
-              available: 0,
-              working: 0,
-              notAvailable: 0,
-            },
-            blockStatus: {
-              blocked: 0,
-              active: 0,
-            },
-            averageRating: 0,
-          };
+          total: 0,
+          blocked: 0,
+          active: 0,
+          approved: 0,
+          pending: 0,
+        };
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Workers retrieved with pagination", {
@@ -548,6 +481,8 @@ const getWorkerDetails = async (req, res) => {
           experience: 1,
           portfolio: 1,
           biography: 1,
+          blocked: 1,
+          blockReason: 1,
           createdAt: 1,
           credentialId: "$cred._id",
           email: "$cred.email",
@@ -649,6 +584,7 @@ const blockWorker = async (req, res) => {
     }
 
     worker.blocked = true;
+    worker.blockReason = sanitizedReason;
     await worker.save();
 
     logger.info("Worker blocked", {
@@ -663,6 +599,7 @@ const blockWorker = async (req, res) => {
       data: {
         workerId: id,
         blocked: true,
+        blockReason: sanitizedReason,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,
