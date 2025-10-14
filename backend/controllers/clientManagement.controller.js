@@ -125,6 +125,7 @@ const getClients = async (req, res) => {
           dateOfBirth: 1,
           maritalStatus: 1,
           blocked: 1,
+          blockReason: 1,
           isVerified: 1,
           verifiedAt: 1,
           createdAt: 1,
@@ -224,23 +225,20 @@ const getClients = async (req, res) => {
         $group: {
           _id: null,
           total: { $sum: 1 },
-          blocked: {
-            $sum: { $cond: [{ $eq: ["$cred.isBlocked", true] }, 1, 0] },
-          },
-          active: {
-            $sum: { $cond: [{ $ne: ["$cred.isBlocked", true] }, 1, 0] },
-          },
+          blocked: { $sum: { $cond: [{ $eq: ["$blocked", true] }, 1, 0] } },
+          active: { $sum: { $cond: [{ $ne: ["$blocked", true] }, 1, 0] } },
         },
       },
     ]);
 
+
     const statistics =
       statsAggregation.length > 0
         ? {
-            total: statsAggregation[0].total,
-            blocked: statsAggregation[0].blocked,
-            active: statsAggregation[0].active,
-          }
+          total: statsAggregation[0].total,
+          blocked: statsAggregation[0].blocked,
+          active: statsAggregation[0].active,
+        }
         : { total: 0, blocked: 0, active: 0 };
 
     const processingTime = Date.now() - startTime;
@@ -344,20 +342,19 @@ const blockClient = async (req, res) => {
 
     const sanitizedReason = sanitizeInput(value.reason);
 
-    // Find credential and block
-    const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "client") {
+    // Find client and block
+    const client = await Client.findById(id);
+    if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client credential not found",
+        message: "Client not found",
         code: "CLIENT_NOT_FOUND",
       });
     }
 
-    credential.isBlocked = true;
-    credential.blockedAt = new Date();
-    credential.blockReason = sanitizedReason;
-    await credential.save();
+    client.blocked = true;
+    client.blockReason = sanitizedReason;
+    await client.save();
 
     logger.info("Client blocked", {
       clientId: id,
@@ -370,8 +367,8 @@ const blockClient = async (req, res) => {
       message: "Client blocked successfully",
       data: {
         clientId: id,
-        blockedAt: credential.blockedAt,
-        blockReason: credential.blockReason,
+        blocked: true,
+        blockReason: sanitizedReason,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,
@@ -388,30 +385,28 @@ const blockClient = async (req, res) => {
   }
 };
 
-// Unblock a client (update Credential)
+// Unblock a client (update client model)
 const unblockClient = async (req, res) => {
   const startTime = Date.now();
   try {
     const { id } = req.params;
 
-    // Find credential and unblock
-    const credential = await Credential.findById(id);
-    if (!credential || credential.userType !== "client") {
+    // Find client and unblock
+    const client = await Client.findById(id);
+    if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client credential not found",
+        message: "Client not found",
         code: "CLIENT_NOT_FOUND",
       });
     }
 
-    credential.isBlocked = false;
-    credential.unblockedAt = new Date();
-    credential.unblockNotes = "Unblocked by admin";
-    await credential.save();
+    client.blocked = false;
+    client.blockReason = null;
+    await client.save();
 
     logger.info("Client unblocked", {
       clientId: id,
-      unblockedAt: credential.unblockedAt,
       processingTime: `${Date.now() - startTime}ms`,
     });
 
@@ -420,7 +415,8 @@ const unblockClient = async (req, res) => {
       message: "Client unblocked successfully",
       data: {
         clientId: id,
-        unblockedAt: credential.unblockedAt,
+        blocked: false,
+        blockReason: null,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,

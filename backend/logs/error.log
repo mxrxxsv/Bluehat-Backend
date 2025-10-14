@@ -55,3 +55,4 @@
 {"error":"Cast to ObjectId failed for value \"undefined\" (type string) at path \"_id\" for model \"Worker\"","level":"error","message":"Error unblocking worker","service":"fixit-api","timestamp":"2025-10-14 20:09:52"}
 {"error":"credentialId is not defined","level":"error","message":"Error unblocking worker","service":"fixit-api","timestamp":"2025-10-14 20:13:05"}
 {"error":"Cast to ObjectId failed for value \"undefined\" (type string) at path \"_id\" for model \"Worker\"","level":"error","message":"Error blocking worker","service":"fixit-api","timestamp":"2025-10-14 20:24:53"}
+{"error":"Cannot access 'client' before initialization","level":"error","message":"Error blocking client","service":"fixit-api","timestamp":"2025-10-14 21:22:38"}

@@ -633,6 +633,7 @@ const unblockWorker = async (req, res) => {
     }
 
     worker.blocked = false;
+    worker.blockReason = null;
     await worker.save();
 
     logger.info("Worker unblocked", {
@@ -646,6 +647,7 @@ const unblockWorker = async (req, res) => {
       data: {
         workerId: id,
         blocked: false,
+        blockReason: null,
       },
       meta: {
         processingTime: `${Date.now() - startTime}ms`,
