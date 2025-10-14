@@ -32,6 +32,7 @@ const JobDetails = () => {
         const res = await getJobById(id);
         const jobData = res.data.data || res.data;
         setJob(jobData);
+        console.log("✅ Job data:", jobData);
       } catch (err) {
         console.error("❌ Error fetching job:", err);
         setError("Job not found.");
@@ -122,12 +123,12 @@ const JobDetails = () => {
               <img
                 src={
                   typeof job.client?.profilePicture === "string" &&
-                  job.client.profilePicture.trim() !== ""
+                    job.client.profilePicture.trim() !== ""
                     ? job.client.profilePicture
                     : job.client?.profilePicture?.url &&
                       job.client.profilePicture.url.trim() !== ""
-                    ? job.client.profilePicture.url
-                    : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      ? job.client.profilePicture.url
+                      : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
@@ -185,21 +186,24 @@ const JobDetails = () => {
         {loadingUser ? (
           <p className="text-gray-500">Checking user...</p>
         ) : currentUser ? (
-          currentUser.userType === "worker" ? (
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-[#55b3f3] hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-            >
-              Apply
-            </button>
-          ) : currentUser.userType === "client" ? (
-            <button
-              onClick={() => navigate(`/invite-workers/${job.id}`)}
-              className="bg-[#55b3f3] hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-            >
-              Invite Workers
-            </button>
-          ) : null
+          <>
+            {currentUser.userType === "worker" ? (
+              <button
+                onClick={() => setShowModal(true)}
+                className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+              >
+                Apply
+              </button>
+            ) : currentUser.userType === "client" &&
+              job.client?.credentialId._id === currentUser.id ? (
+              <button
+                onClick={() => navigate(`/invite-workers/${job.id}`)}
+                className="bg-[#55b3f3] hover:bg-sky-500 mt-4 md:mt-0 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+              >
+                Invite Workers
+              </button>
+            ) : null}
+          </>
         ) : (
           <p className="text-red-500 font-medium">
             Please log in to apply or edit jobs.

@@ -212,7 +212,8 @@ const WorkerSchema = new mongoose.Schema(
     },
     blockReason: {
       type: String,
-      required: true,
+      required: false,
+      default: "",
     },
     averageRating: {
       type: Number,

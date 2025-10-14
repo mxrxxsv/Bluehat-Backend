@@ -1,116 +1,80 @@
-// components/AddressInput.jsx
 import { useState, useEffect } from "react";
 import axios from "axios";
 
 const PHIL_API = "https://psgc.gitlab.io/api";
 
-const AddressInput = ({ value, onChange }) => {
-  const [regions, setRegions] = useState([]);
-  const [provinces, setProvinces] = useState([]);
+const AddressInput = ({ value = "", onChange }) => {
   const [cities, setCities] = useState([]);
   const [barangays, setBarangays] = useState([]);
 
-  const [selectedRegion, setSelectedRegion] = useState("");
-  const [selectedProvince, setSelectedProvince] = useState("");
+  const REGION_CODE = "030000000"; // Region III (Central Luzon)
+  const PROVINCE_CODE = "034900000"; // Nueva Ecija
+
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedBarangay, setSelectedBarangay] = useState("");
 
-  // Load regions
+  // Load cities/municipalities of Nueva Ecija
   useEffect(() => {
-    axios.get(`${PHIL_API}/regions.json`).then((res) => setRegions(res.data));
+    const fetchCities = async () => {
+      try {
+        const res = await axios.get(
+          `${PHIL_API}/provinces/${PROVINCE_CODE}/cities-municipalities.json`
+        );
+        setCities(res.data);
+
+        // ✅ Optional: Auto-select Cabiao by default
+        const cabiao = res.data.find((c) => c.name === "CABIAO");
+        if (cabiao) setSelectedCity(cabiao.code);
+      } catch (err) {
+        console.error("Failed to load cities:", err);
+        setCities([]);
+      }
+    };
+    fetchCities();
   }, []);
 
-  // Load provinces
+  // Load barangays for selected city
   useEffect(() => {
-    if (selectedRegion) {
-      axios
-        .get(`${PHIL_API}/regions/${selectedRegion}/provinces.json`)
-        .then((res) => setProvinces(res.data))
-        .catch(() => setProvinces([]));
-      setSelectedProvince("");
-      setCities([]);
-      setSelectedCity("");
-      setBarangays([]);
-      setSelectedBarangay("");
-    }
-  }, [selectedRegion]);
-
-  // Load cities
-  useEffect(() => {
-    if (selectedProvince) {
-      axios
-        .get(`${PHIL_API}/provinces/${selectedProvince}/cities-municipalities.json`)
-        .then((res) => setCities(res.data))
-        .catch(() => setCities([]));
-      setSelectedCity("");
-      setBarangays([]);
-      setSelectedBarangay("");
-    }
-  }, [selectedProvince]);
-
-  // Load barangays
-  useEffect(() => {
-    if (selectedCity) {
-      axios
-        .get(`${PHIL_API}/cities-municipalities/${selectedCity}/barangays.json`)
-        .then((res) => setBarangays(res.data))
-        .catch(() => setBarangays([]));
-      setSelectedBarangay("");
-    }
+    const fetchBarangays = async () => {
+      if (!selectedCity) {
+        setBarangays([]);
+        return;
+      }
+      try {
+        const res = await axios.get(
+          `${PHIL_API}/cities-municipalities/${selectedCity}/barangays.json`
+        );
+        setBarangays(res.data);
+      } catch (err) {
+        console.error("Failed to load barangays:", err);
+        setBarangays([]);
+      }
+    };
+    fetchBarangays();
   }, [selectedCity]);
 
-  // Update full address
+  // ✅ Only update parent when address changes — not on every render
   useEffect(() => {
-    const fullAddress = [
-      selectedBarangay
-        ? barangays.find((b) => b.code === selectedBarangay)?.name
-        : "",
-      selectedCity ? cities.find((c) => c.code === selectedCity)?.name : "",
-      // selectedProvince ? provinces.find((p) => p.code === selectedProvince)?.name : "",
-      // selectedRegion ? regions.find((r) => r.code === selectedRegion)?.name : "",
-    ]
+    if (!onChange) return;
+
+    const cityName = cities.find((c) => c.code === selectedCity)?.name || "";
+    const barangayName =
+      barangays.find((b) => b.code === selectedBarangay)?.name || "";
+
+    const fullAddress = [barangayName, cityName,]
       .filter(Boolean)
       .join(", ");
-    onChange(fullAddress);
-  }, [selectedRegion, selectedProvince, selectedCity, selectedBarangay, barangays, cities, provinces, regions]);
+
+    onChange(fullAddress); // updates parent only when city or barangay changes
+  }, [selectedCity, selectedBarangay]);
 
   return (
     <div className="space-y-2">
-      {/* Region */}
-      <select
-        value={selectedRegion}
-        onChange={(e) => setSelectedRegion(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
-      >
-        <option value="">Select Region</option>
-        {regions.map((r) => (
-          <option key={r.code} value={r.code} className="text-black">
-            {r.name}
-          </option>
-        ))}
-      </select>
-
-      {/* Province */}
-      <select
-        value={selectedProvince}
-        onChange={(e) => setSelectedProvince(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
-        disabled={!provinces.length}
-      >
-        <option value="">Select Province</option>
-        {provinces.map((p) => (
-          <option key={p.code} value={p.code} className="text-black">
-            {p.name}
-          </option>
-        ))}
-      </select>
-
       {/* City */}
       <select
         value={selectedCity}
         onChange={(e) => setSelectedCity(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
-        disabled={!cities.length}
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-600"
       >
         <option value="">Select City/Municipality</option>
         {cities.map((c) => (
@@ -124,7 +88,7 @@ const AddressInput = ({ value, onChange }) => {
       <select
         value={selectedBarangay}
         onChange={(e) => setSelectedBarangay(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500"
+        className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-600"
         disabled={!barangays.length}
       >
         <option value="">Select Barangay</option>

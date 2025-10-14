@@ -1005,7 +1005,7 @@ const getAds = async (req, res) => {
         timestamp: new Date().toISOString(),
         processingTime: `${processingTime}ms`,
         cached: false,
-        encrypted: true, // Indicate data was encrypted and decrypted
+        encrypted: true, 
       },
     });
   } catch (err) {
