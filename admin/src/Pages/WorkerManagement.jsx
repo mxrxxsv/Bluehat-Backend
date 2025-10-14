@@ -197,12 +197,11 @@ const WorkerManagement = () => {
     try {
       setActionLoading(true);
 
-      const response = await blockWorker(blockingWorker.credentialId, {
+      const response = await blockWorker(blockingWorker._id, {
         reason: blockReason.trim(),
       });
 
       if (response.success) {
-        // Refresh the workers list
         await fetchWorkers();
         closeBlockModal();
         alert("Worker blocked successfully!");
@@ -229,10 +228,9 @@ const WorkerManagement = () => {
     try {
       setActionLoading(true);
 
-      const response = await unblockWorker(worker.credentialId);
+      const response = await unblockWorker(worker._id);
 
       if (response.success) {
-        // Refresh the workers list
         await fetchWorkers();
         alert("Worker unblocked successfully!");
       } else {
@@ -562,7 +560,7 @@ const WorkerManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-3">
-                        {worker.isBlocked ? (
+                        {worker.blocked ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             <Ban className="w-3 h-3 mr-1" />
                             Blocked
@@ -633,7 +631,7 @@ const WorkerManagement = () => {
                             <Eye className="w-3 h-3" />
                             View
                           </button>
-                          {worker.isBlocked ? (
+                          {worker.blocked ? (
                             <button
                               onClick={() => handleUnblockWorker(worker)}
                               disabled={actionLoading}
@@ -755,7 +753,7 @@ const WorkerManagement = () => {
                         <p className="text-sm text-gray-500 capitalize">
                           {selectedWorker.userType}
                         </p>
-                        {selectedWorker.isBlocked ? (
+                        {selectedWorker.blocked ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             <Ban className="w-3 h-3 mr-1" />
                             Blocked
@@ -783,7 +781,7 @@ const WorkerManagement = () => {
                 </div>
 
                 {/* Block Reason */}
-                {selectedWorker.isBlocked && selectedWorker.blockReason && (
+                {selectedWorker.blocked && selectedWorker.blockReason && (
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                     <h4 className="font-medium text-red-800 mb-1">
                       Block Reason
@@ -897,17 +895,17 @@ const WorkerManagement = () => {
                             className="border-l-2 border-blue-200 pl-3"
                           >
                             <h5 className="font-medium text-gray-800">
-                              {exp.jobTitle}
+                              {exp.position}
                             </h5>
                             <p className="text-sm text-gray-600">
-                              {exp.company}
+                              {exp.companyName}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {exp.startDate} - {exp.endDate || "Present"}
+                              {exp.startYear} - {exp.endYear || "Present"}
                             </p>
-                            {exp.description && (
+                            {exp.responsibilities && (
                               <p className="text-sm text-gray-600 mt-1">
-                                {exp.description}
+                                {exp.responsibilities}
                               </p>
                             )}
                           </div>
@@ -954,7 +952,7 @@ const WorkerManagement = () => {
 
               {/* Modal Actions */}
               <div className="flex justify-end gap-2 mt-6">
-                {selectedWorker.isBlocked ? (
+                {selectedWorker.blocked ? (
                   <button
                     onClick={() => {
                       handleUnblockWorker(selectedWorker);
