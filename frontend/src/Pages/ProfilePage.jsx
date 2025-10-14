@@ -274,10 +274,11 @@ const ProfilePage = () => {
             {userType === "client" ? "Client" : "Freelancer"}
           </span>
 
-          <p className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer" onClick={() => setIsBioModalOpen(true)} >
-            {biography || "No biography provided."}
-          </p>
-
+          {userType === "worker" && (
+            < p className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer" onClick={() => setIsBioModalOpen(true)} >
+              {biography || "No biography provided."}
+            </p>
+          )}
 
         </div>
       </div>
@@ -285,437 +286,445 @@ const ProfilePage = () => {
 
 
       {/* Content Based on Role */}
-      {userType === "client" ? (
-        <>
-          <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
-            Your Job Posts
-          </h3>
-          {postsLoading ? (
-            <p className="text-gray-500 text-center">Loading jobs...</p>
-          ) : userPosts.length > 0 ? (
-            <div className="space-y-4">
-              {userPosts.map((post) => (
-                <div key={post.id} className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
-                  <div className="rounded-xl p-4 bg-white transition-all">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
-                        {post.client?.name || "Client Name"}
-                      </span>
-                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                        {/* <Clock size={16} /> */}
-                        {new Date(post.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-
-                    </div>
-                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                      <Briefcase size={20} className="text-blue-400" />
-                      {post.description}
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                        {post.category?.name || "Uncategorized"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={16} /> {post.location}
-                      </span>
-                      <span className="font-bold text-green-400">
-                        ₱{post.price?.toLocaleString() || 0}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center">
-              You have not posted any jobs yet.
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          {/* Credential Section */}
-
-          <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
-
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setIsEditMode((prev) => !prev)}
-                className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-              >
-                {isEditMode ? "Done" : "Edit"}
-              </button>
-            </div>
-
-             {/* ================= EXPERIENCE ================= */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Work Experience
-                {isEditMode && (
-                  <button
-                    onClick={() => setIsAddExperienceOpen(true)}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    + Add
-                  </button>
-                )}
-              </h3>
-              {currentUser.experience && currentUser.experience.length > 0 ? (
-                <div className="space-y-4">
-                  {currentUser.experience.map((exp) => (
-                    <div
-                      key={exp._id}
-                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
-                    >
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-800">
-                          {exp.position || "Unknown Position"}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {exp.companyName || "Unknown Company"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {exp.startYear} – {exp.endYear || "Present"}
-                        </p>
-                        <p className="text-gray-700 mt-2 text-sm">
-                          {exp.responsibilities || "No details provided."}
-                        </p>
-                      </div>
-
-                      {/* ✅ Delete button at bottom */}
-                      {isEditMode && (
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No work experience added yet.</p>
-              )}
-            </div>
-
-          
-
-          {isAddExperienceOpen && (
-            <AddExperience
-              onClose={() => setIsAddExperienceOpen(false)}
-              onAdd={(newExperience) =>
-                setCurrentUser((prev) => ({
-                  ...prev,
-                  experiences: [...(prev.experiences || []), newExperience],
-                }))
-              }
-              onRefresh={fetchExperiences}
-            />
-          )}
-
-            {/* ================= SKILLS ================= */}
-
-            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
-              Skills
-              {isEditMode && (
-                <button
-                  onClick={() => setIsAddSkillOpen(true)}
-                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                >
-                  + Add
-                </button>
-              )}
+      {
+        userType === "client" ? (
+          <>
+            <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
+              Your Job Posts
             </h3>
-            {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {currentUser.skillsByCategory.map((skill, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
-                  >
-                    <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
-                    {isEditMode && (
-                      <button
-                        onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
-                        className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
+            {postsLoading ? (
+              <p className="text-gray-500 text-center">Loading jobs...</p>
+            ) : userPosts.length > 0 ? (
+              <div className="space-y-4">
+                {userPosts.map((post) => (
+                  <div key={post.id} className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
+                    <div className="rounded-xl p-4 bg-white transition-all">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-[#252525] opacity-75">
+                          {post.client?.name || "Client Name"}
+                        </span>
+                        <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                          {/* <Clock size={16} /> */}
+                          {new Date(post.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+
+                      </div>
+                      <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                        <Briefcase size={20} className="text-blue-400" />
+                        {post.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                          {post.category?.name || "Uncategorized"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <MapPin size={16} /> {post.location}
+                        </span>
+                        <span className="font-bold text-green-400">
+                          ₱{post.price?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
-
               </div>
             ) : (
-              <p className="text-gray-500">No skills added yet.</p>
+              <p className="text-gray-500 text-center">
+                You have not posted any jobs yet.
+              </p>
             )}
+          </>
+        ) : (
+          <>
+            {/* Credential Section */}
 
-            {/* AddSkill Modal */}
-            {isAddSkillOpen && (
-              <AddSkill
-                onClose={() => setIsAddSkillOpen(false)}
-                onAdd={(newSkills) =>
-                  setCurrentUser((prev) => ({
-                    ...prev,
-                    skills: [...(prev.skills || []), ...newSkills],
-                  }))
-                }
-                onRefresh={fetchSkills}
-              />
-            )}
+            <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
 
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setIsEditMode((prev) => !prev)}
+                  className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  {isEditMode ? "Done" : "Edit"}
+                </button>
+              </div>
 
-
-            {/* ================= PORTFOLIO ================= */}
-            <div className="mb-8 mt-4">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Portfolio
-                {isEditMode && (
-                  <button
-                    onClick={() => setIsAddPortfolioOpen(true)}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    + Add
-                  </button>
-                )}
-              </h3>
-
-              {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {currentUser.portfolio.map((item) => (
-                    <div
-                      key={item._id}
-                      className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
+              {/* ================= EXPERIENCE ================= */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                  Work Experience
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsAddExperienceOpen(true)}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
                     >
-                      {/* Image Section */}
-                      <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <img
-                          src={
-                            item.image?.url
-                              ? item.image.url
-                              : "https://via.placeholder.com/300x200?text=No+Image"
-                          }
-                          alt={item.projectTitle || "Portfolio Project"}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      </div>
-
-                      {/* Content Section */}
-                      <div className="mt-3 flex-1">
-                        <h4 className="text-lg font-semibold text-gray-800">
-                          {item.projectTitle || "Untitled Project"}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {item.description || "No description provided."}
-                        </p>
-                      </div>
-
-                      {/* Delete Button at Bottom */}
-                      {isEditMode && (
-                        <div className="mt-4 flex justify-end">
-                          <button
-                            onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
+                      + Add
+                    </button>
+                  )}
+                </h3>
+                {currentUser.experience && currentUser.experience.length > 0 ? (
+                  <div className="space-y-4">
+                    {currentUser.experience.map((exp) => (
+                      <div
+                        key={exp._id}
+                        className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+                      >
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-800">
+                            {exp.position || "Unknown Position"}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {exp.companyName || "Unknown Company"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {exp.startYear} – {exp.endYear || "Present"}
+                          </p>
+                          <p className="text-gray-700 mt-2 text-sm">
+                            {exp.responsibilities || "No details provided."}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))}
 
-                </div>
+                        {/* ✅ Delete button at bottom */}
+                        {isEditMode && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
+                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No work experience added yet.</p>
+                )}
+              </div>
 
-              ) : (
-                <p className="text-gray-500">You have not added any portfolio projects yet.</p>
 
+
+              {isAddExperienceOpen && (
+                <AddExperience
+                  onClose={() => setIsAddExperienceOpen(false)}
+                  onAdd={(newExperience) =>
+                    setCurrentUser((prev) => ({
+                      ...prev,
+                      experiences: [...(prev.experiences || []), newExperience],
+                    }))
+                  }
+                  onRefresh={fetchExperiences}
+                />
               )}
-            </div>
 
-            {/* Show AddPortfolio modal */}
-            {isAddPortfolioOpen && (
-              <AddPortfolio
-                onClose={() => setIsAddPortfolioOpen(false)}
-                onAdd={(newPortfolio) =>
-                  setCurrentUser((prev) => ({
-                    ...prev,
-                    portfolio: [...(prev.portfolio || []), newPortfolio],
-                  }))
-                }
-                onRefresh={fetchPortfolios}
-              />
-            )}
+              {/* ================= SKILLS ================= */}
 
-
-
-            {/* ================= CERTIFICATES ================= */}
-            <div className="mb-8 mt-4">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Certificates
+              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
+                Skills
                 {isEditMode && (
                   <button
-                    onClick={() => setIsAddCertificateOpen(true)}
+                    onClick={() => setIsAddSkillOpen(true)}
                     className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
                   >
                     + Add
                   </button>
                 )}
-
               </h3>
-              {currentUser.certificates && currentUser.certificates.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {currentUser.certificates.map((cert, index) => (
+              {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.skillsByCategory.map((skill, index) => (
                     <div
                       key={index}
-                      className="shadow-sm p-3 rounded-md bg-white text-left flex flex-col justify-between"
+                      className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
                     >
-                      <img
-                        src={
-                          cert.url
-                            ? cert.url
-                            : "https://via.placeholder.com/300x200?text=No+Certificate"
-                        }
-                        alt="Certificate"
-                        className="w-full h-40 object-cover rounded-md"
-                      />
-
-                      {/* Delete Button */}
+                      <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
                       {isEditMode && (
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
+                          className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                        >
+                          ✕
+                        </button>
                       )}
                     </div>
                   ))}
+
                 </div>
               ) : (
-                <p className="text-gray-500">No certificates uploaded yet.</p>
+                <p className="text-gray-500">No skills added yet.</p>
+              )}
+
+              {/* AddSkill Modal */}
+              {isAddSkillOpen && (
+                <AddSkill
+                  onClose={() => setIsAddSkillOpen(false)}
+                  onAdd={(newSkills) =>
+                    setCurrentUser((prev) => ({
+                      ...prev,
+                      skills: [...(prev.skills || []), ...newSkills],
+                    }))
+                  }
+                  onRefresh={fetchSkills}
+                />
+              )}
+
+
+
+              {/* ================= PORTFOLIO ================= */}
+              <div className="mb-8 mt-4">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                  Portfolio
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsAddPortfolioOpen(true)}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  )}
+                </h3>
+
+                {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {currentUser.portfolio.map((item) => (
+                      <div
+                        key={item._id}
+                        className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
+                      >
+                        {/* Image Section */}
+                        <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                          <img
+                            src={
+                              item.image?.url
+                                ? item.image.url
+                                : "https://via.placeholder.com/300x200?text=No+Image"
+                            }
+                            alt={item.projectTitle || "Portfolio Project"}
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                        </div>
+
+                        {/* Content Section */}
+                        <div className="mt-3 flex-1">
+                          <h4 className="text-lg font-semibold text-gray-800">
+                            {item.projectTitle || "Untitled Project"}
+                          </h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {item.description || "No description provided."}
+                          </p>
+                        </div>
+
+                        {/* Delete Button at Bottom */}
+                        {isEditMode && (
+                          <div className="mt-4 flex justify-end">
+                            <button
+                              onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
+                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                  </div>
+
+                ) : (
+                  <p className="text-gray-500">You have not added any portfolio projects yet.</p>
+
+                )}
+              </div>
+
+              {/* Show AddPortfolio modal */}
+              {isAddPortfolioOpen && (
+                <AddPortfolio
+                  onClose={() => setIsAddPortfolioOpen(false)}
+                  onAdd={(newPortfolio) =>
+                    setCurrentUser((prev) => ({
+                      ...prev,
+                      portfolio: [...(prev.portfolio || []), newPortfolio],
+                    }))
+                  }
+                  onRefresh={fetchPortfolios}
+                />
+              )}
+
+
+
+              {/* ================= CERTIFICATES ================= */}
+              <div className="mb-8 mt-4">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                  Certificates
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsAddCertificateOpen(true)}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  )}
+
+                </h3>
+                {currentUser.certificates && currentUser.certificates.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {currentUser.certificates.map((cert, index) => (
+                      <div
+                        key={index}
+                        className="shadow-sm p-3 rounded-md bg-white text-left flex flex-col justify-between"
+                      >
+                        <img
+                          src={
+                            cert.url
+                              ? cert.url
+                              : "https://via.placeholder.com/300x200?text=No+Certificate"
+                          }
+                          alt="Certificate"
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+
+                        {/* Delete Button */}
+                        {isEditMode && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
+                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No certificates uploaded yet.</p>
+                )}
+
+              </div>
+
+              {isAddCertificateOpen && (
+                <AddCertificate
+                  onClose={() => setIsAddCertificateOpen(false)}
+                  onAdd={(newCertificate) =>
+                    setCurrentUser((prev) => ({
+                      ...prev,
+                      certificates: [...(prev.certificates || []), newCertificate],
+                    }))
+                  }
+                  onRefresh={fetchCertificates}
+                />
               )}
 
             </div>
 
-            {isAddCertificateOpen && (
-              <AddCertificate
-                onClose={() => setIsAddCertificateOpen(false)}
-                onAdd={(newCertificate) =>
-                  setCurrentUser((prev) => ({
-                    ...prev,
-                    certificates: [...(prev.certificates || []), newCertificate],
-                  }))
-                }
-                onRefresh={fetchCertificates}
-              />
-            )}
-
-          </div>
-
-        </>
-      )}
+          </>
+        )
+      }
 
       {/* Modal for editing biography */}
-      {isBioModalOpen && (
-        <BiographyModal
-          biography={biography}
-          onClose={() => setIsBioModalOpen(false)}
-          onSave={handleSaveBiography}
-        />
+      {
+        isBioModalOpen && (
+          <BiographyModal
+            biography={biography}
+            onClose={() => setIsBioModalOpen(false)}
+            onSave={handleSaveBiography}
+          />
 
-      )}
+        )
+      }
 
 
       {/* Modal for confirming deletions */}
-      {isDeleteModalOpen && (
-        <DeleteConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={() => {
-            if (deleteAction) deleteAction();
-            setIsDeleteModalOpen(false);
-          }}
-          itemName={deleteItemName}
-        />
-      )}
+      {
+        isDeleteModalOpen && (
+          <DeleteConfirmModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => setIsDeleteModalOpen(false)}
+            onConfirm={() => {
+              if (deleteAction) deleteAction();
+              setIsDeleteModalOpen(false);
+            }}
+            itemName={deleteItemName}
+          />
+        )
+      }
 
 
 
       {/* Modal for profile picture */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
-              onClick={() => setIsModalOpen(false)}
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex flex-col items-center mt-5">
-              <img
-                src={
-                  preview ||
-                  image ||
-                  "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                }
-                alt="Preview"
-                className="w-32 h-32 rounded-full object-cover mb-4 border"
-              />
-
-              <input
-                type="file"
-                id="fileInput"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              <label
-                htmlFor="fileInput"
-                className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-100 transition"
+      {
+        isModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                onClick={() => setIsModalOpen(false)}
               >
-                Choose Picture
-              </label>
+                <X size={20} />
+              </button>
 
-              {selectedFile && (
-                <p className="mt-2 text-xs text-gray-500">
-                  Selected: {selectedFile.name}
-                </p>
-              )}
+              <div className="flex flex-col items-center mt-5">
+                <img
+                  src={
+                    preview ||
+                    image ||
+                    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                  }
+                  alt="Preview"
+                  className="w-32 h-32 rounded-full object-cover mb-4 border"
+                />
 
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={handleUpload}
-                  disabled={!selectedFile || uploading}
-                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-blue-400 cursor-pointer"
+                <input
+                  type="file"
+                  id="fileInput"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                <label
+                  htmlFor="fileInput"
+                  className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-100 transition"
                 >
-                  {uploading ? "Uploading..." : "Upload"}
-                </button>
-                <button
-                  onClick={handleRemove}
-                  disabled={uploading}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 cursor-pointer transition-colors"
-                >
-                  Remove
-                </button>
+                  Choose Picture
+                </label>
+
+                {selectedFile && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={handleUpload}
+                    disabled={!selectedFile || uploading}
+                    className="px-4 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    {uploading ? "Uploading..." : "Upload"}
+                  </button>
+                  <button
+                    onClick={handleRemove}
+                    disabled={uploading}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 cursor-pointer transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 
