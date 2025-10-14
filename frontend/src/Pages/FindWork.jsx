@@ -119,9 +119,7 @@ const FindWork = () => {
     } catch (err) {
       console.error("Error fetching jobs:", err);
     } finally {
-      setTimeout(() => {
       setLoading(false);
-    }, 1000);
     }
   };
 
