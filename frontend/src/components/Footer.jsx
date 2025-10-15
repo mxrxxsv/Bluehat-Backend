@@ -4,7 +4,7 @@ const Footer = () => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    if (currentPath !== "/") return null;
+    if (currentPath !== "/" && currentPath !== "/home") return null;
 
     return (
         <footer className="bg-gradient-to-r from-[#f4f6f6] to-[#cfe8f7] text-gray-800 px-4 py-5">
@@ -61,13 +61,13 @@ const Footer = () => {
                     <h4 className="font-semibold mb-2 text-[20px] text-left ">Contact & Support</h4>
                     <div className="text-left">
                         <p className="text-[16px] mb-2">
-                            <strong>Location:</strong> Sumacab Este, Cabanatuan City, Nueva Ecija
+                            <span className="font-semibold">Location:</span> Sumacab Este, Cabanatuan City, Nueva Ecija
                         </p>
                         <p className="text-[16px] mb-2">
-                            <strong>Email:</strong> fixit.app.ph@gmail.com
+                            <span className="font-semibold">Email:</span> fixit.app.ph@gmail.com
                         </p>
                         <p className="text-[16px]">
-                            <strong>Phone:</strong> +123 456 7890
+                            <span className="font-semibold">Phone:</span> +123 456 7890
                         </p>
                     </div>
                 </div>
