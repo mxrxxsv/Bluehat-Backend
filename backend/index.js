@@ -9,6 +9,7 @@ const connectDb = require("./db/connectDb");
 const { authLimiter } = require("./utils/rateLimit");
 const http = require("http");
 const { Server } = require("socket.io");
+const socketBus = require("./socket");
 
 // Routes
 const verRoute = require("./routes/ver.route");
@@ -122,6 +123,10 @@ const io = new Server(server, {
   },
 });
 
+// Make io available globally to controllers
+app.set("io", io);
+socketBus.init(io);
+
 // Track online users: Map<credentialId, Set<socketId>>
 const userSockets = new Map();
 
@@ -135,6 +140,9 @@ io.on("connection", (socket) => {
     if (!userSockets.has(cred)) userSockets.set(cred, new Set());
     userSockets.get(cred).add(socket.id);
     socket.data.credentialId = cred;
+    // Also join a personal room for user-targeted events
+    const userRoom = `user:${cred}`;
+    socket.join(userRoom);
     console.log(`✅ Registered user ${cred} on socket ${socket.id}`);
   });
 

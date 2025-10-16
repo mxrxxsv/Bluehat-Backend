@@ -12,6 +12,7 @@ const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
+const { emitToUser, emitToUsers } = require("../socket");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 
 // ==================== JOI SCHEMAS ====================
@@ -374,7 +375,7 @@ const respondToApplication = async (req, res) => {
       },
       {
         path: "workerId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
     ]);
 
@@ -478,6 +479,28 @@ const respondToApplication = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+      try {
+        // Notify worker of application response
+        emitToUser(application.workerId.credentialId, "application:updated", {
+          applicationId,
+          status: application.applicationStatus,
+        });
+        // Notify client (actor) as well
+        emitToUser(req.user.id, "application:updated", {
+          applicationId,
+          status: application.applicationStatus,
+        });
+        // If contract created, notify both
+        if (contract) {
+          emitToUsers(
+            [application.workerId.credentialId, req.user.id],
+            "contract:created",
+            { contractId: contract._id, applicationId }
+          );
+        }
+      } catch (e) {
+        logger.warn("Socket emit failed for respondToApplication", { error: e.message });
+      }
   } catch (error) {
     return handleApplicationError(error, res, "Application response", req);
   }
@@ -584,6 +607,16 @@ const getWorkerApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+      try {
+        // Notify both parties discussion started
+        emitToUsers(
+          [application.workerId.credentialId, req.user.id],
+          "application:discussion_started",
+          { applicationId }
+        );
+      } catch (e) {
+        logger.warn("Socket emit failed for startApplicationDiscussion", { error: e.message });
+      }
   } catch (error) {
     return handleApplicationError(error, res, "Get worker applications", req);
   }
@@ -691,6 +724,26 @@ const getClientApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+      try {
+        // Emit agreement update
+        const clientCred = application.clientId.credentialId;
+        const workerCred = application.workerId.credentialId;
+        emitToUsers([clientCred, workerCred], "application:agreement", {
+          applicationId,
+          status: newStatus,
+          clientAgreed: application.clientAgreed,
+          workerAgreed: application.workerAgreed,
+        });
+        // If contract created, emit contract event
+        if (contract) {
+          emitToUsers([clientCred, workerCred], "contract:created", {
+            contractId: contract._id,
+            applicationId,
+          });
+        }
+      } catch (e) {
+        logger.warn("Socket emit failed for markApplicationAgreement", { error: e.message });
+      }
   } catch (error) {
     return handleApplicationError(error, res, "Get client applications", req);
   }
@@ -794,6 +847,10 @@ const startApplicationDiscussion = async (req, res) => {
         path: "workerId",
         select: "firstName lastName profilePicture credentialId",
       },
+      {
+        path: "clientId",
+        select: "credentialId",
+      },
     ]);
 
     if (!application) {
@@ -831,6 +888,15 @@ const startApplicationDiscussion = async (req, res) => {
         },
       },
     });
+    try {
+      emitToUsers(
+        [application.workerId.credentialId, application.clientId.credentialId],
+        "application:discussion_started",
+        { applicationId }
+      );
+    } catch (e) {
+      logger.warn("Socket emit failed for startApplicationDiscussion", { error: e.message });
+    }
   } catch (error) {
     return handleApplicationError(
       error,
@@ -914,11 +980,11 @@ const markApplicationAgreement = async (req, res) => {
       },
       {
         path: "workerId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
       {
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
     ]);
 

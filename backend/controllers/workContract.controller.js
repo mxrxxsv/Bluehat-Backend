@@ -11,6 +11,21 @@ const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
+const { emitToUsers } = require("../socket");
+
+// Helper to emit to both parties using their credentialIds
+async function emitToContractParties(contract, event, payload) {
+  try {
+    const [client, worker] = await Promise.all([
+      Client.findById(contract.clientId).select("credentialId"),
+      Worker.findById(contract.workerId).select("credentialId"),
+    ]);
+    const ids = [client?.credentialId, worker?.credentialId].filter(Boolean);
+    if (ids.length) emitToUsers(ids, event, payload);
+  } catch (e) {
+    logger.warn("Socket emit helper failed", { error: e.message, event });
+  }
+}
 
 // ==================== JOI SCHEMAS ====================
 const contractUpdateSchema = Joi.object({
@@ -242,6 +257,7 @@ const getClientContracts = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    // No socket emits for list endpoint
   } catch (error) {
     return handleContractError(error, res, "Get client contracts", req);
   }
@@ -360,6 +376,7 @@ const getWorkerContracts = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    // No socket emits for list endpoint
   } catch (error) {
     return handleContractError(error, res, "Get worker contracts", req);
   }
@@ -432,6 +449,7 @@ const getContractDetails = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    // No socket emits for details endpoint
   } catch (error) {
     return handleContractError(error, res, "Get contract details", req);
   }
@@ -495,6 +513,11 @@ const startWork = async (req, res) => {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
+    });
+    // Notify both parties: work status changed
+    emitToContractParties(contract, "contract:updated", {
+      contractId: contract._id,
+      status: contract.contractStatus, // in_progress
     });
   } catch (error) {
     return handleContractError(error, res, "Start work", req);
@@ -566,6 +589,11 @@ const completeWork = async (req, res) => {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
+    });
+    // Notify both parties: awaiting client confirmation
+    emitToContractParties(contract, "contract:updated", {
+      contractId: contract._id,
+      status: contract.contractStatus, // awaiting_client_confirmation
     });
   } catch (error) {
     return handleContractError(error, res, "Complete work", req);
@@ -639,6 +667,11 @@ const confirmWorkCompletion = async (req, res) => {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
+    });
+    // Notify both parties: work completed
+    emitToContractParties(contract, "contract:updated", {
+      contractId: contract._id,
+      status: contract.contractStatus, // completed
     });
   } catch (error) {
     return handleContractError(error, res, "Confirm work completion", req);
@@ -775,6 +808,10 @@ const submitFeedback = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    // Notify both parties: feedback submitted
+    emitToContractParties(contract, "contract:feedback", {
+      contractId: contract._id,
+    });
   } catch (error) {
     return handleContractError(error, res, "Submit feedback", req);
   }
@@ -851,6 +888,11 @@ const cancelContract = async (req, res) => {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
+    });
+    // Notify both parties: contract cancelled
+    emitToContractParties(contract, "contract:updated", {
+      contractId: contract._id,
+      status: "cancelled",
     });
   } catch (error) {
     return handleContractError(error, res, "Cancel contract", req);

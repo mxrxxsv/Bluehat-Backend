@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 import {
   getWorkerApplications,
   getClientApplications,
@@ -33,6 +34,7 @@ import { checkAuth } from "../api/auth";
 import { createOrGetConversation } from "../api/message";
 const ApplicationsPage = () => {
   const navigate = useNavigate();
+  const socketRef = useRef(null);
   const [applications, setApplications] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,37 @@ const ApplicationsPage = () => {
         const user = res.data.data;
         setUserType(user.userType);
 
+        // Connect socket and register to user room
+        if (!socketRef.current) {
+          socketRef.current = io("http://localhost:5000", { withCredentials: true });
+          const credId = user?.credentialId || user?._id || user?.id;
+          if (credId) socketRef.current.emit("registerUser", String(credId));
+
+          // Application related events
+          const onAppUpdate = async () => {
+            try {
+              const who = await checkAuth();
+              let resp;
+              if (who.data.data.userType === "worker") resp = await getWorkerApplications();
+              else resp = await getClientApplications();
+              setApplications(resp?.data?.applications || []);
+            } catch (e) { /* noop */ }
+          };
+          const onInvitationUpdate = async () => {
+            try {
+              const who = await checkAuth();
+              let inv;
+              if (who.data.data.userType === "worker") inv = await getMyInvitations();
+              else inv = await getMySentInvitations();
+              setInvitations(inv || []);
+            } catch (e) { /* noop */ }
+          };
+          socketRef.current.on("application:updated", onAppUpdate);
+          socketRef.current.on("application:discussion_started", onAppUpdate);
+          socketRef.current.on("application:agreement", onAppUpdate);
+          socketRef.current.on("contract:created", () => { onAppUpdate(); onInvitationUpdate(); });
+        }
+
         // Fetch applications
         let applicationsResponse;
         if (user.userType === "worker") {
@@ -87,6 +120,10 @@ const ApplicationsPage = () => {
     };
 
     fetchData();
+
+    return () => {
+      try { socketRef.current?.disconnect(); } catch (_) {}
+    };
   }, []);
 
   const handleResponse = async (applicationId, action) => {
