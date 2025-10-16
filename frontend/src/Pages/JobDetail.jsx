@@ -261,7 +261,7 @@ const JobDetails = () => {
                 />
               </div>
 
-              <div className="flex gap-2">
+              {/* <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="block text-sm font-medium">Duration</label>
                   <input
@@ -287,7 +287,7 @@ const JobDetails = () => {
                     <option value="months">Months</option>
                   </select>
                 </div>
-              </div>
+              </div> */}
 
               <button
                 type="submit"

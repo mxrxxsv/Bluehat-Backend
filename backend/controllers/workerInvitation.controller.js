@@ -152,22 +152,27 @@ const handleInvitationError = (
 
 // Helper function to create conversation for contract
 const createConversationForContract = async (
-  clientId,
-  workerId,
+  clientCredentialId,
+  workerCredentialId,
   contractId
 ) => {
   try {
-    // Check if conversation already exists
+    // Check if conversation already exists using credential IDs
     let conversation = await Conversation.findOne({
-      participants: { $all: [clientId, workerId] },
-      isDeleted: false,
+      $and: [
+        { participants: { $elemMatch: { credentialId: clientCredentialId } } },
+        { participants: { $elemMatch: { credentialId: workerCredentialId } } },
+      ],
     });
 
     if (!conversation) {
       conversation = new Conversation({
-        participants: [clientId, workerId],
-        conversationType: "contract",
-        relatedContract: contractId,
+        participants: [
+          { credentialId: clientCredentialId, userType: "client" },
+          { credentialId: workerCredentialId, userType: "worker" },
+        ],
+        lastMessage: "",
+        lastSender: null,
       });
       await conversation.save();
     }
@@ -176,8 +181,8 @@ const createConversationForContract = async (
   } catch (error) {
     logger.error("Failed to create conversation for contract", {
       error: error.message,
-      clientId,
-      workerId,
+      clientCredentialId,
+      workerCredentialId,
       contractId,
     });
     // Don't throw error - conversation creation shouldn't break contract creation
@@ -454,8 +459,8 @@ const respondToInvitation = async (req, res) => {
 
       // Create conversation for contract
       await createConversationForContract(
-        invitation.clientId._id,
-        req.workerProfile._id,
+        invitation.clientId.credentialId,
+        req.workerProfile.credentialId,
         contract._id
       );
 
@@ -980,8 +985,8 @@ const markInvitationAgreement = async (req, res) => {
 
       // Create conversation for contract
       await createConversationForContract(
-        invitation.clientId._id,
-        invitation.workerId._id,
+        invitation.clientId.credentialId,
+        invitation.workerId.credentialId,
         contract._id
       );
 

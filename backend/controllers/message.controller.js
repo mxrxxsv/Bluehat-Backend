@@ -9,7 +9,11 @@ const { decryptAES128 } = require("../utils/encipher");
 const xss = require("xss"); 
 
 const createConversationSchema = Joi.object({
-  participantCredentialId: Joi.string().required(), // the other user's credential id
+  // allow either a string ObjectId or an object with _id to be defensive
+  participantCredentialId: Joi.alternatives().try(
+    Joi.string(),
+    Joi.object({ _id: Joi.string().required() })
+  ).required(), // the other user's credential id
   participantUserType: Joi.string().valid("client", "worker").required()
 });
 
@@ -72,18 +76,33 @@ exports.createOrGetConversation = async (req, res) => {
       });
     }
 
-    const myId = req.user._id || req.user.id;
-    const otherId = value.participantCredentialId;
+    // Normalize to valid ObjectId strings defensively
+    const normalizeId = (raw) => {
+      const candidate = raw && typeof raw === 'object' && raw._id ? raw._id : raw;
+      if (typeof candidate === 'string' && mongoose.Types.ObjectId.isValid(candidate)) return candidate;
+      if (candidate && typeof candidate === 'object' && typeof candidate.toString === 'function') {
+        const s = candidate.toString();
+        if (mongoose.Types.ObjectId.isValid(s)) return s;
+      }
+      return null;
+    };
+
+    const myId = normalizeId(req.user._id || req.user.id);
+    const otherId = normalizeId(value.participantCredentialId);
+
+    if (!myId || !otherId) {
+      return res.status(400).json({ success: false, message: "Invalid participant credential id(s)" });
+    }
 
     // --- Determine proper order ---
     const participantsOrdered = myId.toString() < otherId.toString()
       ? [
-        { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId },
-        { credentialId: otherId, userType: value.participantUserType }
+        { credentialId: new mongoose.Types.ObjectId(myId), userType: req.user.userType, profileId: req.user.profileId || undefined },
+        { credentialId: new mongoose.Types.ObjectId(otherId), userType: value.participantUserType }
       ]
       : [
-        { credentialId: otherId, userType: value.participantUserType },
-        { credentialId: myId, userType: req.user.userType, profileId: req.user.profileId }
+        { credentialId: new mongoose.Types.ObjectId(otherId), userType: value.participantUserType },
+        { credentialId: new mongoose.Types.ObjectId(myId), userType: req.user.userType, profileId: req.user.profileId || undefined }
       ];
 
     // ✅ Initialize unreadCounts with 0 for each participant
@@ -96,8 +115,8 @@ exports.createOrGetConversation = async (req, res) => {
     let conversation = await Conversation.findOneAndUpdate(
       {
         $and: [
-          { participants: { $elemMatch: { credentialId: myId } } },
-          { participants: { $elemMatch: { credentialId: otherId } } }
+          { participants: { $elemMatch: { credentialId: new mongoose.Types.ObjectId(myId) } } },
+          { participants: { $elemMatch: { credentialId: new mongoose.Types.ObjectId(otherId) } } }
         ]
       },
       {
@@ -135,7 +154,22 @@ exports.sendMessage = async (req, res) => {
     const { error, value } = sendMessageSchema.validate(req.body);
     if (error) return res.status(400).json({ success: false, message: "Invalid payload", errors: error.details });
 
-    const senderCredentialId = req.user._id || req.user.id;
+    // Normalize sender id
+    const normalizeId = (raw) => {
+      const candidate = raw && typeof raw === 'object' && raw._id ? raw._id : raw;
+      if (typeof candidate === 'string' && mongoose.Types.ObjectId.isValid(candidate)) return candidate;
+      if (candidate && typeof candidate === 'object' && typeof candidate.toString === 'function') {
+        const s = candidate.toString();
+        if (mongoose.Types.ObjectId.isValid(s)) return s;
+      }
+      return null;
+    };
+
+    const senderCredentialIdStr = normalizeId(req.user._id || req.user.id);
+    if (!senderCredentialIdStr) {
+      return res.status(400).json({ success: false, message: "Invalid sender credential id" });
+    }
+    const senderCredentialId = new mongoose.Types.ObjectId(senderCredentialIdStr);
     const userType = req.user.userType;
 
     // find or create conversation
@@ -147,10 +181,15 @@ exports.sendMessage = async (req, res) => {
     } else {
       if (!value.toCredentialId) return res.status(400).json({ success: false, message: "toCredentialId is required when conversationId is not provided" });
 
+      const toIdStr = normalizeId(value.toCredentialId);
+      if (!toIdStr) return res.status(400).json({ success: false, message: "Invalid toCredentialId" });
+
+      const toId = new mongoose.Types.ObjectId(toIdStr);
+
       conversation = await Conversation.findOne({
         $and: [
           { participants: { $elemMatch: { credentialId: senderCredentialId } } },
-          { participants: { $elemMatch: { credentialId: value.toCredentialId } } }
+          { participants: { $elemMatch: { credentialId: toId } } }
         ]
       });
 
@@ -160,7 +199,7 @@ exports.sendMessage = async (req, res) => {
         conversation = await Conversation.create({
           participants: [
             { credentialId: senderCredentialId, userType },
-            { credentialId: value.toCredentialId, userType: value.toUserType || "client" }
+            { credentialId: toId, userType: value.toUserType || "client" }
           ]
         });
       }

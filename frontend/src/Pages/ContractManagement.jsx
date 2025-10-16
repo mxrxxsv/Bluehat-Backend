@@ -20,6 +20,7 @@ import {
   confirmWorkCompletion,
   submitFeedback,
 } from "../api/feedback.jsx";
+import { createOrGetConversation } from "../api/message.jsx";
 import worker from '../assets/worker.png';
 import client from '../assets/client.png';
 import { checkAuth } from "../api/auth";
@@ -135,13 +136,36 @@ const ContractManagement = () => {
 
   const handleMessageClick = async (contract) => {
     try {
+      
       // Determine the other party's details
       const otherParty =
         currentUser?.userType === "worker"
           ? { credentialId: contract.clientId, userType: "client" }
           : { credentialId: contract.workerId, userType: "worker" };
+      
+      // Determine the other party's credential and type
+      const isWorker = currentUser?.userType === "worker";
+      const target = isWorker ? contract?.clientId : contract?.workerId;
+      const targetCredentialId = target?.credentialId && String(target.credentialId);
+      const targetUserType = isWorker ? "client" : "worker";
 
-      // Navigate to chat page with the other party's info
+      if (!targetCredentialId) {
+        // Fallback: just open chat if we cannot resolve the other party
+        navigate("/chat", { state: { contractId: contract._id } });
+        return;
+      }
+
+      // Best-effort: ensure the conversation exists so ChatPage can immediately load it
+      try {
+        await createOrGetConversation({
+          participantCredentialId: targetCredentialId,
+          participantUserType: targetUserType,
+        });
+      } catch (_) {
+        // non-fatal; ChatPage can still create lazily
+      }
+
+      // Navigate to chat with explicit selection + contract banner
       navigate("/chat", {
         state: {
           targetCredentialId: otherParty.credentialId,

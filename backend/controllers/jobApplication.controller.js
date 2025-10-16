@@ -69,22 +69,27 @@ const paramIdSchema = Joi.object({
 
 // ==================== HELPER FUNCTIONS ====================
 const createConversationForContract = async (
-  clientId,
-  workerId,
+  clientCredentialId,
+  workerCredentialId,
   contractId
 ) => {
   try {
-    // Check if conversation already exists
+    // Check if conversation already exists (by credential ids)
     let conversation = await Conversation.findOne({
-      participants: { $all: [clientId, workerId] },
-      isDeleted: false,
+      $and: [
+        { participants: { $elemMatch: { credentialId: clientCredentialId } } },
+        { participants: { $elemMatch: { credentialId: workerCredentialId } } },
+      ],
     });
 
     if (!conversation) {
       conversation = new Conversation({
-        participants: [clientId, workerId],
-        conversationType: "contract",
-        relatedContract: contractId,
+        participants: [
+          { credentialId: clientCredentialId, userType: "client" },
+          { credentialId: workerCredentialId, userType: "worker" },
+        ],
+        lastMessage: "",
+        lastSender: null,
       });
       await conversation.save();
     }
@@ -93,8 +98,8 @@ const createConversationForContract = async (
   } catch (error) {
     logger.error("Failed to create conversation for contract", {
       error: error.message,
-      clientId,
-      workerId,
+      clientCredentialId,
+      workerCredentialId,
       contractId,
     });
     // Don't throw error - conversation creation shouldn't break contract creation
@@ -420,8 +425,8 @@ const respondToApplication = async (req, res) => {
 
       // Create conversation for contract
       await createConversationForContract(
-        req.clientProfile._id,
-        application.workerId._id,
+        req.user.id,
+        application.workerId.credentialId,
         contract._id
       );
 
@@ -982,8 +987,8 @@ const markApplicationAgreement = async (req, res) => {
 
       // Create conversation for contract
       await createConversationForContract(
-        application.clientId._id,
-        application.workerId._id,
+        application.clientId.credentialId,
+        application.workerId.credentialId,
         contract._id
       );
 
