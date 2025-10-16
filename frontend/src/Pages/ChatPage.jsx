@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import axios from "axios";
 import React, { useState, useRef, useEffect } from "react";
 import {
     getConversations,
@@ -9,20 +10,31 @@ import {
     updateMessageREST,
     deleteMessageREST
 } from "../api/message.jsx";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { checkAuth } from "../api/auth.jsx";
+import {
+    getClientContracts,
+    getWorkerContracts,
+    startWork as startWorkAPI,
+    completeWork as completeWorkAPI,
+    confirmWorkCompletion as confirmWorkCompletionAPI,
+} from "../api/feedback.jsx";
+import { markApplicationAgreement as markApplicationAgreementAPI } from "../api/jobApplication.jsx";
+import { markInvitationAgreement as markInvitationAgreementAPI, getMyInvitations, getMySentInvitations } from "../api/applications.jsx";
 
 
 
 const ChatPage = () => {
     const { contactId } = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const messagesEndRef = useRef(null);
 
 
     const [contactNames, setContactNames] = useState({});
     const [contactProfiles, setContactProfiles] = useState({});
+    const [contactProfileIds, setContactProfileIds] = useState({});
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [showModal, setShowModal] = useState(false);
@@ -38,12 +50,46 @@ const ChatPage = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
+    const [contractBanner, setContractBanner] = useState(null);
+    const [contracts, setContracts] = useState([]);
 
     const [currentUser, setCurrentUser] = useState(null);
 
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editContent, setEditContent] = useState("");
     const [messageMenuOpen, setMessageMenuOpen] = useState(null);
+    // Transient toast after clicking "I Agree"
+    const [showAgreeToast, setShowAgreeToast] = useState(false);
+    const [agreeToastMessage, setAgreeToastMessage] = useState("");
+    const agreeToastTimer = useRef(null);
+
+    // Pull agreement context from navigation state or sessionStorage (fallback)
+    const agreementContextFromState = (location.state && location.state.agreementContext) || null;
+    let persistedAgreementContext = null;
+    try {
+        const raw = sessionStorage.getItem("chatAgreementContext");
+        if (raw) persistedAgreementContext = JSON.parse(raw);
+    } catch (_) { }
+    const agreementContext = agreementContextFromState || persistedAgreementContext;
+    const hasAgreement = Boolean(agreementContext);
+    // Allow forcibly suppressing the discussion banner once a contract is detected
+    const [suppressAgreementBanner, setSuppressAgreementBanner] = useState(false);
+    const showAgreementBanner = hasAgreement && !contractBanner && !suppressAgreementBanner;
+    // Track whether current user already agreed (persist per context)
+    const [selfAgreed, setSelfAgreed] = useState(false);
+    const getSelfAgreedKey = (ctx) => (ctx ? `chatAgreementSelfAgreed:${ctx.kind}:${ctx.id}` : null);
+    useEffect(() => {
+        if (!hasAgreement) return;
+        try {
+            const key = getSelfAgreedKey(agreementContext);
+            if (key) {
+                const v = sessionStorage.getItem(key);
+                setSelfAgreed(v === 'true');
+            }
+        } catch (_) { }
+    }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
+
+    // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
 
 
 
@@ -153,7 +199,6 @@ const ChatPage = () => {
                     console.log("✅ Registered user to socket:", myCredId);
                 }
 
-                if (myCredId) socket.current.emit("registerUser", currentConversationId);
 
                 const res = await getConversations();
                 const convArray = Array.isArray(res?.data?.data) ? res.data.data : [];
@@ -177,7 +222,11 @@ const ChatPage = () => {
 
                 setConversations(mapped);
 
-                if (contactId) {
+                // Prefer explicit target from navigation state
+                const st = location.state || {};
+                if (st?.targetCredentialId) {
+                    setSelectedContactId(String(st.targetCredentialId));
+                } else if (contactId) {
                     setSelectedContactId(contactId);
                 } else if (mapped.length > 0) {
                     setSelectedContactId(idToString(mapped[0].other?.credentialId));
@@ -192,6 +241,86 @@ const ChatPage = () => {
         };
         init();
     }, [contactId]);
+
+    // ---------- load contracts for banner ----------
+    useEffect(() => {
+        const loadContracts = async () => {
+            try {
+                if (!currentUser) return;
+                const list = currentUser.userType === "client"
+                    ? await getClientContracts()
+                    : await getWorkerContracts();
+                setContracts(list || []);
+
+                const st = location.state || {};
+                if (st.contractId) {
+                    const c = (list || []).find((x) => String(x._id) === String(st.contractId));
+                    if (c) setContractBanner(c);
+                    return;
+                }
+
+                if (selectedContactId) {
+                    const filtered = (list || []).filter((c) => {
+                        const otherCredId = currentUser.userType === "client" ? c.workerId?.credentialId : c.clientId?.credentialId;
+                        return otherCredId && String(otherCredId) === String(selectedContactId);
+                    });
+                    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    setContractBanner(filtered[0] || null);
+                }
+            } catch (e) {
+                console.warn("Failed to load contracts for banner:", e);
+            }
+        };
+        loadContracts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser, selectedContactId]);
+
+    // Helper to refresh contracts on demand (e.g., after agreeing)
+    const refreshContracts = async () => {
+        try {
+            if (!currentUser) return;
+            const list = currentUser.userType === "client" ? await getClientContracts() : await getWorkerContracts();
+            setContracts(list || []);
+
+            const st = location.state || {};
+            if (st.contractId) {
+                const c = (list || []).find((x) => String(x._id) === String(st.contractId));
+                if (c) {
+                    setContractBanner(c);
+                    return c;
+                }
+            }
+
+            if (selectedContactId) {
+                const filtered = (list || []).filter((c) => {
+                    const otherCredId = currentUser.userType === "client" ? c.workerId?.credentialId : c.clientId?.credentialId;
+                    return otherCredId && String(otherCredId) === String(selectedContactId);
+                });
+                filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                const found = filtered[0] || null;
+                setContractBanner(found);
+                return found;
+            }
+            return null;
+        } catch (e) {
+            console.warn("Failed to refresh contracts:", e);
+            return null;
+        }
+    };
+
+    // When a contract appears, clear any persisted agreement flags so UI moves to contract banner cleanly
+    useEffect(() => {
+        if (contractBanner) {
+            // Suppress discussion banner as soon as a contract is present
+            setSuppressAgreementBanner(true);
+            try {
+                sessionStorage.removeItem("chatAgreementContext");
+                const key = getSelfAgreedKey(agreementContext);
+                if (key) sessionStorage.removeItem(key);
+            } catch (_) { }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contractBanner]);
 
     // ---------- fetch display names ----------
     useEffect(() => {
@@ -211,6 +340,7 @@ const ChatPage = () => {
                             credId,
                             name: r?.data?.data?.user?.fullName || "Unnamed",
                             profilePicture: r?.data?.data?.user?.profilePicture || null,
+                            profileId: r?.data?.data?.user?._id || null,
                         }))
                         .catch(() => ({ credId, name: "Unnamed", profilePicture: null }))
                 )
@@ -218,13 +348,18 @@ const ChatPage = () => {
 
             const namesMap = {};
             const profilesMap = {};
+            const profileIdsMap = {};
             for (const r of results) {
                 namesMap[r.credId] = r.name;
                 profilesMap[r.credId] = r.profilePicture;
+                if (r.profileId) profileIdsMap[r.credId] = r.profileId;
             }
 
             setContactNames((prev) => ({ ...prev, ...namesMap }));
             setContactProfiles((prev) => ({ ...prev, ...profilesMap }));
+            if (Object.keys(profileIdsMap).length) {
+                setContactProfileIds((prev) => ({ ...prev, ...profileIdsMap }));
+            }
         };
 
         fetchProfiles();
@@ -261,9 +396,14 @@ const ChatPage = () => {
 
             // Create or get conversation from backend
             try {
+                // determine participant user type based on current user
+                let participantUserType = "client";
+                if (currentUser?.userType === "client") participantUserType = "worker";
+                if (currentUser?.userType === "worker") participantUserType = "client";
+
                 const res = await createOrGetConversation({
                     participantCredentialId: selectedContactId,
-                    participantUserType: "client",
+                    participantUserType,
                 });
 
                 const conv = res?.data?.data;
@@ -422,6 +562,78 @@ const ChatPage = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Cleanup toast timer when unmounting (must be before any conditional return to preserve hooks order)
+    useEffect(() => {
+        return () => {
+            if (agreeToastTimer.current) clearTimeout(agreeToastTimer.current);
+        };
+    }, []);
+
+    // Helper: Check if both parties agreed and suppress discussion banner immediately
+    const checkBothAgreedAndSuppress = async () => {
+        if (!agreementContext) return false;
+        try {
+            if (agreementContext.kind === "application") {
+                const resp = await axios.get(
+                    `http://localhost:5000/applications/debug/${agreementContext.id}`,
+                    { withCredentials: true }
+                );
+                const data = resp?.data?.data;
+                const status = String(data?.status || "").toLowerCase();
+                const both = status === "both_agreed" || (data?.clientAgreed && data?.workerAgreed);
+                if (both) {
+                    setSuppressAgreementBanner(true);
+                    try {
+                        sessionStorage.removeItem("chatAgreementContext");
+                        const key = getSelfAgreedKey(agreementContext);
+                        if (key) sessionStorage.removeItem(key);
+                    } catch (_) { }
+                    return true;
+                }
+            } else if (agreementContext.kind === "invitation") {
+                if (!currentUser) return false;
+                const list = currentUser.userType === "worker" ? await getMyInvitations() : await getMySentInvitations();
+                const inv = (list || []).find((x) => String(x._id || x.id) === String(agreementContext.id));
+                const invStatus = String(inv?.invitationStatus || "").toLowerCase();
+                const both = invStatus === "both_agreed" || (inv?.clientAgreed && inv?.workerAgreed);
+                if (both) {
+                    setSuppressAgreementBanner(true);
+                    try {
+                        sessionStorage.removeItem("chatAgreementContext");
+                        const key = getSelfAgreedKey(agreementContext);
+                        if (key) sessionStorage.removeItem(key);
+                    } catch (_) { }
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn("Agreement both-agreed check failed:", e);
+        }
+        return false;
+    };
+
+    // Periodically verify agreement while in discussion to auto-hide banner as soon as both agreed
+    useEffect(() => {
+        let cancelled = false;
+        let timer = null;
+        const loop = async () => {
+            if (cancelled) return;
+            if (!hasAgreement || suppressAgreementBanner || contractBanner) return;
+            const both = await checkBothAgreedAndSuppress();
+            if (both) {
+                setTimeout(() => { try { refreshContracts(); } catch (_) { } }, 250);
+                return;
+            }
+            timer = setTimeout(loop, 1500);
+        };
+        loop();
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasAgreement, agreementContext?.id, agreementContext?.kind, currentUser, selectedContactId, contractBanner, suppressAgreementBanner]);
+
     if (loading) return <div className="text-center mt-10">Loading chat...</div>;
 
     const openModal = (e) => {
@@ -432,6 +644,8 @@ const ChatPage = () => {
     const closeModal = () => {
         setShowModal(false);
     };
+
+
 
 
 
@@ -493,35 +707,199 @@ const ChatPage = () => {
 
                 <div className="flex items-center pl-4">
 
-                <button
-                    ref={buttonRef}
-                    type="button"
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="p-2 text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                >
-                    <svg
-                        className="w-6 h-6"
-                        aria-hidden="true"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                    <button
+                        ref={buttonRef}
+                        type="button"
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className="p-2 text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
                     >
-                        <path
-                            clipRule="evenodd"
-                            fillRule="evenodd"
-                            d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 
+                        <svg
+                            className="w-6 h-6"
+                            aria-hidden="true"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                clipRule="evenodd"
+                                fillRule="evenodd"
+                                d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 
                             1.5H2.75A.75.75 0 012 4.75zm0 
                             10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 
                             1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 
                             0 01.75-.75h14.5a.75.75 0 010 
                             1.5H2.75A.75.75 0 012 10z"
-                        />
-                    </svg>
-                </button>
+                            />
+                        </svg>
+                    </button>
                 </div>
+
+                {/* Success toast after agreement */}
+                {showAgreeToast && (
+                    <div className="p-4 sm:ml-64">
+                        <div className="bg-green-50 border border-green-200 rounded-xl shadow-sm p-3 mb-3 flex items-center justify-between">
+                            <div className="text-sm font-medium text-green-800">{agreeToastMessage || "Your agreement has been recorded."}</div>
+                            <button
+                                onClick={() => setShowAgreeToast(false)}
+                                className="ml-3 px-2 py-1 text-green-700 border border-green-300 rounded cursor-pointer"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* CONTRACT BANNER (hidden only if discussion banner is showing) */}
+                {!showAgreementBanner && contractBanner && (
+                    <div className="p-4 sm:ml-64">
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div className="text-left">
+                                <div className="text-sm text-gray-500">Contract</div>
+                                <div className="text-base font-semibold text-gray-800">{contractBanner.jobId?.description?.slice(0, 60) || contractBanner.description?.slice(0, 60) || "Work Contract"}</div>
+                                <div className="text-sm text-gray-600 mt-1">Status: <span className="font-medium">{(contractBanner.contractStatus || "").replaceAll("_", " ")}</span> • Rate: <span className="font-medium">${contractBanner.agreedRate}</span></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {currentUser?.userType === "worker" && contractBanner.contractStatus === "active" && (
+                                    <button onClick={async () => { try { await startWorkAPI(contractBanner._id); setContractBanner((prev) => prev ? { ...prev, contractStatus: "in_progress", startDate: new Date().toISOString() } : prev); alert("Work started"); } catch (e) { alert(e.message); } }} className="px-3 py-2 rounded-lg bg-sky-500 text-white cursor-pointer">Start Work</button>
+                                )}
+                                {currentUser?.userType === "worker" && contractBanner.contractStatus === "in_progress" && (
+                                    <button onClick={async () => { try { await completeWorkAPI(contractBanner._id); setContractBanner((prev) => prev ? { ...prev, contractStatus: "awaiting_client_confirmation", workerCompletedAt: new Date().toISOString() } : prev); alert("Marked completed"); } catch (e) { alert(e.message); } }} className="px-3 py-2 rounded-lg bg-sky-500 text-white cursor-pointer">Complete</button>
+                                )}
+                                {currentUser?.userType === "client" && contractBanner.contractStatus === "awaiting_client_confirmation" && (
+                                    <button onClick={async () => { try { await confirmWorkCompletionAPI(contractBanner._id); setContractBanner((prev) => prev ? { ...prev, contractStatus: "completed", completedAt: new Date().toISOString(), actualEndDate: new Date().toISOString(), clientConfirmedAt: new Date().toISOString() } : prev); alert("Confirmed completion"); } catch (e) { alert(e.message); } }} className="px-3 py-2 rounded-lg bg-green-600 text-white cursor-pointer">Confirm</button>
+                                )}
+                                <button onClick={() => navigate("/contracts")} className="px-3 py-2 rounded-lg border cursor-pointer">Open Contracts</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* DISCUSSION / AGREEMENT BANNER (takes precedence) */}
+                {showAgreementBanner && (
+                    <div className="p-4 sm:ml-64">
+                        <div className={`${selfAgreed ? "bg-blue-50 border-blue-200" : "bg-yellow-50 border-yellow-200"} border rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3`}>
+                            <div className="text-left">
+                                <div className={`text-sm ${selfAgreed ? "text-blue-700" : "text-yellow-700"}`}>
+                                    {selfAgreed ? "Waiting for the other party" : "In discussion"}
+                                </div>
+                                <div className="text-base font-semibold text-gray-800">
+                                    {selectedContactId ? (contactNames[selectedContactId] || "Your contact") : "Your contact"}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                    {selfAgreed
+                                        ? "You agreed to proceed. We're waiting for the other party to agree."
+                                        : "Please indicate if you agree to proceed. A work contract will be created once both parties agree."}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {!selfAgreed && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                if (agreementContext.kind === "application") {
+                                                    await markApplicationAgreementAPI(agreementContext.id, true);
+                                                } else if (agreementContext.kind === "invitation") {
+                                                    await markInvitationAgreementAPI(agreementContext.id, { agreed: true });
+                                                }
+
+                                                setSelfAgreed(true);
+                                                // Hide the discussion banner immediately in favor of a transient toast
+                                                setSuppressAgreementBanner(true);
+
+                                                try {
+                                                    const key = getSelfAgreedKey(agreementContext);
+                                                    if (key) sessionStorage.setItem(key, 'true');
+                                                } catch (_) { }
+
+                                                // Show a transient success toast for 10 seconds
+                                                try { if (agreeToastTimer.current) clearTimeout(agreeToastTimer.current); } catch (_) { }
+                                                setAgreeToastMessage("You agreed — waiting for the other party.");
+                                                setShowAgreeToast(true);
+                                                agreeToastTimer.current = setTimeout(() => setShowAgreeToast(false), 10000);
+
+                                                // 🔹 Refresh contracts and try to suppress banner immediately when contract exists
+                                                const c = await refreshContracts();
+                                                if (c) {
+                                                    setSuppressAgreementBanner(true);
+                                                    try {
+                                                        sessionStorage.removeItem("chatAgreementContext");
+                                                        const key = getSelfAgreedKey(agreementContext);
+                                                        if (key) sessionStorage.removeItem(key);
+                                                    } catch (_) { }
+                                                } else {
+                                                    // If contract not created yet, verify agreement state directly
+                                                    const both = await checkBothAgreedAndSuppress();
+                                                    if (both) {
+                                                        setSuppressAgreementBanner(true);
+                                                    }
+                                                }
+
+                                                // Retry once after a short delay in case contract creation is slightly delayed
+                                                setTimeout(async () => {
+                                                    try {
+                                                        const c2 = await refreshContracts();
+                                                        if (c2) {
+                                                            setSuppressAgreementBanner(true);
+                                                            try {
+                                                                sessionStorage.removeItem("chatAgreementContext");
+                                                                const key = getSelfAgreedKey(agreementContext);
+                                                                if (key) sessionStorage.removeItem(key);
+                                                            } catch (_) { }
+                                                        } else {
+                                                            const both2 = await checkBothAgreedAndSuppress();
+                                                            if (both2) setSuppressAgreementBanner(true);
+                                                        }
+                                                    } catch (_) { }
+                                                }, 1500);
+                                            } catch (e) {
+                                                alert(e.message || "Failed to mark agreement");
+                                            }
+                                        }}
+
+                                        className="px-3 py-2 rounded-lg bg-green-600 text-white cursor-pointer"
+                                    >
+                                        I Agree
+                                    </button>
+                                )}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            if (agreementContext.kind === "application") {
+                                                await markApplicationAgreementAPI(agreementContext.id, false);
+                                            } else if (agreementContext.kind === "invitation") {
+                                                await markInvitationAgreementAPI(agreementContext.id, { agreed: false });
+                                            }
+                                            setSelfAgreed(false);
+                                            try {
+                                                const key = getSelfAgreedKey(agreementContext);
+                                                if (key) sessionStorage.removeItem(key);
+                                            } catch (_) { }
+                                            alert("Noted. You can continue the discussion in chat.");
+                                        } catch (e) {
+                                            alert(e.message || "Failed to update agreement");
+                                        }
+                                    }}
+                                    className="px-3 py-2 rounded-lg border cursor-pointer"
+                                >
+                                    Not now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* CHAT MESSAGES */}
                 <div className="p-4 sm:ml-64 overflow-hidden">
-                    <div className="h-full md:h-[400px] overflow-y-auto px-2">
+                    <div
+                        className={`${
+                            // shrink the chat area if any banner or toast is showing
+                            contractBanner ||
+                                showAgreementBanner ||
+                                showAgreeToast
+                                ? "h-[340px] md:h-[250px]"
+                                : "h-full md:h-[400px]"
+                            } overflow-y-auto px-2 transition-all duration-300`}
+                    >
+
                         {messages.map((msg, index) => {
                             const senderCred = idToString(msg?.sender?.credentialId);
                             const currentCred = getCredentialIdFromUser(currentUser);
@@ -658,7 +1036,7 @@ const ChatPage = () => {
                         </form>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {showModal && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 bg-white bg-opacity-80">
@@ -681,7 +1059,8 @@ const ChatPage = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
         </>
     );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getWorkerApplications,
   getClientApplications,
@@ -30,8 +31,8 @@ import {
 } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { createOrGetConversation } from "../api/message";
-
 const ApplicationsPage = () => {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,13 @@ const ApplicationsPage = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedInvitation, setSelectedInvitation] = useState(null);
   const [activeTab, setActiveTab] = useState("applications");
+
+  // Normalize status strings to detect discussion-like states reliably
+  const isDiscussionLike = (status) => {
+    if (!status) return false;
+    const norm = String(status).toLowerCase().replace(/\s+/g, "_").replace(/-+/g, "_");
+    return norm === "in_discussion" || norm === "client_agreed" || norm === "worker_agreed";
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,15 +137,51 @@ const ApplicationsPage = () => {
         if (updatedApp) setSelectedApp(updatedApp);
       }
 
-      // Create or get conversation for messaging
-      if (response?.data?.conversationInfo) {
-        try {
-          await createOrGetConversation(response.data.conversationInfo);
-          alert("Discussion started! You can now message each other.");
-        } catch (msgErr) {
-          console.warn("Conversation creation failed:", msgErr);
-          alert("Discussion started, but messaging may not be available.");
+      // Navigate to Chat with target contact + discussion context
+      try {
+        const convoInfo = response?.data?.conversationInfo;
+        let targetCredentialId = convoInfo?.participantCredentialId || null;
+        let targetUserType = convoInfo?.participantUserType || null;
+
+        // Fallback: derive from updated app if API didn't return convoInfo
+        if (!targetCredentialId) {
+          const updated = (appsResponse?.data?.applications || []).find((a) => a._id === applicationId) || selectedApp;
+          if (updated) {
+            if (updated.workerId?.credentialId) {
+              targetCredentialId = String(updated.workerId.credentialId);
+              targetUserType = "worker";
+            }
+          }
         }
+
+        // Optionally ensure conversation exists (Chat can also create lazily)
+        if (targetCredentialId && targetUserType) {
+          try {
+            await createOrGetConversation({
+              participantCredentialId: targetCredentialId,
+              participantUserType: targetUserType,
+            });
+          } catch (_) {
+            // best-effort; proceed to chat regardless
+          }
+
+          const navState = {
+            targetCredentialId,
+            targetUserType,
+            agreementContext: { kind: "application", id: applicationId },
+          };
+          try {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          } catch (_) {}
+          navigate("/chat", { state: navState });
+          return;
+        }
+
+        // If still missing, just open chat but persist agreement context
+        try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: applicationId })); } catch (_) {}
+        navigate("/chat");
+      } catch (navErr) {
+        console.warn("Navigation to chat failed:", navErr);
       }
     } catch (err) {
       console.error("Start discussion failed:", err);
@@ -230,19 +274,277 @@ const ApplicationsPage = () => {
         if (updatedInvitation) setSelectedInvitation(updatedInvitation);
       }
 
-      // Create or get conversation for messaging
-      if (response?.data?.conversationInfo) {
-        try {
-          await createOrGetConversation(response.data.conversationInfo);
-          alert("Discussion started! You can now message each other.");
-        } catch (msgErr) {
-          console.warn("Conversation creation failed:", msgErr);
-          alert("Discussion started, but messaging may not be available.");
+      // Navigate to Chat with target contact + discussion context
+      try {
+        const convoInfo = response?.data?.conversationInfo;
+        let targetCredentialId = convoInfo?.participantCredentialId || null;
+        let targetUserType = convoInfo?.participantUserType || null;
+
+        // Fallback: derive from updated invitation if API didn't return convoInfo
+        if (!targetCredentialId) {
+          const updated = (invitationsResponse || []).find((i) => i._id === invitationId) || selectedInvitation;
+          if (updated) {
+            if (updated.clientId?.credentialId) {
+              targetCredentialId = String(updated.clientId.credentialId);
+              targetUserType = "client";
+            }
+          }
         }
+
+        // Ensure conversation exists (optional)
+        if (targetCredentialId && targetUserType) {
+          try {
+            await createOrGetConversation({
+              participantCredentialId: targetCredentialId,
+              participantUserType: targetUserType,
+            });
+          } catch (_) {}
+
+          const navState = {
+            targetCredentialId,
+            targetUserType,
+            agreementContext: { kind: "invitation", id: invitationId },
+          };
+          try {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          } catch (_) {}
+          navigate("/chat", { state: navState });
+          return;
+        }
+
+        // Persist agreement context even when falling back
+        try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: invitationId })); } catch (_) {}
+        navigate("/chat");
+      } catch (navErr) {
+        console.warn("Navigation to chat failed:", navErr);
       }
     } catch (err) {
       console.error("Start invitation discussion failed:", err);
       alert(err.message || "Failed to start discussion");
+    }
+  };
+
+  // Unified helpers to open chat from modals
+  const openChatForCurrentApplication = async () => {
+    try {
+      if (!selectedApp) return;
+      // If client and still pending, start discussion first then navigate (handler already navigates)
+      if (userType === "client" && selectedApp.applicationStatus === "pending") {
+        await handleStartDiscussion(selectedApp._id);
+        return;
+      }
+
+      // Derive target
+      let targetCredentialId = null;
+      let targetUserType = null;
+      if (userType === "client") {
+        targetCredentialId = selectedApp?.workerId?.credentialId && String(selectedApp.workerId.credentialId);
+        targetUserType = "worker";
+      } else if (userType === "worker") {
+        targetCredentialId = selectedApp?.clientId?.credentialId && String(selectedApp.clientId.credentialId);
+        targetUserType = "client";
+      }
+
+      if (targetCredentialId && targetUserType) {
+        const includeAgreement = isDiscussionLike(selectedApp.applicationStatus);
+        try {
+          await createOrGetConversation({
+            participantCredentialId: targetCredentialId,
+            participantUserType: targetUserType,
+          });
+        } catch (_) {}
+
+        const navState = {
+          targetCredentialId,
+          targetUserType,
+          agreementContext: includeAgreement ? { kind: "application", id: selectedApp._id } : undefined,
+        };
+        try {
+          if (navState.agreementContext) {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          }
+        } catch (_) {}
+        navigate("/chat", { state: navState });
+      } else {
+        // Fallback: still persist agreement context if in discussion
+        if (isDiscussionLike(selectedApp?.applicationStatus)) {
+          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: selectedApp._id })); } catch (_) {}
+        }
+        navigate("/chat");
+      }
+    } catch (e) {
+      console.warn("Open chat (application) failed:", e);
+    }
+  };
+
+  const openChatForCurrentInvitation = async () => {
+    try {
+      if (!selectedInvitation) return;
+      // If worker and still pending, start discussion first then navigate
+      if (userType === "worker" && selectedInvitation.invitationStatus === "pending") {
+        await handleStartInvitationDiscussion(selectedInvitation._id);
+        return;
+      }
+
+      // Derive target
+      let targetCredentialId = null;
+      let targetUserType = null;
+      if (userType === "worker") {
+        targetCredentialId = selectedInvitation?.clientId?.credentialId && String(selectedInvitation.clientId.credentialId);
+        targetUserType = "client";
+      } else if (userType === "client") {
+        targetCredentialId = selectedInvitation?.workerId?.credentialId && String(selectedInvitation.workerId.credentialId);
+        targetUserType = "worker";
+      }
+
+      if (targetCredentialId && targetUserType) {
+        const includeAgreement = isDiscussionLike(selectedInvitation.invitationStatus);
+        try {
+          await createOrGetConversation({
+            participantCredentialId: targetCredentialId,
+            participantUserType: targetUserType,
+          });
+        } catch (_) {}
+
+        const navState = {
+          targetCredentialId,
+          targetUserType,
+          agreementContext: includeAgreement ? { kind: "invitation", id: selectedInvitation._id } : undefined,
+        };
+        try {
+          if (navState.agreementContext) {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          }
+        } catch (_) {}
+        navigate("/chat", { state: navState });
+      } else {
+        if (isDiscussionLike(selectedInvitation?.invitationStatus)) {
+          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: selectedInvitation._id })); } catch (_) {}
+        }
+        navigate("/chat");
+      }
+    } catch (e) {
+      console.warn("Open chat (invitation) failed:", e);
+    }
+  };
+
+  // Open Chat directly from a list item (application)
+  const openChatForApplicationItem = async (app) => {
+    try {
+      if (!app) return;
+      
+      let justStarted = false;
+      let convoInfo = null;
+
+      // If client and still pending, start discussion first
+      if (userType === "client" && app.applicationStatus === "pending") {
+        try {
+          const res = await startApplicationDiscussion(app._id);
+          convoInfo = res?.data?.conversationInfo || null;
+          justStarted = true;
+        } catch (_) {}
+      }
+
+      // Derive target
+      let targetCredentialId = null;
+      let targetUserType = null;
+      if (userType === "client") {
+        targetCredentialId = app?.workerId?.credentialId && String(app.workerId.credentialId);
+        targetUserType = "worker";
+      } else if (userType === "worker") {
+        targetCredentialId = app?.clientId?.credentialId && String(app.clientId.credentialId);
+        targetUserType = "client";
+      }
+
+  const includeAgreement = justStarted || isDiscussionLike(app.applicationStatus);
+
+      if (targetCredentialId && targetUserType) {
+        try {
+          await createOrGetConversation({
+            participantCredentialId: targetCredentialId,
+            participantUserType: targetUserType,
+          });
+        } catch (_) {}
+
+        const navState = {
+          targetCredentialId,
+          targetUserType,
+          agreementContext: includeAgreement ? { kind: "application", id: app._id } : undefined,
+        };
+        try {
+          if (navState.agreementContext) {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          }
+        } catch (_) {}
+        navigate("/chat", { state: navState });
+      } else {
+        if (includeAgreement) {
+          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: app._id })); } catch (_) {}
+        }
+        navigate("/chat");
+      }
+    } catch (e) {
+      console.warn("Open chat from application item failed:", e);
+    }
+  };
+
+  // Open Chat directly from a list item (invitation)
+  const openChatForInvitationItem = async (inv) => {
+    try {
+      if (!inv) return;
+      
+      let justStarted = false;
+      let convoInfo = null;
+
+      // If worker and still pending, start discussion first
+      if (userType === "worker" && inv.invitationStatus === "pending") {
+        try {
+          const res = await startInvitationDiscussion(inv._id);
+          convoInfo = res?.data?.conversationInfo || null;
+          justStarted = true;
+        } catch (_) {}
+      }
+
+      // Derive target
+      let targetCredentialId = null;
+      let targetUserType = null;
+      if (userType === "worker") {
+        targetCredentialId = inv?.clientId?.credentialId && String(inv.clientId.credentialId);
+        targetUserType = "client";
+      } else if (userType === "client") {
+        targetCredentialId = inv?.workerId?.credentialId && String(inv.workerId.credentialId);
+        targetUserType = "worker";
+      }
+
+  const includeAgreement = justStarted || isDiscussionLike(inv.invitationStatus);
+
+      if (targetCredentialId && targetUserType) {
+        try {
+          await createOrGetConversation({
+            participantCredentialId: targetCredentialId,
+            participantUserType: targetUserType,
+          });
+        } catch (_) {}
+
+        const navState = {
+          targetCredentialId,
+          targetUserType,
+          agreementContext: includeAgreement ? { kind: "invitation", id: inv._id } : undefined,
+        };
+        try {
+          if (navState.agreementContext) {
+            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+          }
+        } catch (_) {}
+        navigate("/chat", { state: navState });
+      } else {
+        if (includeAgreement) {
+          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: inv._id })); } catch (_) {}
+        }
+        navigate("/chat");
+      }
+    } catch (e) {
+      console.warn("Open chat from invitation item failed:", e);
     }
   };
 
@@ -388,6 +690,7 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
+                      onClick={(e) => { e.stopPropagation(); if (["in_discussion","client_agreed","worker_agreed"].includes(app.applicationStatus)) openChatForApplicationItem(app); }}
                       className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${app.applicationStatus === "accepted"
                           ? "bg-green-100 text-green-600"
                           : app.applicationStatus === "rejected"
@@ -495,6 +798,7 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
+                      onClick={(e) => { e.stopPropagation(); if (["in_discussion","client_agreed","worker_agreed"].includes(invitation.invitationStatus)) openChatForInvitationItem(invitation); }}
                       className={`px-2 py-1 rounded-full text-xs font-medium ${invitation.invitationStatus === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : invitation.invitationStatus === "accepted" ||
@@ -650,6 +954,12 @@ const ApplicationsPage = () => {
                   >
                     <MessageCircle className="w-4 h-4" /> Start Discussion
                   </button>
+                  {/* <button
+                    onClick={openChatForCurrentApplication}
+                    className="flex items-center gap-1 bg-indigo-500 text-white px-3 py-2 rounded-lg hover:bg-indigo-600 cursor-pointer text-sm"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Message
+                  </button> */}
                   <button
                     onClick={() => handleResponse(selectedApp._id, "reject")}
                     className="flex items-center gap-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 cursor-pointer text-sm"
@@ -684,6 +994,12 @@ const ApplicationsPage = () => {
                     className="flex items-center gap-1 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 cursor-pointer text-sm"
                   >
                     <ThumbsDown className="w-4 h-4" /> I Don't Agree
+                  </button>
+                  <button
+                    onClick={openChatForCurrentApplication}
+                    className="flex items-center gap-1 bg-indigo-500 text-white px-3 py-2 rounded-lg hover:bg-indigo-600 cursor-pointer text-sm"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Message
                   </button>
                 </div>
               </div>
@@ -878,6 +1194,13 @@ const ApplicationsPage = () => {
                     Discuss
                   </button>
                   <button
+                    onClick={openChatForCurrentInvitation}
+                    className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Message
+                  </button>
+                  <button
                     onClick={() =>
                       handleInvitationResponse(selectedInvitation._id, "reject")
                     }
@@ -909,6 +1232,13 @@ const ApplicationsPage = () => {
                 >
                   <ThumbsDown className="w-4 h-4" />
                   Disagree
+                </button>
+                <button
+                  onClick={openChatForCurrentInvitation}
+                  className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Message
                 </button>
               </div>
             )}
