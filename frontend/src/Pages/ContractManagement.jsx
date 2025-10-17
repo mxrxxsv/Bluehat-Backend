@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 import {
   Loader,
   CheckCircle,
@@ -30,6 +31,7 @@ const ContractManagement = () => {
   const [contracts, setContracts] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const socketRef = useRef(null);
   const [feedbackModal, setFeedbackModal] = useState({
     show: false,
     contract: null,
@@ -50,6 +52,23 @@ const ContractManagement = () => {
       const user = authRes.data.data;
       setCurrentUser(user);
 
+      // Setup socket connection once
+      if (!socketRef.current) {
+        socketRef.current = io("http://localhost:5000", { withCredentials: true });
+        const credId = user?.credentialId || user?._id || user?.id;
+        if (credId) socketRef.current.emit("registerUser", String(credId));
+
+        const refreshContracts = async () => {
+          try {
+            const list = user.userType === "worker" ? await getWorkerContracts() : await getClientContracts();
+            setContracts(list || []);
+          } catch (_) {}
+        };
+        ["contract:created", "contract:updated", "contract:feedback"].forEach((ev) => {
+          socketRef.current.on(ev, refreshContracts);
+        });
+      }
+
       // Load contracts based on user type
       const contractsRes =
         user.userType === "worker"
@@ -65,6 +84,12 @@ const ContractManagement = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      try { socketRef.current?.disconnect(); } catch (_) {}
+    };
+  }, []);
 
   const handleStartWork = async (contractId) => {
     try {
