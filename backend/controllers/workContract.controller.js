@@ -8,6 +8,7 @@ const Job = require("../models/Job");
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
 const Conversation = require("../models/Conversation");
+const Review = require("../models/Review");
 
 // Utils
 const logger = require("../utils/logger");
@@ -488,16 +489,34 @@ const startWork = async (req, res) => {
       });
     }
 
+    // Check if worker is available to start work
+    const worker = await Worker.findById(req.workerProfile._id);
+    if (!worker || !worker.canAcceptNewContract()) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "You are already working on another job. Please complete your current work before starting a new one.",
+        code: "WORKER_NOT_AVAILABLE",
+      });
+    }
+
     // Update contract
     contract.contractStatus = "in_progress";
     contract.startDate = new Date();
     await contract.save();
+
+    // Update worker status to "working" and set current job using helper method
+    if (worker) {
+      worker.startWorking(contract.jobId);
+      await worker.save();
+    }
 
     const processingTime = Date.now() - startTime;
 
     logger.info("Work started successfully", {
       contractId,
       workerId: req.workerProfile._id,
+      jobId: contract.jobId,
       userId: req.user.id,
       ip: req.ip,
       processingTime: `${processingTime}ms`,
@@ -561,6 +580,13 @@ const completeWork = async (req, res) => {
     contract.contractStatus = "awaiting_client_confirmation";
     contract.workerCompletedAt = new Date();
     await contract.save();
+
+    // Update worker status back to "available" and clear current job using helper method
+    const worker = await Worker.findById(req.workerProfile._id);
+    if (worker) {
+      worker.becomeAvailable();
+      await worker.save();
+    }
 
     // Update job status if linked to a job
     if (contract.jobId) {
@@ -737,59 +763,76 @@ const submitFeedback = async (req, res) => {
       });
     }
 
-    // Check if feedback already submitted
-    if (req.user.userType === "client" && contract.clientRating !== null) {
+    // Check if review already exists for this contract and user
+    const existingReview = await Review.findOne({
+      contractId: contract._id,
+      reviewerType: req.user.userType,
+      isDeleted: false,
+    });
+
+    if (existingReview) {
       return res.status(400).json({
         success: false,
-        message: "You have already submitted feedback for this contract",
-        code: "FEEDBACK_ALREADY_SUBMITTED",
+        message: "You have already submitted a review for this contract",
+        code: "REVIEW_ALREADY_EXISTS",
       });
     }
 
-    if (req.user.userType === "worker" && contract.workerRating !== null) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already submitted feedback for this contract",
-        code: "FEEDBACK_ALREADY_SUBMITTED",
-      });
-    }
+    // Determine reviewer and reviewee details
+    let reviewerData, revieweeData;
 
-    // Update contract with feedback
     if (req.user.userType === "client") {
-      contract.clientRating = rating;
-      contract.clientFeedback = feedback;
+      // Client reviewing worker
+      reviewerData = {
+        reviewerId: req.clientProfile._id,
+        reviewerModel: "Client",
+        reviewerType: "client",
+      };
+      revieweeData = {
+        revieweeId: contract.workerId,
+        revieweeModel: "Worker",
+        revieweeType: "worker",
+      };
     } else {
-      contract.workerRating = rating;
-      contract.workerFeedback = feedback;
+      // Worker reviewing client
+      reviewerData = {
+        reviewerId: req.workerProfile._id,
+        reviewerModel: "Worker",
+        reviewerType: "worker",
+      };
+      revieweeData = {
+        revieweeId: contract.clientId,
+        revieweeModel: "Client",
+        revieweeType: "client",
+      };
     }
 
-    await contract.save();
+    // Create the review
+    const review = new Review({
+      contractId: contract._id,
+      workerId: contract.workerId,
+      clientId: contract.clientId,
+      jobId: contract.jobId,
+      rating,
+      feedback,
+      ...reviewerData,
+      ...revieweeData,
+    });
 
-    // Update user average ratings
-    if (req.user.userType === "client") {
-      // Update worker's average rating
-      const workerStats = await WorkContract.getWorkerStats(contract.workerId);
-      if (workerStats.length > 0) {
-        await Worker.findByIdAndUpdate(contract.workerId, {
-          averageRating: workerStats[0].averageRating || 0,
-          totalJobsCompleted: workerStats[0].completedContracts || 0,
-        });
-      }
-    } else {
-      // Update client's average rating
-      const clientStats = await WorkContract.getClientStats(contract.clientId);
-      if (clientStats.length > 0) {
-        await Client.findByIdAndUpdate(contract.clientId, {
-          averageRating: clientStats[0].averageRating || 0,
-          totalJobsPosted: clientStats[0].completedContracts || 0,
-        });
-      }
-    }
+    await review.save();
+
+    // Populate the review for response
+    const populatedReview = await Review.findById(review._id)
+      .populate("reviewerId", "firstName lastName profilePicture")
+      .populate("revieweeId", "firstName lastName profilePicture")
+      .populate("jobId", "title description")
+      .lean();
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Feedback submitted successfully", {
+    logger.info("Review submitted successfully", {
       contractId,
+      reviewId: review._id,
       userType: req.user.userType,
       rating,
       userId: req.user.id,
@@ -798,19 +841,25 @@ const submitFeedback = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      message: "Feedback submitted successfully",
-      code: "FEEDBACK_SUBMITTED",
-      data: contract.toSafeObject(),
+      message: "Review submitted successfully",
+      code: "REVIEW_SUBMITTED",
+      data: {
+        review: populatedReview,
+        contractId: contract._id,
+      },
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
       },
     });
-    // Notify both parties: feedback submitted
-    emitToContractParties(contract, "contract:feedback", {
+
+    // Notify both parties: review submitted
+    emitToContractParties(contract, "contract:review_submitted", {
       contractId: contract._id,
+      reviewId: review._id,
+      reviewerType: req.user.userType,
     });
   } catch (error) {
     return handleContractError(error, res, "Submit feedback", req);
@@ -861,7 +910,12 @@ const cancelContract = async (req, res) => {
     contract.contractStatus = "cancelled";
     await contract.save();
 
-    // Update job status if linked to a job
+    // Update worker status back to "available" and clear current job using helper method
+    const worker = await Worker.findById(contract.workerId);
+    if (worker) {
+      worker.becomeAvailable();
+      await worker.save();
+    } // Update job status if linked to a job
     if (contract.jobId) {
       await Job.findByIdAndUpdate(contract.jobId, {
         status: "open",
@@ -899,6 +953,306 @@ const cancelContract = async (req, res) => {
   }
 };
 
+// Get reviews for a worker
+const getWorkerReviews = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate parameters
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid worker ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    // Validate query parameters
+    const queryValidation = Joi.object({
+      page: Joi.number().integer().min(1).max(1000).default(1),
+      limit: Joi.number().integer().min(1).max(50).default(10),
+      rating: Joi.number().integer().min(1).max(5).optional(),
+    });
+
+    const { error: queryError, value: queryValue } = queryValidation.validate(
+      req.query
+    );
+    if (queryError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid query parameters",
+        code: "VALIDATION_ERROR",
+        errors: queryError.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { id: workerId } = sanitizeInput(paramValue);
+    const { page, limit, rating } = sanitizeInput(queryValue);
+
+    // Check if worker exists
+    const worker = await Worker.findById(workerId);
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: "Worker not found",
+        code: "WORKER_NOT_FOUND",
+      });
+    }
+
+    // Build filter
+    const filter = {
+      workerId: new mongoose.Types.ObjectId(workerId),
+      revieweeType: "worker",
+      isDeleted: false,
+    };
+
+    if (rating) {
+      filter.rating = rating;
+    }
+
+    // Get reviews with pagination
+    const reviews = await Review.find(filter)
+      .populate("reviewerId", "firstName lastName profilePicture")
+      .populate("jobId", "title description")
+      .populate("contractId", "agreedRate contractStatus")
+      .sort({ reviewDate: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const totalCount = await Review.countDocuments(filter);
+
+    // Get rating statistics
+    const ratingStats = await Review.getRatingStats(workerId, "worker");
+
+    const processingTime = Date.now() - startTime;
+
+    res.status(200).json({
+      success: true,
+      message: "Worker reviews retrieved successfully",
+      code: "WORKER_REVIEWS_RETRIEVED",
+      data: {
+        reviews,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          itemsPerPage: limit,
+          hasNextPage: page < Math.ceil(totalCount / limit),
+          hasPrevPage: page > 1,
+        },
+        statistics: ratingStats,
+        worker: {
+          id: worker._id,
+          firstName: worker.firstName,
+          lastName: worker.lastName,
+          averageRating: worker.averageRating,
+          totalJobsCompleted: worker.totalJobsCompleted,
+        },
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleContractError(error, res, "Get worker reviews", req);
+  }
+};
+
+// Get reviews for a client
+const getClientReviews = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate parameters
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid client ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    // Validate query parameters
+    const queryValidation = Joi.object({
+      page: Joi.number().integer().min(1).max(1000).default(1),
+      limit: Joi.number().integer().min(1).max(50).default(10),
+      rating: Joi.number().integer().min(1).max(5).optional(),
+    });
+
+    const { error: queryError, value: queryValue } = queryValidation.validate(
+      req.query
+    );
+    if (queryError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid query parameters",
+        code: "VALIDATION_ERROR",
+        errors: queryError.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { id: clientId } = sanitizeInput(paramValue);
+    const { page, limit, rating } = sanitizeInput(queryValue);
+
+    // Check if client exists
+    const client = await Client.findById(clientId);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+        code: "CLIENT_NOT_FOUND",
+      });
+    }
+
+    // Build filter
+    const filter = {
+      clientId: new mongoose.Types.ObjectId(clientId),
+      revieweeType: "client",
+      isDeleted: false,
+    };
+
+    if (rating) {
+      filter.rating = rating;
+    }
+
+    // Get reviews with pagination
+    const reviews = await Review.find(filter)
+      .populate("reviewerId", "firstName lastName profilePicture")
+      .populate("jobId", "title description")
+      .populate("contractId", "agreedRate contractStatus")
+      .sort({ reviewDate: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const totalCount = await Review.countDocuments(filter);
+
+    // Get rating statistics
+    const ratingStats = await Review.getRatingStats(clientId, "client");
+
+    const processingTime = Date.now() - startTime;
+
+    res.status(200).json({
+      success: true,
+      message: "Client reviews retrieved successfully",
+      code: "CLIENT_REVIEWS_RETRIEVED",
+      data: {
+        reviews,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          itemsPerPage: limit,
+          hasNextPage: page < Math.ceil(totalCount / limit),
+          hasPrevPage: page > 1,
+        },
+        statistics: ratingStats,
+        client: {
+          id: client._id,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          averageRating: client.averageRating,
+          totalJobsPosted: client.totalJobsPosted,
+        },
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleContractError(error, res, "Get client reviews", req);
+  }
+};
+
+// Get review details for a specific contract
+const getContractReview = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate parameters
+    const { error: paramError, value: paramValue } = paramIdSchema.validate(
+      req.params
+    );
+    if (paramError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid contract ID",
+        code: "INVALID_PARAM",
+      });
+    }
+
+    const { id: contractId } = sanitizeInput(paramValue);
+
+    // Build filter based on user type to ensure user can only access their contracts
+    const contractFilter = {
+      _id: contractId,
+      isDeleted: false,
+    };
+
+    if (req.user.userType === "client") {
+      contractFilter.clientId = req.clientProfile._id;
+    } else {
+      contractFilter.workerId = req.workerProfile._id;
+    }
+
+    // Check if contract exists and user has access
+    const contract = await WorkContract.findOne(contractFilter);
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Contract not found",
+        code: "CONTRACT_NOT_FOUND",
+      });
+    }
+
+    // Get all reviews for this contract
+    const reviews = await Review.find({
+      contractId: contractId,
+      isDeleted: false,
+    })
+      .populate("reviewerId", "firstName lastName profilePicture")
+      .populate("revieweeId", "firstName lastName profilePicture")
+      .populate("jobId", "title description")
+      .sort({ reviewDate: -1 })
+      .lean();
+
+    const processingTime = Date.now() - startTime;
+
+    res.status(200).json({
+      success: true,
+      message: "Contract reviews retrieved successfully",
+      code: "CONTRACT_REVIEWS_RETRIEVED",
+      data: {
+        contractId: contract._id,
+        reviews,
+        contractStatus: contract.contractStatus,
+        canSubmitReview: contract.contractStatus === "completed",
+      },
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    return handleContractError(error, res, "Get contract reviews", req);
+  }
+};
+
 module.exports = {
   getClientContracts,
   getWorkerContracts,
@@ -908,4 +1262,7 @@ module.exports = {
   confirmWorkCompletion,
   submitFeedback,
   cancelContract,
+  getWorkerReviews,
+  getClientReviews,
+  getContractReview,
 };

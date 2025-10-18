@@ -85,7 +85,6 @@ const workerInvitationSchema = new mongoose.Schema(
         // Invitations expire after 7 days
         return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       },
-      index: true,
     },
     isDeleted: {
       type: Boolean,

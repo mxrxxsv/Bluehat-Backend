@@ -19,6 +19,9 @@ const {
   confirmWorkCompletion,
   submitFeedback,
   cancelContract,
+  getWorkerReviews,
+  getClientReviews,
+  getContractReview,
 } = require("../controllers/workContract.controller");
 
 // Debug route to check contracts
@@ -200,6 +203,22 @@ router.patch(
   verifyToken,
   verifyClientOrWorker,
   cancelContract
+);
+
+// ==================== REVIEW ROUTES ====================
+
+// Get reviews for a specific worker
+router.get("/reviews/worker/:id", verifyToken, getWorkerReviews);
+
+// Get reviews for a specific client
+router.get("/reviews/client/:id", verifyToken, getClientReviews);
+
+// Get reviews for a specific contract
+router.get(
+  "/:id/reviews",
+  verifyToken,
+  verifyClientOrWorker,
+  getContractReview
 );
 
 module.exports = router;

@@ -13,6 +13,34 @@ const Conversation = require("../models/Conversation");
 // Utils
 const logger = require("../utils/logger");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
+const { sendJobProgressEmail } = require("../mailer/jobProgressNotifications");
+
+// Helper function for safe decryption
+const safeDecrypt = (encryptedData, fieldName = "field") => {
+  if (!encryptedData || typeof encryptedData !== "string") {
+    return "";
+  }
+
+  // Skip decryption for obviously corrupted/invalid data (too short for AES)
+  if (encryptedData.length < 16) {
+    return encryptedData; // Return original if too short
+  }
+
+  try {
+    return decryptAES128(encryptedData);
+  } catch (error) {
+    // Only log if it looks like it should be encrypted (longer strings)
+    if (encryptedData.length >= 32) {
+      logger.warn(`Decryption failed for ${fieldName}`, {
+        error: error.message,
+        fieldName,
+        dataType: typeof encryptedData,
+        dataLength: encryptedData.length,
+      });
+    }
+    return encryptedData; // Return original if decryption fails
+  }
+};
 
 // ==================== JOI SCHEMAS ====================
 const invitationSchema = Joi.object({
@@ -263,6 +291,16 @@ const inviteWorker = async (req, res) => {
       });
     }
 
+    // Check if worker is available for new work
+    if (!worker.canAcceptNewContract()) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This worker is currently working on another job and cannot accept new invitations.",
+        code: "WORKER_NOT_AVAILABLE",
+      });
+    }
+
     let job = null;
     // Validate job if job-specific invitation
     if (jobId) {
@@ -317,7 +355,7 @@ const inviteWorker = async (req, res) => {
     await invitation.populate([
       {
         path: "workerId",
-        select: "firstName lastName profilePicture skills",
+        select: "firstName lastName profilePicture skills credentialId",
       },
       {
         path: "jobId",
@@ -328,6 +366,64 @@ const inviteWorker = async (req, res) => {
         },
       },
     ]);
+
+    // Send email notification to worker
+    try {
+      logger.info("Starting email notification process", {
+        invitationId: invitation._id,
+        workerId: invitation.workerId._id,
+        workerCredentialId: invitation.workerId.credentialId,
+      });
+
+      // Get worker's email from credential - explicitly select email field
+      const workerCredential = await mongoose
+        .model("Credential")
+        .findById(invitation.workerId.credentialId)
+        .select("+email");
+
+      logger.info("Worker credential lookup result", {
+        found: !!workerCredential,
+        hasEmail: !!(workerCredential && workerCredential.email),
+        credentialId: invitation.workerId.credentialId,
+      });
+
+      if (workerCredential && workerCredential.email) {
+        logger.info("Attempting to send invitation email", {
+          to: workerCredential.email,
+          jobTitle: invitation.jobId.description,
+        });
+
+        await sendJobProgressEmail(
+          workerCredential.email,
+          "worker_invitation",
+          invitation.jobId.description,
+          {
+            proposedRate: invitation.proposedRate,
+            message: invitation.description,
+            invitationId: invitation._id,
+            jobId: invitation.jobId._id,
+          }
+        );
+
+        logger.info("Worker invitation email sent successfully", {
+          invitationId: invitation._id,
+          workerEmail: workerCredential.email,
+        });
+      } else {
+        logger.warn("Cannot send email - missing credential or email", {
+          workerCredential: !!workerCredential,
+          email: workerCredential?.email,
+          credentialId: invitation.workerId.credentialId,
+        });
+      }
+    } catch (emailError) {
+      logger.error("Failed to send worker invitation email", {
+        invitationId: invitation._id,
+        error: emailError.message,
+        stack: emailError.stack,
+      });
+      // Don't fail the invitation if email fails
+    }
 
     const processingTime = Date.now() - startTime;
 
@@ -404,7 +500,7 @@ const respondToInvitation = async (req, res) => {
     }).populate([
       {
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
       {
         path: "jobId",
@@ -444,6 +540,17 @@ const respondToInvitation = async (req, res) => {
 
     // If accepted directly (old flow), create contract only if direct accept
     if (action === "accept") {
+      // Check if worker is available before creating contract
+      const worker = await Worker.findById(req.workerProfile._id);
+      if (!worker || !worker.canAcceptNewContract()) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "You are already working on another job. Please complete your current work before accepting new invitations.",
+          code: "WORKER_NOT_AVAILABLE",
+        });
+      }
+
       contract = new WorkContract({
         clientId: invitation.clientId._id,
         workerId: req.workerProfile._id,
@@ -484,6 +591,51 @@ const respondToInvitation = async (req, res) => {
           }
         );
       }
+    }
+
+    // Send email notification to client about worker's response
+    try {
+      // Get client's email from credential - explicitly select email field
+      const clientCredential = await mongoose
+        .model("Credential")
+        .findById(invitation.clientId.credentialId)
+        .select("+email");
+
+      if (clientCredential && clientCredential.email) {
+        let emailType;
+        if (action === "accept") {
+          emailType = "invitation_accepted";
+        } else if (action === "reject") {
+          emailType = "invitation_rejected";
+        } else if (action === "start_discussion") {
+          emailType = "discussion_started";
+        }
+
+        await sendJobProgressEmail(
+          clientCredential.email,
+          emailType,
+          invitation.jobId?.description || "Direct Work Invitation",
+          {
+            proposedRate: invitation.proposedRate,
+            invitationId: invitation._id,
+            jobId: invitation.jobId?._id,
+          }
+        );
+
+        logger.info("Client notification email sent successfully", {
+          invitationId,
+          action,
+          emailType,
+          clientEmail: clientCredential.email,
+        });
+      }
+    } catch (emailError) {
+      logger.warn("Failed to send email notification to client", {
+        error: emailError.message,
+        invitationId,
+        action,
+        clientId: invitation.clientId._id,
+      });
     }
 
     const processingTime = Date.now() - startTime;
@@ -538,7 +690,8 @@ const getClientInvitations = async (req, res) => {
       });
     }
 
-    const { page, limit, status, invitationType, sortBy, order } = sanitizeInput(value);
+    const { page, limit, status, invitationType, sortBy, order } =
+      sanitizeInput(value);
 
     // Build filter
     const filter = {
@@ -579,23 +732,15 @@ const getClientInvitations = async (req, res) => {
 
       if (safeInv.workerId) {
         const worker = safeInv.workerId;
-        try {
-          if (worker.firstName) worker.firstName = decryptAES128(worker.firstName);
-          if (worker.lastName) worker.lastName = decryptAES128(worker.lastName);
-        } catch (err) {
-          console.warn("⚠️ Decryption failed for worker name:", err.message);
-        }
+        worker.firstName = safeDecrypt(worker.firstName, "worker firstName");
+        worker.lastName = safeDecrypt(worker.lastName, "worker lastName");
       }
 
       // 🧩 Optional: also decrypt client name if included
       if (safeInv.clientId) {
         const client = safeInv.clientId;
-        try {
-          if (client.firstName) client.firstName = decryptAES128(client.firstName);
-          if (client.lastName) client.lastName = decryptAES128(client.lastName);
-        } catch (err) {
-          console.warn("⚠️ Decryption failed for client name:", err.message);
-        }
+        client.firstName = safeDecrypt(client.firstName, "client firstName");
+        client.lastName = safeDecrypt(client.lastName, "client lastName");
       }
 
       return safeInv;
@@ -687,14 +832,14 @@ const getWorkerInvitations = async (req, res) => {
       const { senderIP, ...safeInv } = inv;
 
       if (safeInv.clientId) {
-        try {
-          if (safeInv.clientId.firstName)
-            safeInv.clientId.firstName = decryptAES128(safeInv.clientId.firstName);
-          if (safeInv.clientId.lastName)
-            safeInv.clientId.lastName = decryptAES128(safeInv.clientId.lastName);
-        } catch (err) {
-          console.warn("⚠️ Decryption failed for client name:", err.message);
-        }
+        safeInv.clientId.firstName = safeDecrypt(
+          safeInv.clientId.firstName,
+          "client firstName"
+        );
+        safeInv.clientId.lastName = safeDecrypt(
+          safeInv.clientId.lastName,
+          "client lastName"
+        );
       }
 
       return safeInv;
@@ -970,6 +1115,17 @@ const markInvitationAgreement = async (req, res) => {
 
     // If both agreed, create contract automatically
     if (newStatus === "both_agreed") {
+      // Check if worker is available before creating contract
+      const worker = await Worker.findById(invitation.workerId._id);
+      if (!worker || !worker.canAcceptNewContract()) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "The worker is already working on another job. Contract creation failed.",
+          code: "WORKER_NOT_AVAILABLE",
+        });
+      }
+
       contract = new WorkContract({
         clientId: invitation.clientId._id,
         workerId: invitation.workerId._id,
@@ -1065,6 +1221,6 @@ module.exports = {
   getClientInvitations,
   getWorkerInvitations,
   cancelInvitation,
-  startInvitationDiscussion, 
-  markInvitationAgreement, 
+  startInvitationDiscussion,
+  markInvitationAgreement,
 };

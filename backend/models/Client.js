@@ -122,7 +122,6 @@ const ClientSchema = new mongoose.Schema(
 );
 
 // ==================== INDEXES ====================
-ClientSchema.index({ credentialId: 1 });
 ClientSchema.index({ isVerified: 1 });
 ClientSchema.index({ verifiedAt: 1 });
 ClientSchema.index({ blocked: 1 });

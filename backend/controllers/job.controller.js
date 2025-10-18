@@ -7,6 +7,7 @@ const SkillCategory = require("../models/SkillCategory");
 const Job = require("../models/Job");
 const Client = require("../models/Client");
 const Credential = require("../models/Credential");
+const Admin = require("../models/Admin");
 
 //utils
 const logger = require("../utils/logger");
@@ -1581,19 +1582,38 @@ const deleteJob = async (req, res) => {
       });
     }
 
-    // ✅ Verify user authentication and type
-    if (!req.user || req.user.userType !== "client") {
-      logger.warn("Non-client attempted to delete job", {
-        userId: req.user?.id,
-        userType: req.user?.userType,
+    // ✅ Verify user authentication and type (allow both clients and admins)
+    if (!req.user && !req.admin) {
+      logger.warn("Unauthenticated user attempted to delete job", {
         ip: req.ip,
         timestamp: new Date().toISOString(),
       });
 
       return res.status(401).json({
         success: false,
-        message: "Only clients can delete jobs",
-        code: "CLIENT_AUTH_REQUIRED",
+        message: "Authentication required",
+        code: "AUTH_REQUIRED",
+      });
+    }
+
+    // Check if user is either a client or admin
+    const isClient = req.user && req.user.userType === "client";
+    const isAdmin = req.admin && req.admin.role === "admin";
+
+    if (!isClient && !isAdmin) {
+      logger.warn("Unauthorized user attempted to delete job", {
+        userId: req.user?.id,
+        adminId: req.admin?.id,
+        userType: req.user?.userType,
+        role: req.admin?.role,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: "Only clients and admins can delete jobs",
+        code: "CLIENT_OR_ADMIN_AUTH_REQUIRED",
       });
     }
 
@@ -1621,38 +1641,54 @@ const deleteJob = async (req, res) => {
       });
     }
 
-    // ✅ Find client profile to verify ownership
-    const clientProfile = await Client.findOne({ credentialId: req.user.id });
-    if (!clientProfile) {
-      logger.error("Client profile not found during job deletion", {
-        userId: req.user.id,
-        jobId: id,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
+    // ✅ For clients, verify ownership. Admins can delete any job.
+    let clientProfile = null;
 
-      return res.status(400).json({
-        success: false,
-        message: "Client profile not found",
-        code: "CLIENT_PROFILE_NOT_FOUND",
-      });
+    if (isClient) {
+      // Find client profile to verify ownership
+      clientProfile = await Client.findOne({ credentialId: req.user.id });
+      if (!clientProfile) {
+        logger.error("Client profile not found during job deletion", {
+          userId: req.user.id,
+          jobId: id,
+          ip: req.ip,
+          timestamp: new Date().toISOString(),
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: "Client profile not found",
+          code: "CLIENT_PROFILE_NOT_FOUND",
+        });
+      }
+
+      // ✅ Verify ownership for clients
+      if (job.clientId.toString() !== clientProfile._id.toString()) {
+        logger.warn("Unauthorized job deletion attempt by client", {
+          jobId: id,
+          jobOwnerId: job.clientId,
+          requesterId: clientProfile._id,
+          userId: req.user.id,
+          ip: req.ip,
+          timestamp: new Date().toISOString(),
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: "Only the job owner can delete this job",
+          code: "OWNERSHIP_REQUIRED",
+        });
+      }
     }
 
-    // ✅ Verify ownership
-    if (job.clientId.toString() !== clientProfile._id.toString()) {
-      logger.warn("Unauthorized job deletion attempt", {
+    // ✅ Admins can delete any job without ownership check
+    if (isAdmin) {
+      logger.info("Admin deleting job", {
         jobId: id,
+        adminId: req.admin._id,
         jobOwnerId: job.clientId,
-        requesterId: clientProfile._id,
-        userId: req.user.id,
         ip: req.ip,
         timestamp: new Date().toISOString(),
-      });
-
-      return res.status(403).json({
-        success: false,
-        message: "Only the job owner can delete this job",
-        code: "OWNERSHIP_REQUIRED",
       });
     }
 
@@ -1676,8 +1712,10 @@ const deleteJob = async (req, res) => {
     logger.info("Job deleted successfully", {
       jobId: id,
       jobDetails,
-      clientId: clientProfile._id,
-      userId: req.user.id,
+      deletedBy: isAdmin ? "admin" : "client",
+      clientId: clientProfile?._id,
+      userId: req.user?.id,
+      adminId: req.admin?._id,
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,

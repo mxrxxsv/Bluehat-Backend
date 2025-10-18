@@ -14,6 +14,26 @@ const Conversation = require("../models/Conversation");
 const logger = require("../utils/logger");
 const { emitToUser, emitToUsers } = require("../socket");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
+const { sendJobProgressEmail } = require("../mailer/jobProgressNotifications");
+
+// Helper function for safe decryption
+const safeDecrypt = (encryptedData, fieldName = "field") => {
+  if (!encryptedData || typeof encryptedData !== "string") {
+    return "";
+  }
+
+  try {
+    return decryptAES128(encryptedData);
+  } catch (error) {
+    logger.warn(`Decryption failed for ${fieldName}`, {
+      error: error.message,
+      fieldName,
+      dataType: typeof encryptedData,
+      dataLength: encryptedData.length,
+    });
+    return encryptedData; // Return original if decryption fails
+  }
+};
 
 // ==================== JOI SCHEMAS ====================
 const applicationSchema = Joi.object({
@@ -260,6 +280,17 @@ const applyToJob = async (req, res) => {
       });
     }
 
+    // Check if worker is available for new work
+    const worker = await Worker.findById(req.workerProfile.id);
+    if (!worker || !worker.canAcceptNewContract()) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "You are currently working on another job. Please complete your current work before applying to new jobs.",
+        code: "WORKER_NOT_AVAILABLE",
+      });
+    }
+
     // Check if worker is trying to apply to their own job (edge case)
     if (job.clientId.id.toString() === req.workerProfile.id.toString()) {
       return res.status(403).json({
@@ -411,6 +442,17 @@ const respondToApplication = async (req, res) => {
 
     // If accepted directly (old flow) or start_discussion, create contract only if direct accept
     if (action === "accept") {
+      // Check if worker is available before creating contract
+      const worker = await Worker.findById(application.workerId._id);
+      if (!worker || !worker.canAcceptNewContract()) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "The worker is already working on another job. Please wait until they complete their current work.",
+          code: "WORKER_NOT_AVAILABLE",
+        });
+      }
+
       contract = new WorkContract({
         clientId: req.clientProfile._id,
         workerId: application.workerId._id,
@@ -451,6 +493,51 @@ const respondToApplication = async (req, res) => {
       );
     }
 
+    // Send email notification to worker about client's response
+    try {
+      // Get worker's email from credential - explicitly select email field
+      const workerCredential = await mongoose
+        .model("Credential")
+        .findById(application.workerId.credentialId)
+        .select("+email");
+
+      if (workerCredential && workerCredential.email) {
+        let emailType;
+        if (action === "accept") {
+          emailType = "application_accepted";
+        } else if (action === "reject") {
+          emailType = "application_rejected";
+        } else if (action === "start_discussion") {
+          emailType = "discussion_started";
+        }
+
+        await sendJobProgressEmail(
+          workerCredential.email,
+          emailType,
+          application.jobId.description,
+          {
+            proposedRate: application.proposedRate,
+            applicationId: application._id,
+            jobId: application.jobId._id,
+          }
+        );
+
+        logger.info("Worker notification email sent successfully", {
+          applicationId,
+          action,
+          emailType,
+          workerEmail: workerCredential.email,
+        });
+      }
+    } catch (emailError) {
+      logger.warn("Failed to send email notification to worker", {
+        error: emailError.message,
+        applicationId,
+        action,
+        workerId: application.workerId._id,
+      });
+    }
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Application response processed successfully", {
@@ -479,28 +566,30 @@ const respondToApplication = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-      try {
-        // Notify worker of application response
-        emitToUser(application.workerId.credentialId, "application:updated", {
-          applicationId,
-          status: application.applicationStatus,
-        });
-        // Notify client (actor) as well
-        emitToUser(req.user.id, "application:updated", {
-          applicationId,
-          status: application.applicationStatus,
-        });
-        // If contract created, notify both
-        if (contract) {
-          emitToUsers(
-            [application.workerId.credentialId, req.user.id],
-            "contract:created",
-            { contractId: contract._id, applicationId }
-          );
-        }
-      } catch (e) {
-        logger.warn("Socket emit failed for respondToApplication", { error: e.message });
+    try {
+      // Notify worker of application response
+      emitToUser(application.workerId.credentialId, "application:updated", {
+        applicationId,
+        status: application.applicationStatus,
+      });
+      // Notify client (actor) as well
+      emitToUser(req.user.id, "application:updated", {
+        applicationId,
+        status: application.applicationStatus,
+      });
+      // If contract created, notify both
+      if (contract) {
+        emitToUsers(
+          [application.workerId.credentialId, req.user.id],
+          "contract:created",
+          { contractId: contract._id, applicationId }
+        );
       }
+    } catch (e) {
+      logger.warn("Socket emit failed for respondToApplication", {
+        error: e.message,
+      });
+    }
   } catch (error) {
     return handleApplicationError(error, res, "Application response", req);
   }
@@ -571,19 +660,19 @@ const getWorkerApplications = async (req, res) => {
           // Decrypt client name if it exists
           const decryptedClient = clientId
             ? {
-              ...clientId,
-              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
-              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
-            }
+                ...clientId,
+                firstName: safeDecrypt(clientId.firstName, "client firstName"),
+                lastName: safeDecrypt(clientId.lastName, "client lastName"),
+              }
             : null;
 
           // Decrypt worker name if needed
           const decryptedWorker = workerId
             ? {
-              ...workerId,
-              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
-              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
-            }
+                ...workerId,
+                firstName: safeDecrypt(workerId.firstName, "worker firstName"),
+                lastName: safeDecrypt(workerId.lastName, "worker lastName"),
+              }
             : null;
 
           return {
@@ -607,16 +696,18 @@ const getWorkerApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-      try {
-        // Notify both parties discussion started
-        emitToUsers(
-          [application.workerId.credentialId, req.user.id],
-          "application:discussion_started",
-          { applicationId }
-        );
-      } catch (e) {
-        logger.warn("Socket emit failed for startApplicationDiscussion", { error: e.message });
-      }
+    try {
+      // Notify both parties discussion started
+      emitToUsers(
+        [application.workerId.credentialId, req.user.id],
+        "application:discussion_started",
+        { applicationId }
+      );
+    } catch (e) {
+      logger.warn("Socket emit failed for startApplicationDiscussion", {
+        error: e.message,
+      });
+    }
   } catch (error) {
     return handleApplicationError(error, res, "Get worker applications", req);
   }
@@ -688,19 +779,19 @@ const getClientApplications = async (req, res) => {
           // Decrypt client name if it exists
           const decryptedClient = clientId
             ? {
-              ...clientId,
-              firstName: clientId.firstName ? decryptAES128(clientId.firstName) : "",
-              lastName: clientId.lastName ? decryptAES128(clientId.lastName) : "",
-            }
+                ...clientId,
+                firstName: safeDecrypt(clientId.firstName, "client firstName"),
+                lastName: safeDecrypt(clientId.lastName, "client lastName"),
+              }
             : null;
 
           // Decrypt worker name if needed
           const decryptedWorker = workerId
             ? {
-              ...workerId,
-              firstName: workerId.firstName ? decryptAES128(workerId.firstName) : "",
-              lastName: workerId.lastName ? decryptAES128(workerId.lastName) : "",
-            }
+                ...workerId,
+                firstName: safeDecrypt(workerId.firstName, "worker firstName"),
+                lastName: safeDecrypt(workerId.lastName, "worker lastName"),
+              }
             : null;
 
           return {
@@ -724,26 +815,28 @@ const getClientApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-      try {
-        // Emit agreement update
-        const clientCred = application.clientId.credentialId;
-        const workerCred = application.workerId.credentialId;
-        emitToUsers([clientCred, workerCred], "application:agreement", {
+    try {
+      // Emit agreement update
+      const clientCred = application.clientId.credentialId;
+      const workerCred = application.workerId.credentialId;
+      emitToUsers([clientCred, workerCred], "application:agreement", {
+        applicationId,
+        status: newStatus,
+        clientAgreed: application.clientAgreed,
+        workerAgreed: application.workerAgreed,
+      });
+      // If contract created, emit contract event
+      if (contract) {
+        emitToUsers([clientCred, workerCred], "contract:created", {
+          contractId: contract._id,
           applicationId,
-          status: newStatus,
-          clientAgreed: application.clientAgreed,
-          workerAgreed: application.workerAgreed,
         });
-        // If contract created, emit contract event
-        if (contract) {
-          emitToUsers([clientCred, workerCred], "contract:created", {
-            contractId: contract._id,
-            applicationId,
-          });
-        }
-      } catch (e) {
-        logger.warn("Socket emit failed for markApplicationAgreement", { error: e.message });
       }
+    } catch (e) {
+      logger.warn("Socket emit failed for markApplicationAgreement", {
+        error: e.message,
+      });
+    }
   } catch (error) {
     return handleApplicationError(error, res, "Get client applications", req);
   }
@@ -895,7 +988,9 @@ const startApplicationDiscussion = async (req, res) => {
         { applicationId }
       );
     } catch (e) {
-      logger.warn("Socket emit failed for startApplicationDiscussion", { error: e.message });
+      logger.warn("Socket emit failed for startApplicationDiscussion", {
+        error: e.message,
+      });
     }
   } catch (error) {
     return handleApplicationError(
@@ -1038,6 +1133,17 @@ const markApplicationAgreement = async (req, res) => {
 
     // If both agreed, create contract automatically
     if (newStatus === "both_agreed") {
+      // Check if worker is available before creating contract
+      const worker = await Worker.findById(application.workerId._id);
+      if (!worker || !worker.canAcceptNewContract()) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "The worker is already working on another job. Contract creation failed.",
+          code: "WORKER_NOT_AVAILABLE",
+        });
+      }
+
       contract = new WorkContract({
         clientId: application.clientId._id,
         workerId: application.workerId._id,
@@ -1058,17 +1164,13 @@ const markApplicationAgreement = async (req, res) => {
         contract._id
       );
 
-      // Update job status
+      // Update job status to in_progress
       await Job.findByIdAndUpdate(application.jobId._id, {
         status: "in_progress",
         hiredWorker: application.workerId._id,
       });
 
-      // Update application to accepted
-      application.applicationStatus = "accepted";
-      await application.save();
-
-      // Reject other pending applications
+      // Reject all other pending applications for this job
       await JobApplication.updateMany(
         {
           jobId: application.jobId._id,
@@ -1086,13 +1188,14 @@ const markApplicationAgreement = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    logger.info("Application agreement updated", {
+    logger.info("Application agreement marked successfully", {
       applicationId,
-      userType: req.user.userType,
       agreed,
       newStatus,
-      contractCreated: !!contract,
+      contractId: contract?._id,
+      jobId: application.jobId._id,
       userId: req.user.id,
+      userType: req.user.userType,
       ip: req.ip,
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
@@ -1100,22 +1203,16 @@ const markApplicationAgreement = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: contract
-        ? "Both parties agreed! Work contract created successfully."
-        : `Agreement status updated. ${
-            newStatus === "client_agreed" || newStatus === "worker_agreed"
-              ? "Waiting for other party to agree."
-              : ""
-          }`,
-      code: contract ? "CONTRACT_CREATED" : "AGREEMENT_UPDATED",
+      message: `Agreement ${agreed ? "confirmed" : "updated"} successfully`,
+      code: "AGREEMENT_UPDATED",
       data: {
-        application: application.toSafeObject(),
-        contract: contract?.toSafeObject() || null,
-        agreementStatus: {
+        application: {
+          id: application._id,
           clientAgreed: application.clientAgreed,
           workerAgreed: application.workerAgreed,
           status: newStatus,
         },
+        contract: contract?.toSafeObject() || null,
       },
       meta: {
         processingTime: `${processingTime}ms`,

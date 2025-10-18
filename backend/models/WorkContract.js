@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { sendJobProgressEmail } = require("../mailer/jobProgressNotifications");
+const { decryptAES128 } = require("../utils/encipher");
 
 const workContractSchema = new mongoose.Schema(
   {
@@ -82,30 +84,6 @@ const workContractSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    clientRating: {
-      type: Number,
-      min: [1, "Rating must be between 1 and 5"],
-      max: [5, "Rating must be between 1 and 5"],
-      default: null,
-    },
-    clientFeedback: {
-      type: String,
-      trim: true,
-      maxlength: [1000, "Feedback cannot exceed 1000 characters"],
-      default: null,
-    },
-    workerRating: {
-      type: Number,
-      min: [1, "Rating must be between 1 and 5"],
-      max: [5, "Rating must be between 1 and 5"],
-      default: null,
-    },
-    workerFeedback: {
-      type: String,
-      trim: true,
-      maxlength: [1000, "Feedback cannot exceed 1000 characters"],
-      default: null,
-    },
 
     // References to source
     applicationId: {
@@ -140,11 +118,131 @@ workContractSchema.index({ createdAt: -1 });
 workContractSchema.index({ completedAt: -1 });
 
 // Pre-save middleware
-workContractSchema.pre("save", function (next) {
+workContractSchema.pre("save", async function (next) {
   // Auto-set completion date
   if (this.contractStatus === "completed" && !this.completedAt) {
     this.completedAt = new Date();
     this.actualEndDate = new Date();
+  }
+
+  // Update job status when contract status changes
+  if (this.isModified("contractStatus") || this.isNew) {
+    try {
+      const Job = mongoose.model("Job");
+
+      if (this.jobId) {
+        if (
+          this.contractStatus === "active" ||
+          this.contractStatus === "in_progress"
+        ) {
+          // Update job to in_progress status with the worker
+          await Job.findByIdAndUpdate(this.jobId, {
+            status: "in_progress",
+            hiredWorker: this.workerId,
+          });
+        } else if (this.contractStatus === "completed") {
+          // Update job to completed status
+          await Job.findByIdAndUpdate(this.jobId, {
+            status: "completed",
+          });
+        } else if (this.contractStatus === "cancelled") {
+          // Reset job to open status and remove hired worker
+          await Job.findByIdAndUpdate(this.jobId, {
+            status: "open",
+            hiredWorker: null,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating job status:", error);
+      // Don't fail the contract save if job update fails
+    }
+
+    // Send email notifications for contract status changes
+    if (!this.isNew && this.isModified("contractStatus")) {
+      try {
+        // Get job, worker, and client details
+        const Job = mongoose.model("Job");
+        const Worker = mongoose.model("Worker");
+        const Client = mongoose.model("Client");
+        const Credential = mongoose.model("Credential");
+
+        const job = await Job.findById(this.jobId);
+        const worker = await Worker.findById(this.workerId);
+        const client = await Client.findById(this.clientId);
+
+        if (job && worker && client) {
+          // Get credentials with email explicitly selected
+          const workerCredential = await Credential.findById(
+            worker.credentialId
+          ).select("+email");
+          const clientCredential = await Credential.findById(
+            client.credentialId
+          ).select("+email");
+
+          // Determine email type based on contract status
+          let emailType;
+          switch (this.contractStatus) {
+            case "active":
+              emailType = "work_started";
+              break;
+            case "in_progress":
+              emailType = "work_started";
+              break;
+            case "awaiting_client_confirmation":
+              emailType = "work_completed";
+              break;
+            case "completed":
+              emailType = "work_completed";
+              break;
+            case "cancelled":
+              emailType = "contract_cancelled";
+              break;
+            default:
+              emailType = null;
+          }
+
+          if (emailType) {
+            // Send email to worker
+            if (workerCredential && workerCredential.email) {
+              await sendJobProgressEmail(
+                workerCredential.email,
+                emailType,
+                job.title,
+                {
+                  agreedRate: this.agreedRate,
+                  contractStatus: this.contractStatus,
+                  contractId: this._id,
+                  jobId: job._id,
+                }
+              );
+            }
+
+            // Send email to client (except for work_started which is worker-initiated)
+            if (
+              clientCredential &&
+              clientCredential.email &&
+              emailType !== "work_started"
+            ) {
+              await sendJobProgressEmail(
+                clientCredential.email,
+                emailType,
+                job.title,
+                {
+                  agreedRate: this.agreedRate,
+                  contractStatus: this.contractStatus,
+                  contractId: this._id,
+                  jobId: job._id,
+                }
+              );
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error("Error sending contract status email:", emailError);
+        // Don't fail the contract save if email fails
+      }
+    }
   }
 
   next();
@@ -175,38 +273,5 @@ workContractSchema.virtual("duration").get(function () {
   }
   return null;
 });
-
-// Static methods
-workContractSchema.statics.getClientStats = async function (clientId) {
-  return this.aggregate([
-    { $match: { clientId: new mongoose.Types.ObjectId(clientId) } },
-    {
-      $group: {
-        _id: null,
-        totalContracts: { $sum: 1 },
-        completedContracts: {
-          $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
-        },
-        averageRating: { $avg: "$clientRating" },
-      },
-    },
-  ]);
-};
-
-workContractSchema.statics.getWorkerStats = async function (workerId) {
-  return this.aggregate([
-    { $match: { workerId: new mongoose.Types.ObjectId(workerId) } },
-    {
-      $group: {
-        _id: null,
-        totalContracts: { $sum: 1 },
-        completedContracts: {
-          $sum: { $cond: [{ $eq: ["$contractStatus", "completed"] }, 1, 0] },
-        },
-        averageRating: { $avg: "$workerRating" },
-      },
-    },
-  ]);
-};
 
 module.exports = mongoose.model("WorkContract", workContractSchema);

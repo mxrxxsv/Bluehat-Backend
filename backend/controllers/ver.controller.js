@@ -1272,6 +1272,51 @@ const login = async (req, res) => {
       await matchingUser.save();
     }
 
+    // ✅ Check if user account is blocked
+    try {
+      let userProfile = null;
+
+      if (matchingUser.userType === "client") {
+        userProfile = await Client.findOne({ user: matchingUser._id }).select(
+          "blocked blockReason"
+        );
+      } else if (matchingUser.userType === "worker") {
+        userProfile = await Worker.findOne({ user: matchingUser._id }).select(
+          "blocked blockReason"
+        );
+      }
+
+      if (userProfile && userProfile.blocked) {
+        const blockReason =
+          userProfile.blockReason ||
+          "Account has been blocked by administrator";
+
+        logger.warn("Blocked user login attempt", {
+          email: email,
+          userId: matchingUser._id,
+          userType: matchingUser.userType,
+          blockReason: blockReason,
+          ip: req.ip,
+          userAgent: req.get("User-Agent"),
+          timestamp: new Date().toISOString(),
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: `Account access denied: ${blockReason}`,
+          code: "ACCOUNT_BLOCKED",
+          blockReason: blockReason,
+        });
+      }
+    } catch (blockCheckError) {
+      logger.error("Error checking user block status", {
+        email: email,
+        userId: matchingUser._id,
+        error: blockCheckError.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     // ✅ Check if TOTP code is provided
     if (!totpCode) {
       logger.info("Login password verified, TOTP required", {

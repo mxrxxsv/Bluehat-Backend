@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 const forgotPassword = async (email, userName, resetUrl) => {
   try {
     let mailOptions = {
-      from: `"BlueHat" <${process.env.EMAIL}>`,
+      from: `"FixIt" <${process.env.EMAIL}>`,
       to: email,
       subject: "Reset your password",
       html: PASSWORD_RESET_REQUEST_TEMPLATE.replace(

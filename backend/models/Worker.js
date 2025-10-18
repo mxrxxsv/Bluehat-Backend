@@ -151,12 +151,6 @@ const WorkerSchema = new mongoose.Schema(
         },
       },
     ],
-    reviews: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Review",
-      },
-    ],
 
     // ==================== ID VERIFICATION FIELDS ====================
     idPictureId: {
@@ -293,8 +287,56 @@ WorkerSchema.methods.rejectIdVerification = function () {
   return this;
 };
 
+// ==================== WORK STATUS METHODS ====================
+
+// Check if worker is available for new work
+WorkerSchema.methods.isAvailableForWork = function () {
+  return (
+    this.status === "available" &&
+    !this.blocked &&
+    this.isVerified &&
+    !this.currentJob
+  );
+};
+
+// Check if worker can accept new contracts (stricter check)
+WorkerSchema.methods.canAcceptNewContract = function () {
+  // Worker must be available and not already working on another job
+  return this.isAvailableForWork() && this.status !== "working";
+};
+
+// Start working on a job
+WorkerSchema.methods.startWorking = function (jobId) {
+  this.status = "working";
+  this.currentJob = jobId;
+  return this;
+};
+
+// Mark worker as available (when work is completed/cancelled)
+WorkerSchema.methods.becomeAvailable = function () {
+  this.status = "available";
+  this.currentJob = null;
+  return this;
+};
+
+// Set worker as not available
+WorkerSchema.methods.setNotAvailable = function () {
+  this.status = "not available";
+  this.currentJob = null;
+  return this;
+};
+
+// Get status display text
+WorkerSchema.virtual("statusText").get(function () {
+  const statusMap = {
+    available: "Available",
+    working: "Working",
+    "not available": "Not Available",
+  };
+  return statusMap[this.status] || "Unknown";
+});
+
 // ==================== INDEXES ====================
-WorkerSchema.index({ credentialId: 1 });
 WorkerSchema.index({ verificationStatus: 1 });
 WorkerSchema.index({ isVerified: 1 });
 WorkerSchema.index({ verifiedAt: 1 });
