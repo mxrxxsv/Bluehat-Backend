@@ -22,7 +22,7 @@ const AdsPage = () => {
     <>
       <div className='mt-30 ml-5 md:mt-40 md:ml-30 w-75 md:w-95 mb-8 fixed top-0'>
         <h1 className='text-[24px] md:text-[32px] font-medium text-[#252525] opacity-80'>
-          Free Government Training and Certification
+          Free Government Training and Certifications
         </h1>
       </div>
 
