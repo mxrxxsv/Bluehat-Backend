@@ -1144,37 +1144,38 @@ const ApplicationsPage = () => {
 
               {/* Job Info */}
               <div className="mb-5">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Job Description</h4>
-                <div className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs sm:text-sm text-gray-600 shadow-inner">
+                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">Job Description</h4>
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs sm:text-sm text-gray-600 shadow-inner text-left">
                   {selectedInvitation.jobId?.description || "No job description available."}
                 </div>
               </div>
 
               {/* Proposed Rate */}
               <div className="border-t border-gray-100 pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Proposed Rate</h4>
-                <p className="text-xl font-semibold text-green-600 tracking-wide">
-                  ${selectedInvitation.proposedRate || "0"}
+                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">Proposed Rate</h4>
+                <p className="text-xl font-semibold text-green-600 tracking-wide text-left">
+                  ₱{selectedInvitation.proposedRate || "0"}
                 </p>
               </div>
             </div>
 
 
             {/* Invitation Description */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-800 text-sm mb-1">
+            <div className="mb-4 px-4 mt-4">
+              <h4 className="font-medium text-gray-800 text-sm mb-1 text-left">
                 Message:
               </h4>
-              <p className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+              <p className="text-xs sm:text-sm text-gray-600 bg-gray-50 p-3 rounded-lg text-left">
                 {selectedInvitation.description || "No message provided"}
               </p>
             </div>
 
             {/* Status */}
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-800 text-sm mb-1">
+            <div className="mb-6 px-4">
+              <h4 className="font-medium text-gray-800 text-sm mb-1 text-left">
                 Status:
               </h4>
+              <div className="flex justify-start">
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium ${selectedInvitation.invitationStatus === "pending"
                     ? "bg-yellow-100 text-yellow-800"
@@ -1206,6 +1207,7 @@ const ApplicationsPage = () => {
                               ? "Rejected"
                               : selectedInvitation.invitationStatus}
               </span>
+              </div>
             </div>
 
             {/* Action Buttons */}
