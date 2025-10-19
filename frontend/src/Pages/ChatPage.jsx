@@ -661,7 +661,7 @@ const ChatPage = () => {
                 aria-label="Sidebar"
             >
                 <div className="h-full px-3 overflow-y-auto">
-                    <ul className="space-y-2 font-medium">
+                    <ul className="font-medium">
                         {conversations.map((conv) => {
                             const otherCred = idToString(conv?.other?.credentialId);
                             const name = contactNames[otherCred] || "Unnamed";
@@ -674,8 +674,7 @@ const ChatPage = () => {
                                             setSelectedContactId(otherCred);
                                             setIsSidebarOpen(false);
                                         }}
-
-                                        className={`flex items-center w-full p-3 text-gray-900 rounded-lg border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
+                                        className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
                                     >
                                         <img
                                             src={profile}
@@ -754,8 +753,8 @@ const ChatPage = () => {
                         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                             <div className="text-left">
                                 <div className="text-sm text-gray-500">Contract</div>
-                                <div className="text-base font-semibold text-gray-800">{contractBanner.jobId?.description?.slice(0, 60) || contractBanner.description?.slice(0, 60) || "Work Contract"}</div>
-                                <div className="text-sm text-gray-600 mt-1">Status: <span className="font-medium">{(contractBanner.contractStatus || "").replaceAll("_", " ")}</span> • Rate: <span className="font-medium">${contractBanner.agreedRate}</span></div>
+                                <div className="text-base font-semibold text-[#252525]">{contractBanner.jobId?.description?.slice(0, 60) || contractBanner.description?.slice(0, 60) || "Work Contract"}</div>
+                                <div className="text-sm text-gray-600 mt-1"> <span className="font-semibold">Status: </span> <span className="font-medium">{(contractBanner.contractStatus || "").replaceAll("_", " ")}</span> • <span className="font-semibold">Rate:</span> <span className="font-medium">₱{contractBanner.agreedRate}</span></div>
                             </div>
                             <div className="flex items-center gap-2">
                                 {currentUser?.userType === "worker" && contractBanner.contractStatus === "active" && (
@@ -767,7 +766,7 @@ const ChatPage = () => {
                                 {currentUser?.userType === "client" && contractBanner.contractStatus === "awaiting_client_confirmation" && (
                                     <button onClick={async () => { try { await confirmWorkCompletionAPI(contractBanner._id); setContractBanner((prev) => prev ? { ...prev, contractStatus: "completed", completedAt: new Date().toISOString(), actualEndDate: new Date().toISOString(), clientConfirmedAt: new Date().toISOString() } : prev); alert("Confirmed completion"); } catch (e) { alert(e.message); } }} className="px-3 py-2 rounded-lg bg-green-600 text-white cursor-pointer">Confirm</button>
                                 )}
-                                <button onClick={() => navigate("/contracts")} className="px-3 py-2 rounded-lg border cursor-pointer">Open Contracts</button>
+                                <button onClick={() => navigate("/contracts")} className="px-3 py-2 bg-[#55b3f3] text-white rounded-md border border-[#55b3f3] cursor-pointer shadow-sm hover:bg-sky-500">Open Contracts</button>
                             </div>
                         </div>
                     </div>
@@ -855,7 +854,7 @@ const ChatPage = () => {
                                             }
                                         }}
 
-                                        className="px-3 py-2 rounded-lg bg-green-600 text-white cursor-pointer"
+                                        className="px-3 py-2 rounded-lg bg-green-500 text-white cursor-pointer hover:bg-green-600"
                                     >
                                         I Agree
                                     </button>
@@ -878,7 +877,7 @@ const ChatPage = () => {
                                             alert(e.message || "Failed to update agreement");
                                         }
                                     }}
-                                    className="px-3 py-2 rounded-lg border cursor-pointer"
+                                    className="px-3 py-2 rounded-lg border cursor-pointer hover:bg-[#f4f6f6] hover:shadow-sm border-gray-400 text-gray-700 bg-white"
                                 >
                                     Not now
                                 </button>
