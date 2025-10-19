@@ -310,7 +310,7 @@ const ContractManagement = () => {
                         </div>
                       </div>
                       <p className="text-sm flex items-center text-left text-gray-500 mb-3">
-                        Contract Type: {contract.contractType}
+                        Contract Type: {(contract.contractType).replaceAll("_", " ")}
                       </p>
                       <p className="text-sm flex items-center text-left text-gray-500 mb-3">
                         Contract ID: {contract._id}
