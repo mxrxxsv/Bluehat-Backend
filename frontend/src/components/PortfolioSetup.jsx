@@ -39,8 +39,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
 
     const [biography, setBiography] = useState("");
 
-
-
     useEffect(() => {
         checkAuth()
             .then((res) => {
@@ -118,7 +116,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
         });
     };
 
-
     // Experience upload
     const handleAddExperience = () => {
         if (!experience.companyName || !experience.position) return;
@@ -150,10 +147,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
         setSkillCategory([]); // reset selection
     };
 
-
-
-
-
     return (
         <div className="fixed inset-0 bg-[#f4f6f6] flex justify-center items-center z-50 p-4">
             <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl relative">
@@ -169,6 +162,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 <p className="text-center text-sm text-gray-500 mb-6">
                     Step {step} of 5
                 </p>
+
                 {error && (
                     <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
                 )}
@@ -180,6 +174,9 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 {step === 1 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Your Biography</h3>
+                        <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+                            Write a short, engaging biography this helps clients learn about your personality and expertise.
+                        </div>
                         <textarea
                             placeholder="Tell clients about yourself..."
                             value={biography}
@@ -191,7 +188,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                                 onClick={() => {
                                     if (!biography.trim()) return;
                                     handleUpload(updateWorkerBiography, { biography }, () => {
-                                        // console.log("Biography saved:", biography);
                                         setStep(2);
                                     }, 2000);
                                 }}
@@ -204,11 +200,13 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     </div>
                 )}
 
-
                 {/* STEP 2: Portfolio */}
                 {step === 2 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Portfolio</h3>
+                        <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+                            Highlight your best work! Upload projects that showcase your skills and creativity.
+                        </div>
                         <input
                             type="text"
                             placeholder="Project Title"
@@ -247,9 +245,10 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 {/* STEP 3: Certificates */}
                 {step === 3 && (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-700">
-                            Upload Certificates
-                        </h3>
+                        <h3 className="text-lg font-semibold text-gray-700">Upload Certificates</h3>
+                        <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+                            Upload any relevant certificates or training documents to boost your credibility.
+                        </div>
                         <DropzoneFileInput
                             onFileSelect={(file) => setCertificateFile(file)}
                             accept="image/*,application/pdf"
@@ -286,6 +285,9 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 {step === 4 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Experience</h3>
+                        <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+                            Share your work experience so clients can see your background and roles.
+                        </div>
                         <input
                             type="text"
                             placeholder="Company Name"
@@ -372,32 +374,29 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 {step === 5 && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-700">Add Skills</h3>
-
-                        {/* Skill Selection Buttons */}
+                        <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+                            Select your key skills these help clients match you to the right projects.
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {availableSkills.map((skill) => (
                                 <button
                                     key={skill._id}
                                     onClick={() => {
                                         if (skillCategory.includes(skill._id)) {
-                                            // Deselect if already selected
                                             setSkillCategory(skillCategory.filter((id) => id !== skill._id));
                                         } else {
-                                            // Add to selected skills
                                             setSkillCategory([...skillCategory, skill._id]);
                                         }
                                     }}
                                     className={`px-3 py-1 rounded-full text-xs font-medium ${skillCategory.includes(skill._id)
-                                        ? "bg-blue-500 text-white shadow"
-                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                            ? "bg-blue-500 text-white shadow"
+                                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                         }`}
                                 >
                                     {skill.name || skill.categoryName}
                                 </button>
                             ))}
                         </div>
-
-                        {/* Add Skills Button */}
                         <div className="flex justify-end mt-2">
                             <button
                                 onClick={handleAddSkillCategory}
@@ -407,8 +406,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                                 Add Skill
                             </button>
                         </div>
-
-                        {/* Selected/Added Skills List */}
                         <ul className="mt-3 text-sm text-gray-600">
                             {skills.map((s, i) => (
                                 <li key={i}>
@@ -418,8 +415,6 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                         </ul>
                     </div>
                 )}
-
-
 
                 {/* Navigation */}
                 <div className="flex justify-between mt-8">
@@ -452,6 +447,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                 </div>
             </div>
         </div>
+
     );
 };
 
