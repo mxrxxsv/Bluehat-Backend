@@ -63,6 +63,14 @@ const ChatPage = () => {
     const [agreeToastMessage, setAgreeToastMessage] = useState("");
     const agreeToastTimer = useRef(null);
 
+    useEffect(() => {
+        if (contractBanner || showAgreeToast || agreeToastMessage) {
+            setIsSidebarOpen(false);
+        } else {
+            setIsSidebarOpen(true);
+        }
+    }, [contractBanner, showAgreeToast, agreeToastMessage]);
+
     // Pull agreement context from navigation state or sessionStorage (fallback)
     const agreementContextFromState = (location.state && location.state.agreementContext) || null;
     let persistedAgreementContext = null;
@@ -90,8 +98,6 @@ const ChatPage = () => {
     }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
 
     // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
-
-
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
@@ -408,7 +414,7 @@ const ChatPage = () => {
 
                 const conv = res?.data?.data;
 
-                // ✅ Validate response
+                // Validate response
                 if (!conv || !conv._id) {
                     console.error("Failed to create or fetch conversation:", res);
                     return; // stop further execution
@@ -646,18 +652,14 @@ const ChatPage = () => {
     };
 
 
-
-
-
-
-
     return (
         <>
             {/* SIDEBAR */}
             <aside
                 ref={sidebarRef}
-                className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    } sm:translate-x-0 overflow-clip h-full md:h-[500px]`}
+                // duration-300 
+                className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white/20 backdrop-blur-md border border-white/30 md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    } overflow-hidden h-[600px] md:h-[500px]`}
                 aria-label="Sidebar"
             >
                 <div className="h-full px-3 overflow-y-auto">
@@ -706,30 +708,42 @@ const ChatPage = () => {
 
                 <div className="flex items-center pl-4">
 
-                    <button
-                        ref={buttonRef}
-                        type="button"
-                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className="p-2 text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                    >
-                        <svg
-                            className="w-6 h-6"
-                            aria-hidden="true"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                    {/* Sidebar Toggle Button */}
+                    {!contractBanner && !showAgreeToast && !agreeToastMessage && (
+                        <button
+                            ref={buttonRef}
+                            type="button"
+                            onClick={() => {
+                                if (!contractBanner && !showAgreeToast && !agreeToastMessage) {
+                                    setIsSidebarOpen(!isSidebarOpen);
+                                }
+                            }}
+                            disabled={contractBanner || showAgreeToast || agreeToastMessage}
+                            className={`p-2 rounded-lg sm:hidden focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200
+                            ${contractBanner || showAgreeToast || agreeToastMessage
+                                    ? "text-gray-300 cursor-not-allowed"
+                                    : "text-gray-500 hover:bg-gray-100"
+                                }`}
                         >
-                            <path
-                                clipRule="evenodd"
-                                fillRule="evenodd"
-                                d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 
-                            1.5H2.75A.75.75 0 012 4.75zm0 
-                            10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 
-                            1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 
-                            0 01.75-.75h14.5a.75.75 0 010 
-                            1.5H2.75A.75.75 0 012 10z"
-                            />
-                        </svg>
-                    </button>
+                            <svg
+                                className="w-6 h-6"
+                                aria-hidden="true"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    clipRule="evenodd"
+                                    fillRule="evenodd"
+                                    d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 
+                                    1.5H2.75A.75.75 0 012 4.75zm0 
+                                    10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 
+                                    1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 
+                                    0 01.75-.75h14.5a.75.75 0 010 
+                                    1.5H2.75A.75.75 0 012 10z"
+                                />
+                            </svg>
+                        </button>
+                    )}
                 </div>
 
                 {/* Success toast after agreement */}
