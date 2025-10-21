@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Axios instance for advertisements
 const advertisementApi = axios.create({
-  baseURL: "http://localhost:5000/advertisement",
+  baseURL: "https://fixit-capstone.onrender.com/advertisement",
   withCredentials: true,
 });
 

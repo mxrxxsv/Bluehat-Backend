@@ -84,7 +84,7 @@ const ContractManagement = () => {
       setCurrentUser(user);
 
       if (!socketRef.current) {
-        socketRef.current = io("http://localhost:5000", {
+        socketRef.current = io("https://fixit-capstone.onrender.com", {
           withCredentials: true,
         });
         const credId = user?.credentialId || user?._id || user?.id;

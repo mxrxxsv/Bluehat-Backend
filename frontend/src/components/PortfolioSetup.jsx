@@ -54,7 +54,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
     useEffect(() => {
         const fetchSkills = async () => {
             try {
-                const res = await fetch("http://localhost:5000/skills"); // adjust URL
+                const res = await fetch("https://fixit-capstone.onrender.com/skills"); // adjust URL
                 const data = await res.json();
                 setAvailableSkills(Array.isArray(data?.data?.categories) ? data.data.categories : []);
             } catch (err) {
