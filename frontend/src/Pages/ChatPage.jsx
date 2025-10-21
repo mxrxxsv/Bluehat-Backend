@@ -674,9 +674,13 @@ const ChatPage = () => {
                                     <button
                                         onClick={() => {
                                             setSelectedContactId(otherCred);
-                                            setIsSidebarOpen(false);
+                                            
+                                            if (window.innerWidth < 768) {
+                                                setIsSidebarOpen(false);
+                                            }
                                         }}
-                                        className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""}`}
+                                        className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""
+                                            }`}
                                     >
                                         <img
                                             src={profile}
