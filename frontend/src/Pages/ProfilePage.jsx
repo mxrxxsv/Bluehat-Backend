@@ -59,6 +59,12 @@ const ProfilePage = () => {
     price: "",
   });
 
+  // Helper: lock editing for hired/in_progress/completed
+  const isJobLocked = (job) =>
+    ["hired", "in_progress", "completed"].includes(
+      (job?.status || "").toLowerCase()
+    );
+
 
   // Load user
   useEffect(() => {
@@ -250,6 +256,7 @@ const ProfilePage = () => {
 
   // 🟡 Edit button
 const handleEditJob = (job) => {
+  if (isJobLocked(job)) return;
   setSelectedJob(job);
   setEditJob({
     title: job.title || "",
@@ -303,6 +310,7 @@ const handleUpdateJob = async () => {
 
 // 🟠 Open delete confirm
 const handleConfirmDelete = (job) => {
+  if (isJobLocked(job)) return;
   setJobToDelete(job);
   setIsDeleteConfirmOpen(true);
 };
@@ -417,23 +425,41 @@ const handleDeleteJob = async () => {
                       {post.description}
                     </p>
 
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3 items-center">
                       <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
                         {post.category?.name || "Uncategorized"}
                       </span>
+                      
                     </div>
 
                     <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
                         <MapPin size={16} /> {post.location}
                       </span>
+                      
                       <span className="font-bold text-green-400">
                         ₱{post.price?.toLocaleString() || 0}
                       </span>
                     </div>
+                    <div className="flex justify-start mt-2">
+                    {post.status && (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs shadow-sm ${
+                            ((post.status || "").toLowerCase() === "open" && "bg-green-100 text-green-600") ||
+                            ((post.status || "").toLowerCase() === "hired" && "bg-yellow-100 text-yellow-700") ||
+                            ((post.status || "").toLowerCase() === "in_progress" && "bg-blue-100 text-blue-700") ||
+                            ((post.status || "").toLowerCase() === "completed" && "bg-gray-200 text-gray-600") ||
+                            ((post.status || "").toLowerCase() === "cancelled" && "bg-red-100 text-red-600") ||
+                            "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {(post.status || "").replace("_", " ")}
+                        </span>
+                      )}
+                      </div>
 
                     {/* ✅ Action buttons (visible only in Edit mode) */}
-                    {isEditMode && (
+                    {isEditMode && !isJobLocked(post) && (
                       <div className="flex justify-end gap-2 mt-4">
                         <button
                           onClick={() => handleEditJob(post)}
