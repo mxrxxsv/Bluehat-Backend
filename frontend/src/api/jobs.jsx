@@ -1,12 +1,10 @@
 import axios from "axios";
 
-// ✅ FIXED: Correct baseURL without /jobs
 const API = axios.create({
   baseURL: "http://localhost:5000",
   withCredentials: true,
 });
 
-// ✅ Add authorization header for authenticated requests
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -15,7 +13,6 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// ✅ ENHANCED: Get all jobs with cache busting option
 export const getAllJobs = (options = {}) => {
   const {
     page = 1,
@@ -47,22 +44,16 @@ export const getAllJobs = (options = {}) => {
 };
 
 
-// ✅ FIXED: Get single job by ID
 export const getJobById = (id) => API.get(`/jobs/${id}`);
 
-// ✅ FIXED: Post a new job
 export const postJob = (jobData) => API.post("/jobs", jobData);
 
-// ✅ FIXED: Update job
 export const updateJob = (id, jobData) => API.put(`/jobs/${id}`, jobData);
 
-// ✅ FIXED: Delete job
 export const deleteJob = (id) => API.delete(`/jobs/${id}`);
 
-// ✅ FIXED: Get applications for a job
 export const getJobApplications = (jobId) =>
   API.get(`/jobs/${jobId}/applications`);
 
-// ✅ FIXED: Respond to application
 export const respondToApplication = (applicationId, action, message) =>
   API.patch(`/applications/${applicationId}/respond`, { action, message });
