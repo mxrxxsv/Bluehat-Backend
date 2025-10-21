@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Filter, MapPin, Star, ArrowLeft } from "lucide-react";
+import { Search, Filter, MapPin, Star, ArrowLeft, X, Briefcase } from "lucide-react";
 import Header from "../components/Header";
 import WorkerInvitationCard from "../components/WorkerInvitationCard";
 import { checkAuth } from "../api/auth";
@@ -215,21 +215,59 @@ const InviteWorkersPage = () => {
           </button>
 
           {job && (
-            <div className="bg-white rounded-xl p-6 shadow-md">
-              <h1 className="text-2xl font-bold text-[#545454] mb-2">
-                Invite Workers for: {job.title}
-              </h1>
-              <p className="text-gray-600 mb-4">{job.description}</p>
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {job.location}
-                </span>
-                {/* <span>Budget: ₱{job.budget}</span>
-                <span>Duration: {job.duration}</span> */}
+            <div className="space-y-4 pb-4">
+              <div className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
+                <div className="rounded-xl p-4 bg-white transition-all">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+
+                      <img
+                        src={job.client?.profilePicture || currentUser.avatar}
+                        alt="Client Avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+
+                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                        {job.client?.name || "Client Name"}
+                      </span>
+                    </div>
+    
+                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                      {/* <Clock size={16} /> */}
+                      {new Date(job.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+
+                  </div>
+                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5">
+                      <Briefcase size={20} className="text-blue-400" />
+                    </span>
+                    <span className="line-clamp-1 md:text-base">{job.description}</span>
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                      {job.category?.name || "Uncategorized"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={16} />
+                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location}</span>
+                    </span>
+                    <span className="font-bold text-green-400">
+                      ₱{job.price?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
+
         </div>
 
         {/* Search and Filters */}
