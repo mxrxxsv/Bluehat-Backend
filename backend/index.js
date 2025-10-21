@@ -23,6 +23,7 @@ const clientManagementRoute = require("./routes/clientManagement.route");
 const workerManagementRoute = require("./routes/workerManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification.route");
 const messageRoute = require("./routes/message.route");
+const dashboardRoutes = require("./routes/dashboard.route");
 
 // Hiring system routes
 const applicationRoute = require("./routes/jobApplication.route");
@@ -90,6 +91,7 @@ app.use("/id-verification", userIDVerificationRoute);
 app.use("/client-management", clientManagementRoute);
 app.use("/worker-management", workerManagementRoute);
 app.use("/messages", messageRoute);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Hiring system routes
 app.use("/applications", applicationRoute);

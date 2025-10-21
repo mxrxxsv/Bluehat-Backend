@@ -46,9 +46,9 @@ const Dashboard = () => {
   const [newUserFilter, setNewUserFilter] = useState("worker");
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // ===== JOB APPLICATIONS =====
-  const [applications, setApplications] = useState([]);
-  const [loadingApplications, setLoadingApplications] = useState(true);
+  // ===== RECENT CONTRACTS =====
+  const [contracts, setContracts] = useState([]);
+  const [loadingContracts, setLoadingContracts] = useState(true);
 
   // ----- FETCH TOP LOCATIONS -----
   useEffect(() => {
@@ -56,14 +56,14 @@ const Dashboard = () => {
       try {
         setLoadingLocations(true);
         const res = await fetchDashboardData(locationFilter);
-        setLocations(res.data.locations);
+        setLocations(res.locations);
         setUsersCounts({
-          workerCount: res.data.users.workerCount,
-          clientCount: res.data.users.clientCount,
+          workerCount: res.users.workerCount,
+          clientCount: res.users.clientCount,
         });
         setDonutOptions((prev) => ({
           ...prev,
-          labels: res.data.locations.labels,
+          labels: res.locations.labels,
         }));
       } catch (error) {
         console.error("Error fetching locations:", error);
@@ -80,7 +80,7 @@ const Dashboard = () => {
       try {
         setLoadingUsers(true);
         const res = await fetchDashboardData(newUserFilter);
-        setRecentUsers(res.data.users.recentUsers.slice(0, 3)); // limit to 3
+        setRecentUsers(res.users.recentUsers.slice(0, 3)); // limit to 3
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -90,20 +90,20 @@ const Dashboard = () => {
     fetchUsers();
   }, [newUserFilter]);
 
-  // ----- FETCH RECENT JOB APPLICATIONS -----
+  // ----- FETCH RECENT CONTRACTS -----
   useEffect(() => {
-    const fetchApplications = async () => {
+    const fetchContracts = async () => {
       try {
-        setLoadingApplications(true);
-        const res = await fetchDashboardData("all"); // fetch all for applications
-        setApplications(res.data.applications);
+        setLoadingContracts(true);
+        const res = await fetchDashboardData("all");
+        setContracts(res.contracts);
       } catch (error) {
-        console.error("Error fetching applications:", error);
+        console.error("Error fetching contracts:", error);
       } finally {
-        setLoadingApplications(false);
+        setLoadingContracts(false);
       }
     };
-    fetchApplications();
+    fetchContracts();
   }, []);
 
   return (
@@ -191,18 +191,6 @@ const Dashboard = () => {
                             {user.name}
                           </p>
                         </div>
-                        {/* {user.status && (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                            user.status === "Available" ? "bg-green-100 text-green-800" :
-                            user.status === "Working" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"
-                          }`}>
-                            <span className={`w-2 h-2 mr-1 rounded-full ${
-                              user.status === "Available" ? "bg-green-500" :
-                              user.status === "Working" ? "bg-red-500" : "bg-gray-500"
-                            }`}></span>
-                            {user.status || "Unknown"}
-                          </span>
-                        )} */}
                       </div>
                     </li>
                   ))
@@ -216,78 +204,78 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Job Applications Table */}
+        {/* Recent Contracts Table */}
         <div className="relative overflow-x-auto shadow-md sm:rounded-lg mt-6">
-          {loadingApplications ? (
+          {loadingContracts ? (
             <div className="p-4 text-center text-gray-500">
-              Loading applications...
+              Loading contracts...
             </div>
           ) : (
             <table className="w-full text-sm text-left text-gray-500">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3">Job</th>
+                  <th className="px-6 py-3">Job Description</th>
                   <th className="px-6 py-3">Worker</th>
                   <th className="px-6 py-3">Client</th>
                   <th className="px-6 py-3">Price</th>
-                  <th className="px-6 py-3">Duration</th>
                   <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Applied At</th>
-                  <th className="px-6 py-3">Viewed</th>
+                  <th className="px-6 py-3">Completed At</th>
                 </tr>
               </thead>
               <tbody>
-                {applications.length === 0 ? (
+                {contracts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="6"
                       className="px-6 py-4 text-center text-gray-500"
                     >
-                      No applications found.
+                      No contracts found.
                     </td>
                   </tr>
                 ) : (
-                  applications.map((app) => (
+                  contracts.map((contract) => (
                     <tr
-                      key={app._id}
+                      key={contract._id}
                       className="border-b border-gray-200 odd:bg-white even:bg-gray-50"
                     >
                       <td className="px-6 py-4 font-medium text-gray-900">
-                        {app.jobTitle || "N/A"}
-                      </td>
-                      <td className="px-6 py-4">{app.workerName || "N/A"}</td>
-                      <td className="px-6 py-4">{app.clientName || "N/A"}</td>
-                      <td className="px-6 py-4">
-                        ₱{app.proposedPrice?.toLocaleString() || 0}
+                        {contract.description || "N/A"}
                       </td>
                       <td className="px-6 py-4">
-                        {app.estimatedDuration?.value || "-"}{" "}
-                        {app.estimatedDuration?.unit || ""}
+                        {contract.workerName || "N/A"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {contract.clientName || "N/A"}
+                      </td>
+                      <td className="px-6 py-4">
+                        ₱
+                        {contract.agreedRate
+                          ? Number(contract.agreedRate).toLocaleString()
+                          : "0"}
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                            app.status === "accepted"
+                            contract.contractStatus === "completed" ||
+                            contract.contractStatus === "active"
                               ? "bg-green-100 text-green-800"
-                              : app.status === "rejected"
+                              : contract.contractStatus === "cancelled" ||
+                                contract.contractStatus === "disputed"
                               ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
+                              : contract.contractStatus === "in_progress" ||
+                                contract.contractStatus ===
+                                  "awaiting_client_confirmation"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100"
                           }`}
                         >
-                          {app.status || "N/A"}
+                          {contract.contractStatus || "Unknown"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        {app.appliedAt
-                          ? new Date(app.appliedAt).toLocaleDateString()
+                        {contract.completedAt
+                          ? new Date(contract.completedAt).toLocaleDateString()
                           : "N/A"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {app.viewedByClient ? (
-                          <span className="text-green-600">Yes</span>
-                        ) : (
-                          <span className="text-gray-400">No</span>
-                        )}
                       </td>
                     </tr>
                   ))

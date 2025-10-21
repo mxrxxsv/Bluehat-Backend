@@ -1,11 +1,11 @@
 const Worker = require("../models/Worker");
 const Client = require("../models/Client");
-const JobApplication = require("../models/JobApplication");
+const WorkContract = require("../models/WorkContract");
 const { decryptAES128 } = require("../utils/encipher");
 
 exports.getDashboardData = async (req, res) => {
   try {
-    const { userType } = req.query; // "worker", "client", "all" or undefined
+    const { userType } = req.query;
 
     // ===== BASIC COUNTS =====
     const workerCount = await Worker.countDocuments();
@@ -13,7 +13,6 @@ exports.getDashboardData = async (req, res) => {
 
     // ===== LOCATION AGGREGATION =====
     const cityCountsMap = new Map();
-
     const addCities = (docs) => {
       for (const doc of docs) {
         let city;
@@ -28,12 +27,10 @@ exports.getDashboardData = async (req, res) => {
       }
     };
 
-    // Get location data for workers and/or clients
     if (!userType || userType === "worker" || userType === "all") {
       const workers = await Worker.find({}).select("address.city").lean();
       addCities(workers);
     }
-
     if (!userType || userType === "client" || userType === "all") {
       const clients = await Client.find({}).select("address.city").lean();
       addCities(clients);
@@ -43,7 +40,6 @@ exports.getDashboardData = async (req, res) => {
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count);
 
-    // Top 3 cities + "Others"
     const topLocations = decryptedLocations.slice(0, 3);
     const otherCount = decryptedLocations
       .slice(3)
@@ -56,7 +52,6 @@ exports.getDashboardData = async (req, res) => {
 
     // ===== RECENT USERS =====
     let recentUsers = [];
-
     if (!userType || userType === "all") {
       const [workers, clients] = await Promise.all([
         Worker.find({})
@@ -70,7 +65,6 @@ exports.getDashboardData = async (req, res) => {
           )
           .lean(),
       ]);
-
       recentUsers = [...workers, ...clients]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 4);
@@ -92,7 +86,6 @@ exports.getDashboardData = async (req, res) => {
         .lean();
     }
 
-    // ===== DECRYPT RECENT USERS =====
     recentUsers = recentUsers.map((user) => {
       try {
         const firstName = user.firstName ? decryptAES128(user.firstName) : "";
@@ -103,10 +96,7 @@ exports.getDashboardData = async (req, res) => {
         const suffix = user.suffixName ? decryptAES128(user.suffixName) : "";
         const fullName = `${firstName} ${middleName} ${lastName}${
           suffix ? " " + suffix : ""
-        }`
-          .replace(/\s+/g, " ")
-          .trim();
-
+        }`.trim();
         return {
           _id: user._id,
           name: fullName,
@@ -123,14 +113,10 @@ exports.getDashboardData = async (req, res) => {
       }
     });
 
-    // ===== RECENT JOB APPLICATIONS =====
-    const recentApplications = await JobApplication.find({})
-      .sort({ appliedAt: -1 })
+    // ===== RECENT WORK CONTRACTS =====
+    const recentContracts = await WorkContract.find({})
+      .sort({ createdAt: -1 })
       .limit(10)
-      .populate({
-        path: "jobId",
-        select: "title",
-      })
       .populate({
         path: "workerId",
         select: "firstName middleName lastName suffixName profilePicture",
@@ -141,7 +127,7 @@ exports.getDashboardData = async (req, res) => {
       })
       .lean();
 
-    const decryptedApplications = recentApplications.map((app) => {
+    const decryptedContracts = recentContracts.map((contract) => {
       const decryptName = (user) => {
         if (!user) return "Unknown";
         try {
@@ -149,20 +135,24 @@ exports.getDashboardData = async (req, res) => {
           const middle = user.middleName ? decryptAES128(user.middleName) : "";
           const last = user.lastName ? decryptAES128(user.lastName) : "";
           const suffix = user.suffixName ? decryptAES128(user.suffixName) : "";
-          return `${first} ${middle} ${last}${suffix ? " " + suffix : ""}`
-            .replace(/\s+/g, " ")
-            .trim();
+          return `${first} ${middle} ${last}${
+            suffix ? " " + suffix : ""
+          }`.trim();
         } catch {
           return "Unknown";
         }
       };
 
       return {
-        ...app,
-        workerName: decryptName(app.workerId),
-        workerProfilePicture: app.workerId?.profilePicture?.url || null,
-        clientName: decryptName(app.clientId),
-        jobTitle: app.jobId?.title || "Unknown",
+        _id: contract._id,
+        workerName: decryptName(contract.workerId),
+        workerProfilePicture: contract.workerId?.profilePicture?.url || null,
+        clientName: decryptName(contract.clientId),
+        agreedRate: contract.agreedRate || 0, // ✅ Keep original field name
+        contractStatus: contract.contractStatus || "Unknown", // ✅ Keep original field name
+        completedAt: contract.completedAt || null, // ✅ Add completedAt
+        description: contract.description || "N/A", // ✅ Add description
+        createdAt: contract.createdAt, // ✅ Keep createdAt for reference
       };
     });
 
@@ -172,7 +162,7 @@ exports.getDashboardData = async (req, res) => {
       data: {
         users: { workerCount, clientCount, recentUsers },
         locations: { labels: locationLabels, series: locationCounts },
-        applications: decryptedApplications,
+        contracts: decryptedContracts, // ✅ Changed from "applications" to "contracts"
       },
     });
   } catch (error) {
