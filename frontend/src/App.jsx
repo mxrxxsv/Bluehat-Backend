@@ -44,17 +44,18 @@ function App() {
         <Route path="/forgetpass" element={<ForgetPass />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
-        {/* <Route path="/applications" element={<ApplicationsPage />} /> */}
-        {/* <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} /> */}
+        <Route path="/applications" element={<ApplicationsPage />} />
+        <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} />
         <Route path="/feedback/:contractId" element={<FeedbackPage />} />
         <Route path="/contracts" element={<ContractManagement />} />
 
-        {/* <Route path="/find-workers" element={<FindWorker />} />
+        <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
-        <Route path="/ads" element={<AdsPage />} /> */}
+        <Route path="/ads" element={<AdsPage />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/setup-2fa" element={<Setup2FA />} />
-        <Route
+
+        {/* <Route
           path="/find-workers"
           element={
             <ProtectedRoute>
@@ -70,9 +71,9 @@ function App() {
               <FindWork />
             </ProtectedRoute>
           }
-        />
+        /> */}
 
-        <Route
+        {/* <Route
           path="/applications"
           element={
             <ProtectedRoute>
@@ -88,16 +89,17 @@ function App() {
               <InviteWorkersPage />
             </ProtectedRoute>
           }
-        />
+        /> */}
 
-        <Route
+        {/* <Route
           path="/ads"
           element={
             <ProtectedRoute>
               <AdsPage />
             </ProtectedRoute>
           }
-        />
+        /> */}
+        
       </Routes>
 
       <Footer />

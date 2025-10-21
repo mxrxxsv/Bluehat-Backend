@@ -24,7 +24,6 @@ const WorkerPortfolio = () => {
         setWorker(data.worker || data);
         console.log(data);
       } catch (err) {
-        setError(err.message || "Failed to fetch worker");
       } finally {
         setLoading(false);
       }
@@ -39,7 +38,7 @@ const WorkerPortfolio = () => {
         const userData = await checkAuth();
         setCurrentUser(userData.data.data);
       } catch (err) {
-        setError(err.message || "Failed to fetch user");
+        setCurrentUser(null);
       }
     };
 

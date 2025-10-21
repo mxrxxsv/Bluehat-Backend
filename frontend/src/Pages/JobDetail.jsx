@@ -32,9 +32,9 @@ const JobDetails = () => {
         const res = await getJobById(id);
         const jobData = res.data.data || res.data;
         setJob(jobData);
-        console.log("✅ Job data:", jobData);
+        console.log("Job data:", jobData);
       } catch (err) {
-        console.error("❌ Error fetching job:", err);
+        console.error("Error fetching job:", err);
         setError("Job not found.");
       } finally {
         setLoadingJob(false);
@@ -205,9 +205,11 @@ const JobDetails = () => {
             ) : null}
           </>
         ) : (
-          <p className="text-red-500 font-medium">
-            Please log in to apply or edit jobs.
-          </p>
+          <button 
+            onClick={() => navigate("/signup")}
+            className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer">
+            Create Account
+          </button>
         )}
       </div>
 
