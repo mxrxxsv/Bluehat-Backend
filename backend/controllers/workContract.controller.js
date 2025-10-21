@@ -562,7 +562,7 @@ const getContractDetails = async (req, res) => {
     }
 
     // Get reviews for this contract
-    const review = await Review.findOne({
+    const review = await Review.find({
       contractId: contract._id,
       isDeleted: false,
     })
@@ -624,45 +624,47 @@ const getContractDetails = async (req, res) => {
       }
     }
 
-    // Decrypt review names if review exists
-    if (review) {
-      if (review.reviewerId) {
-        review.reviewerId.firstName = safeDecrypt(
-          review.reviewerId.firstName,
-          "reviewer firstName"
-        );
-        review.reviewerId.lastName = safeDecrypt(
-          review.reviewerId.lastName,
-          "reviewer lastName"
-        );
+    // Decrypt review names if reviews exist
+    if (review && review.length > 0) {
+      review.forEach((singleReview) => {
+        if (singleReview.reviewerId) {
+          singleReview.reviewerId.firstName = safeDecrypt(
+            singleReview.reviewerId.firstName,
+            "reviewer firstName"
+          );
+          singleReview.reviewerId.lastName = safeDecrypt(
+            singleReview.reviewerId.lastName,
+            "reviewer lastName"
+          );
 
-        // Add reviewer profile picture info
-        if (review.reviewerId.profilePicture) {
-          review.reviewerId.profilePictureUrl =
-            review.reviewerId.profilePicture.url || null;
-          review.reviewerId.profilePicturePublicId =
-            review.reviewerId.profilePicture.public_id || null;
+          // Add reviewer profile picture info
+          if (singleReview.reviewerId.profilePicture) {
+            singleReview.reviewerId.profilePictureUrl =
+              singleReview.reviewerId.profilePicture.url || null;
+            singleReview.reviewerId.profilePicturePublicId =
+              singleReview.reviewerId.profilePicture.public_id || null;
+          }
         }
-      }
 
-      if (review.revieweeId) {
-        review.revieweeId.firstName = safeDecrypt(
-          review.revieweeId.firstName,
-          "reviewee firstName"
-        );
-        review.revieweeId.lastName = safeDecrypt(
-          review.revieweeId.lastName,
-          "reviewee lastName"
-        );
+        if (singleReview.revieweeId) {
+          singleReview.revieweeId.firstName = safeDecrypt(
+            singleReview.revieweeId.firstName,
+            "reviewee firstName"
+          );
+          singleReview.revieweeId.lastName = safeDecrypt(
+            singleReview.revieweeId.lastName,
+            "reviewee lastName"
+          );
 
-        // Add reviewee profile picture info
-        if (review.revieweeId.profilePicture) {
-          review.revieweeId.profilePictureUrl =
-            review.revieweeId.profilePicture.url || null;
-          review.revieweeId.profilePicturePublicId =
-            review.revieweeId.profilePicture.public_id || null;
+          // Add reviewee profile picture info
+          if (singleReview.revieweeId.profilePicture) {
+            singleReview.revieweeId.profilePictureUrl =
+              singleReview.revieweeId.profilePicture.url || null;
+            singleReview.revieweeId.profilePicturePublicId =
+              singleReview.revieweeId.profilePicture.public_id || null;
+          }
         }
-      }
+      });
     }
 
     const processingTime = Date.now() - startTime;
@@ -671,7 +673,8 @@ const getContractDetails = async (req, res) => {
       contractId,
       userId: req.user.id,
       userType: req.user.userType,
-      hasReview: !!review,
+      hasReview: review && review.length > 0,
+      reviewCount: review ? review.length : 0,
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
     });
@@ -685,8 +688,9 @@ const getContractDetails = async (req, res) => {
           ...contract,
           createdIP: undefined, // Remove sensitive data
         },
-        review: review || null,
-        hasReview: !!review,
+        review: review || [],
+        reviews: review || [],
+        hasReview: review && review.length > 0,
       },
       meta: {
         processingTime: `${processingTime}ms`,

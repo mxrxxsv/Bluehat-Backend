@@ -9,7 +9,7 @@ const ContractAPI = axios.create({
 export const getContractById = async (contractId) => {
   try {
     const response = await ContractAPI.get(`/${contractId}`);
-    return response.data.contract;
+    return response.data; // Return the full response data which includes contract, review, etc.
   } catch (error) {
     console.error("Get contract failed:", error);
     throw new Error(error.response?.data?.message || "Failed to load contract");
