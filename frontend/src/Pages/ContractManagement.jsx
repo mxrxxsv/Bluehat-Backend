@@ -58,7 +58,6 @@ const ContractManagement = () => {
       const user = authRes.data.data;
       setCurrentUser(user);
 
-      // Setup socket connection once
       if (!socketRef.current) {
         socketRef.current = io("http://localhost:5000", {
           withCredentials: true,
@@ -322,14 +321,15 @@ const ContractManagement = () => {
             {contracts.map((contract) => (
               <div
                 key={contract._id}
-                className="bg-white rounded-[20px] shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-[20px] shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleViewDetails(contract._id)}
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3
-                        className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2 cursor-pointer hover:text-blue-600 transition-colors"
-                        onClick={() => handleViewDetails(contract._id)}
+                        className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2 cursor-pointer transition-colors"
+                        
                       >
                         {contract.jobId.description || "Contract Work"}
                       </h3>
