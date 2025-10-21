@@ -71,15 +71,15 @@ const Header = () => {
           else setMenuLabel("Applications");
         }
       })
-      .catch(() => {
-        const publicPages = [
-          "/", "/home", "/login", "/signup",
-          "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion", "/reset-password"
-        ];
-        if (!publicPages.includes(location.pathname)) {
-          navigate("/login");
-        }
-      })
+      // .catch(() => {
+      //   const publicPages = [
+      //     "/", "/home", "/login", "/signup",
+      //     "/workersignup", "/clientsignup", "/forgetpass", "/workerquestion", "/reset-password"
+      //   ];
+      //   if (!publicPages.includes(location.pathname)) {
+      //     navigate("/login");
+      //   }
+      // })
       .finally(() => {
         setAuthLoading(false);
       });
