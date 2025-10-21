@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ContractDetailsModal from "../components/ContractDetailsModal";
+import NotificationModal from "../components/NotificationModal";
 import {
   getWorkerContracts,
   getClientContracts,
@@ -43,6 +44,30 @@ const ContractManagement = () => {
     show: false,
     contractId: null,
   });
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
+
+  const showNotification = (type, title, message) => {
+    setNotification({
+      show: true,
+      type,
+      title,
+      message,
+    });
+  };
+
+  // const closeNotification = () => {
+  //   setNotification({
+  //     show: false,
+  //     type: "info",
+  //     title: "",
+  //     message: "",
+  //   });
+  // };
 
   useEffect(() => {
     loadUserAndContracts();
@@ -115,11 +140,19 @@ const ContractManagement = () => {
       console.log("Attempting to start work for contract:", contractId);
       const result = await startWork(contractId);
       console.log("Start work result:", result);
-      alert("Work started successfully!");
+      showNotification(
+        "success",
+        "Work Started",
+        "Work started successfully! You can now begin working on this contract."
+      );
       loadUserAndContracts();
     } catch (error) {
       console.error("Start work error:", error);
-      alert("Failed to start work: " + error.message);
+      showNotification(
+        "error",
+        "Start Work Failed",
+        `Failed to start work: ${error.message}`
+      );
     }
   };
 
@@ -128,21 +161,37 @@ const ContractManagement = () => {
       console.log("Attempting to complete work for contract:", contractId);
       const result = await completeWork(contractId);
       console.log("Complete work result:", result);
-      alert("Work marked as completed! Waiting for client confirmation.");
+      showNotification(
+        "success",
+        "Work Completed",
+        "Work marked as completed! The contract is now waiting for client confirmation."
+      );
       loadUserAndContracts();
     } catch (error) {
       console.error("Complete work error:", error);
-      alert("Failed to mark work as completed: " + error.message);
+      showNotification(
+        "error",
+        "Complete Work Failed",
+        `Failed to mark work as completed: ${error.message}`
+      );
     }
   };
 
   const handleConfirmCompletion = async (contractId) => {
     try {
       await confirmWorkCompletion(contractId);
-      alert("Work completion confirmed! You can now submit feedback.");
+      showNotification(
+        "success",
+        "Work Confirmed",
+        "Work completion confirmed successfully! You can now submit feedback for this contract."
+      );
       loadUserAndContracts();
     } catch (error) {
-      alert("Failed to confirm completion: " + error.message);
+      showNotification(
+        "error",
+        "Confirmation Failed",
+        `Failed to confirm completion: ${error.message}`
+      );
     }
   };
 
@@ -150,7 +199,11 @@ const ContractManagement = () => {
     try {
       // Frontend validation
       if (!feedback.comment || feedback.comment.trim().length < 5) {
-        alert("Feedback must be at least 5 characters long");
+        showNotification(
+          "warning",
+          "Validation Error",
+          "Feedback must be at least 5 characters long"
+        );
         return;
       }
 
@@ -168,13 +221,21 @@ const ContractManagement = () => {
         rating: feedback.rating,
         feedback: feedback.comment, // Backend expects 'feedback' not 'comment'
       });
-      alert("Feedback submitted successfully!");
+      showNotification(
+        "success",
+        "Feedback Submitted",
+        "Your feedback has been submitted successfully!"
+      );
       setFeedbackModal({ show: false, contract: null });
       setFeedback({ rating: 5, comment: "" });
       loadUserAndContracts();
     } catch (error) {
       console.error("Feedback submission error:", error);
-      alert("Failed to submit feedback: " + error.message);
+      showNotification(
+        "error",
+        "Feedback Failed",
+        `Failed to submit feedback: ${error.message}`
+      );
     }
   };
 
@@ -237,7 +298,11 @@ const ContractManagement = () => {
       });
     } catch (error) {
       console.error("Failed to navigate to conversation:", error);
-      alert("Failed to open conversation");
+      showNotification(
+        "error",
+        "Navigation Failed",
+        "Failed to open conversation"
+      );
     }
   };
 
@@ -624,6 +689,17 @@ const ContractManagement = () => {
             </div>
           </div>
         )}
+
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={() =>
+            setNotification({ show: false, type: "", title: "", message: "" })
+          }
+        />
       </div>
     </div>
   );
