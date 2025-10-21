@@ -54,8 +54,8 @@ const sendJobProgressEmail = async (emailData) => {
       jobDescription,
       proposedRate,
       message,
-      jobUrl: jobUrl || `${process.env.FRONTEND_URL}/jobs`,
-      dashboardUrl: dashboardUrl || `${process.env.FRONTEND_URL}/dashboard`,
+      jobUrl: jobUrl || `${process.env.FRONTEND_URL}/find-work`,
+      dashboardUrl: dashboardUrl || `${process.env.FRONTEND_URL}/find-work`,
       rating,
       feedback,
     });
@@ -72,7 +72,7 @@ const sendJobProgressEmail = async (emailData) => {
 
     const mailOptions = {
       from: {
-        name: "BlueHat Platform",
+        name: "FixIt Platform",
         address: process.env.EMAIL,
       },
       to: recipientEmail,

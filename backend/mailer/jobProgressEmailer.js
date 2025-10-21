@@ -12,14 +12,14 @@ const transporter = nodemailer.createTransport({
 const EMAIL_TEMPLATES = {
   WORKER_INVITATION: `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">New Job Invitation - BlueHat</h2>
+      <h2 style="color: #2563eb;">New Job Invitation - FixIt</h2>
       <p>Hello!</p>
-      <p>You have received a new job invitation on BlueHat platform.</p>
+      <p>You have received a new job invitation on FixIt platform.</p>
       <p><strong>Job Description:</strong></p>
       <p>{jobDescription}</p>
-      <p>Please log in to your BlueHat account to view the full details and respond to this invitation.</p>
+      <p>Please log in to your FixIt account to view the full details and respond to this invitation.</p>
       <p><a href="{frontendUrl}/dashboard" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invitation</a></p>
-      <p>Best regards,<br>The BlueHat Team</p>
+      <p>Best regards,<br>The FixIt Team</p>
     </div>
   `,
 
@@ -27,11 +27,11 @@ const EMAIL_TEMPLATES = {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #16a34a;">Great News! Application Accepted</h2>
       <p>Hello!</p>
-      <p>Your application for a job on BlueHat has been accepted!</p>
+      <p>Your application for a job on FixIt has been accepted!</p>
       <p><strong>Job:</strong> {jobTitle}</p>
-      <p>Please log in to your BlueHat account to proceed with the next steps.</p>
+      <p>Please log in to your FixIt account to proceed with the next steps.</p>
       <p><a href="{frontendUrl}/dashboard" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Details</a></p>
-      <p>Best regards,<br>The BlueHat Team</p>
+      <p>Best regards,<br>The FixIt Team</p>
     </div>
   `,
 
@@ -39,10 +39,10 @@ const EMAIL_TEMPLATES = {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #dc2626;">Application Update</h2>
       <p>Hello!</p>
-      <p>Thank you for your interest in the job "{jobTitle}" on BlueHat. Unfortunately, the client has decided to go with another candidate for this position.</p>
-      <p>Don't give up! There are many other opportunities available on BlueHat.</p>
+      <p>Thank you for your interest in the job "{jobTitle}" on FixIt. Unfortunately, the client has decided to go with another candidate for this position.</p>
+      <p>Don't give up! There are many other opportunities available on FixIt.</p>
       <p><a href="{frontendUrl}/jobs" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse More Jobs</a></p>
-      <p>Best regards,<br>The BlueHat Team</p>
+      <p>Best regards,<br>The FixIt Team</p>
     </div>
   `,
 
@@ -50,11 +50,11 @@ const EMAIL_TEMPLATES = {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #2563eb;">Discussion Started</h2>
       <p>Hello!</p>
-      <p>Someone has started a discussion about a job on BlueHat.</p>
+      <p>Someone has started a discussion about a job on FixIt.</p>
       <p><strong>Job:</strong> {jobTitle}</p>
-      <p>Please log in to your BlueHat account to continue the conversation.</p>
+      <p>Please log in to your FixIt account to continue the conversation.</p>
       <p><a href="{frontendUrl}/messages" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Messages</a></p>
-      <p>Best regards,<br>The BlueHat Team</p>
+      <p>Best regards,<br>The FixIt Team</p>
     </div>
   `,
 };
@@ -77,9 +77,9 @@ const sendWorkerInvitationEmail = async (workerEmail, jobDescription) => {
     });
 
     const mailOptions = {
-      from: `"BlueHat" <${process.env.EMAIL}>`,
+      from: `"FixIt" <${process.env.EMAIL}>`,
       to: workerEmail,
-      subject: "New Job Invitation - BlueHat",
+      subject: "New Job Invitation - FixIt",
       html: EMAIL_TEMPLATES.WORKER_INVITATION.replace(
         "{jobDescription}",
         jobDescription
@@ -117,22 +117,22 @@ const sendApplicationStatusEmail = async (
     switch (emailType) {
       case "application_accepted":
         template = EMAIL_TEMPLATES.APPLICATION_ACCEPTED;
-        subject = "Application Accepted - BlueHat";
+        subject = "Application Accepted - FixIt";
         break;
       case "application_rejected":
         template = EMAIL_TEMPLATES.APPLICATION_REJECTED;
-        subject = "Application Update - BlueHat";
+        subject = "Application Update - FixIt";
         break;
       case "discussion_started":
         template = EMAIL_TEMPLATES.DISCUSSION_STARTED;
-        subject = "Discussion Started - BlueHat";
+        subject = "Discussion Started - FixIt";
         break;
       default:
         throw new Error("Unknown email type");
     }
 
     const mailOptions = {
-      from: `"BlueHat" <${process.env.EMAIL}>`,
+      from: `"FixIt" <${process.env.EMAIL}>`,
       to: recipientEmail,
       subject: subject,
       html: template
