@@ -63,14 +63,6 @@ const ChatPage = () => {
     const [agreeToastMessage, setAgreeToastMessage] = useState("");
     const agreeToastTimer = useRef(null);
 
-    useEffect(() => {
-        if (contractBanner || showAgreeToast || agreeToastMessage) {
-            setIsSidebarOpen(false);
-        } else {
-            setIsSidebarOpen(true);
-        }
-    }, [contractBanner, showAgreeToast, agreeToastMessage]);
-
     // Pull agreement context from navigation state or sessionStorage (fallback)
     const agreementContextFromState = (location.state && location.state.agreementContext) || null;
     let persistedAgreementContext = null;
@@ -98,6 +90,14 @@ const ChatPage = () => {
     }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
 
     // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
+
+     useEffect(() => {
+        if (contractBanner || showAgreeToast || agreeToastMessage || showAgreementBanner) {
+            setIsSidebarOpen(false);
+        } else {
+            setIsSidebarOpen(true);
+        }
+    }, [contractBanner, showAgreeToast, agreeToastMessage, showAgreementBanner]);
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {

@@ -114,6 +114,7 @@ const FindWork = () => {
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs
         : [];
+        console.log("Fetched jobs:", jobsArray);
       setJobPosts(jobsArray);
       setLastRefreshTime(new Date());
     } catch (err) {
@@ -360,18 +361,18 @@ const FindWork = () => {
               <div className="mt-6 pt-4">
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    {/* <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       
                       <img
                         src={user?.image || currentUser.avatar}
                         alt="Avatar"
                         className="w-8 h-8 rounded-full object-cover"
                       />
-                       */}
+                      
                     <span className="text-sm font-medium text-[#252525] opacity-75">
                       {user?.fullName || "Client Name"}
                     </span>
-                    {/* </div> */}
+                    </div>
 
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                       {/* <Clock size={16} /> Just now */}
@@ -471,7 +472,7 @@ const FindWork = () => {
       {/* Draft confirmation modal */}
       {showDraftConfirm && (
         <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-40 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg max-w-sm w-full text-center">
+          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
             <h3 className="text-lg font-semibold mb-4">Save draft</h3>
             <p className="text-gray-600 mb-6">
               You have unsaved input. Do you want to save it as a draft or discard it?
@@ -485,7 +486,7 @@ const FindWork = () => {
               </button>
               <button
                 onClick={handleSaveDraft}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer transition-colors"
+                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
               >
                 Save Draft
               </button>
@@ -520,9 +521,21 @@ const FindWork = () => {
             >
               <div className="rounded-xl p-4 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
+                  <div className="flex items-center gap-2">
+                      
+                      <img
+                        src={job.client?.profilePicture?.url || currentUser.avatar}
+                        alt="Client Avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      
+                    <span className="text-sm font-medium text-[#252525] opacity-75">
+                      {job.client?.name || "Client Name"}
+                    </span>
+                    </div>
+                  {/* <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
                     {job.client?.name || "Client Name"}
-                  </span>
+                  </span> */}
                   <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                     {/* <Clock size={16} /> */}
                     {new Date(job.createdAt).toLocaleDateString("en-US", {
