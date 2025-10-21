@@ -10,7 +10,7 @@ const InvitationAPI = axios.create({
   withCredentials: true,
 });
 
-// Application endpoints
+// Application 
 export const getMyApplications = async () => {
   try {
     const response = await API.get("/worker/sent");
