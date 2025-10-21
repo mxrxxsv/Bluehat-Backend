@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/messages",
+  baseURL: "https://fixit-capstone.onrender.com/messages",
   withCredentials: true, // send cookies for authentication
 });
 

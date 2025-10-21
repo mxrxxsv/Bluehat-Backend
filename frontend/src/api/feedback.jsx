@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const ContractAPI = axios.create({
-  baseURL: "http://localhost:5000/contracts",
+  baseURL: "https://fixit-capstone.onrender.com/contracts",
   withCredentials: true,
 });
 

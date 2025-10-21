@@ -2,7 +2,7 @@ import axios from "axios";
 
 // ✅ Axios instance configured for cookies
 const auth = axios.create({
-  baseURL: "http://localhost:5000/admin", 
+  baseURL: "https://fixit-capstone.onrender.com/admin", 
   withCredentials: true, 
   headers: {
     "Content-Type": "application/json",

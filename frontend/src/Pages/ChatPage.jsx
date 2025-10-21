@@ -135,7 +135,7 @@ const ChatPage = () => {
 
     // ---------- socket.io ----------
     useEffect(() => {
-        socket.current = io("http://localhost:5000", { withCredentials: true });
+        socket.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
 
         socket.current.on("receiveMessage", (msg) => {
             if (!msg) return;
@@ -581,7 +581,7 @@ const ChatPage = () => {
         try {
             if (agreementContext.kind === "application") {
                 const resp = await axios.get(
-                    `http://localhost:5000/applications/debug/${agreementContext.id}`,
+                    `https://fixit-capstone.onrender.com/applications/debug/${agreementContext.id}`,
                     { withCredentials: true }
                 );
                 const data = resp?.data?.data;

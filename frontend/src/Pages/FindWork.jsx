@@ -137,7 +137,7 @@ const FindWork = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/skills");
+        const res = await axios.get("https://fixit-capstone.onrender.com/skills");
         const cats = res.data?.data?.categories;
         setCategories(Array.isArray(cats) ? cats : []);
       } catch (err) {

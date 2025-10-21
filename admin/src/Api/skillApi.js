@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Axios instance for skills
 const skillApi = axios.create({
-  baseURL: "http://localhost:5000/skills",
+  baseURL: "https://fixit-capstone.onrender.com/skills",
   withCredentials: true, 
 });
 

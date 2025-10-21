@@ -65,7 +65,7 @@ const ApplicationsPage = () => {
 
         // Connect socket and register to user room
         if (!socketRef.current) {
-          socketRef.current = io("http://localhost:5000", { withCredentials: true });
+          socketRef.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
           const credId = user?.credentialId || user?._id || user?.id;
           if (credId) socketRef.current.emit("registerUser", String(credId));
 

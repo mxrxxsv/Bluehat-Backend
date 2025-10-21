@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/id-verification",
+  baseURL: "https://fixit-capstone.onrender.com/id-verification",
   withCredentials: true,
 });
 

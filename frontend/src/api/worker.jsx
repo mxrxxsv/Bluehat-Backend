@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/workers",
+  baseURL: "https://fixit-capstone.onrender.com/workers",
   withCredentials: true,
 });
 
