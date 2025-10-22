@@ -166,13 +166,14 @@ const Header = () => {
                   <div className="w-20 pt-1 md:pt-0 md:w-43 flex flex-row gap-1 md:gap-1">
                     <Link
                       to="/login"
-                      className="hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex"
+                      className="text-white bg-[#55b3f3] hover:bg-sky-600 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-4 py-2 shadow-sm hover:shadow-md"
                     >
                       Log in
                     </Link>
                     <Link
                       to="/signup"
-                      className="text-white bg-sky-500 hover:bg-blue-400 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-[10px] text-sm px-3 py-2 shadow-sm hover:shadow-md"
+                      className="hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex"
+                      
                     >
                       Sign up
                     </Link>
