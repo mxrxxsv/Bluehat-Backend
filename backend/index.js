@@ -32,46 +32,14 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-// Build allowed origins list from env
-// Supports a comma-separated CORS_ALLOWED_ORIGINS for multiple domains (e.g., vercel preview + prod)
-// Fallback to single PRODUCTION_FRONTEND_URL or DEVELOPMENT_FRONTEND_URL
-const resolveAllowedOrigins = () => {
-  const origins = new Set();
-
-  const addIf = (v) => {
-    if (v && typeof v === "string" && v.trim()) origins.add(v.trim());
-  };
-
-  // Primary comma-separated list
-  if (process.env.CORS_ALLOWED_ORIGINS) {
-    process.env.CORS_ALLOWED_ORIGINS.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .forEach((o) => origins.add(o));
-  }
-
-  // Backwards-compatible fallbacks
-  if (process.env.NODE_ENV === "production") {
-    addIf(process.env.PRODUCTION_FRONTEND_URL);
-    addIf(process.env.PRODUCTION_ADMIN_URL);
-  } else {
-    addIf(process.env.DEVELOPMENT_FRONTEND_URL);
-    addIf(process.env.DEVELOPMENT_ADMIN_URL);
-  }
-
-  // Always allow localhost for local testing if defined
-  addIf(process.env.LOCALHOST_FRONTEND_URL);
-
-  return Array.from(origins);
-};
-
-const allowedOrigins = resolveAllowedOrigins();
+const allowedOrigins = [
+  process.env.NODE_ENV === "production"
+    ? process.env.PRODUCTION_FRONTEND_URL
+    : process.env.DEVELOPMENT_FRONTEND_URL,
+];
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Ensure Express knows it's behind a proxy (needed for some deployments like Render/Heroku)
-app.set("trust proxy", 1);
 
 // 1) Security headers
 app.use(
