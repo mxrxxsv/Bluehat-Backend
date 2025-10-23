@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const createTransporter = () => {
+const createTransporter = (port = 465, secure = true) => {
   const user = process.env.EMAIL;
   const pass = process.env.PASSWORD;
   if (!user || !pass) {
@@ -8,10 +8,28 @@ const createTransporter = () => {
   }
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port,
+    secure,
     auth: { user, pass },
   });
+};
+
+const getVerifiedTransporter = async () => {
+  const attempts = [
+    { port: 465, secure: true, label: "smtps:465" },
+    { port: 587, secure: false, label: "starttls:587" },
+  ];
+  for (const opt of attempts) {
+    try {
+      const t = createTransporter(opt.port, opt.secure);
+      await t.verify();
+      console.log("✅ SMTP verify passed (job progress) using", opt.label);
+      return t;
+    } catch (e) {
+      console.error("❌ SMTP verify failed (job progress) using", opt.label, e.message);
+    }
+  }
+  return createTransporter(465, true);
 };
 
 // Email templates for job progress notifications
@@ -207,12 +225,7 @@ const sendJobProgressEmail = async (
       subject: mailOptions.subject,
     });
 
-    const transporter = createTransporter();
-    try {
-      await transporter.verify();
-    } catch (verifyErr) {
-      console.error("❌ SMTP verify failed (job progress):", verifyErr.message);
-    }
+    const transporter = await getVerifiedTransporter();
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Job progress email sent:", info.response);
     return true;

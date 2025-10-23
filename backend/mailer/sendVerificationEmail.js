@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 const { VERIFY_EMAIL_TEMPLATE } = require("./mailerTemplate");
 
-const createTransporter = () => {
+const createTransporter = (port = 465, secure = true) => {
   const user = process.env.EMAIL;
   const pass = process.env.PASSWORD;
   if (!user || !pass) {
@@ -9,20 +9,35 @@ const createTransporter = () => {
   }
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port,
+    secure,
     auth: { user, pass },
   });
 };
 
+const getVerifiedTransporter = async () => {
+  // Try SMTPS 465 first, then STARTTLS 587
+  const attempts = [
+    { port: 465, secure: true, label: "smtps:465" },
+    { port: 587, secure: false, label: "starttls:587" },
+  ];
+  for (const opt of attempts) {
+    try {
+      const t = createTransporter(opt.port, opt.secure);
+      await t.verify();
+      console.log("✅ SMTP verify passed (verification email) using", opt.label);
+      return t;
+    } catch (e) {
+      console.error("❌ SMTP verify failed (verification email) using", opt.label, e.message);
+    }
+  }
+  // Fallback to default without verify
+  return createTransporter(465, true);
+};
+
 const sendVerificationEmail = async (email, verifyUrl) => {
   try {
-    const transporter = createTransporter();
-    try {
-      await transporter.verify();
-    } catch (verifyErr) {
-      console.error("❌ SMTP verify failed (verification email):", verifyErr.message);
-    }
+    const transporter = await getVerifiedTransporter();
     let mailOptions = {
       from: `"FixIt" <${process.env.EMAIL}>`,
       to: email,
