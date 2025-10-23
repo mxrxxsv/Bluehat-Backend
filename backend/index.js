@@ -32,11 +32,26 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-const allowedOrigins = [
-  process.env.NODE_ENV === "production"
-    ? process.env.PRODUCTION_FRONTEND_URL
-    : process.env.DEVELOPMENT_FRONTEND_URL,
-];
+// Build allowed CORS origins from env (supports comma-separated list)
+const parseAllowedOrigins = () => {
+  const list = [];
+  const primary =
+    process.env.NODE_ENV === "production"
+      ? process.env.PRODUCTION_FRONTEND_URL
+      : process.env.DEVELOPMENT_FRONTEND_URL;
+  if (primary) list.push(primary.trim());
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    process.env.CORS_ALLOWED_ORIGINS.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((o) => list.push(o));
+  }
+  // de-duplicate
+  return Array.from(new Set(list));
+};
+
+const allowedOrigins = parseAllowedOrigins();
+const allowRenderPreviews = String(process.env.ALLOW_RENDER_PREVIEWS || "false").toLowerCase() === "true";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,15 +79,26 @@ app.use(
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // Allow server-to-server or same-origin (no Origin header)
+      if (!origin) return callback(null, true);
+
+      // Exact match list
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // Optional: allow any onrender.com preview/frontends if enabled
+      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/.test(origin)) {
+        return callback(null, true);
       }
+
+      callback(new Error("Not allowed by CORS: " + origin));
     },
     credentials: true,
   })
 );
+
+// Log allowed origins on boot
+console.log("🌐 CORS allowed origins:", allowedOrigins);
+if (allowRenderPreviews) console.log("🌐 CORS: ALLOW_RENDER_PREVIEWS enabled for *.onrender.com");
 
 // 3) Request parsing
 app.use(express.json());
@@ -127,7 +153,12 @@ const server = http.createServer(app);
 // =====================
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/.test(origin)) return callback(null, true);
+      return callback("Not allowed by CORS (socket): " + origin);
+    },
     credentials: true,
   },
 });
