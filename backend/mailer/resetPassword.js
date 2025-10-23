@@ -1,15 +1,27 @@
 const nodemailer = require("nodemailer");
 const { PASSWORD_RESET_REQUEST_TEMPLATE } = require("./mailerTemplate");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD,
-  },
-});
+const createTransporter = () => {
+  const user = process.env.EMAIL;
+  const pass = process.env.PASSWORD;
+  if (!user || !pass) {
+    console.error("❌ EMAIL/PASSWORD env vars missing for mailer. EMAIL set:", !!user, " PASSWORD set:", !!pass);
+  }
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
+};
 const forgotPassword = async (email, userName, resetUrl) => {
   try {
+    const transporter = createTransporter();
+    try {
+      await transporter.verify();
+    } catch (verifyErr) {
+      console.error("❌ SMTP verify failed (reset password):", verifyErr.message);
+    }
     let mailOptions = {
       from: `"FixIt" <${process.env.EMAIL}>`,
       to: email,
