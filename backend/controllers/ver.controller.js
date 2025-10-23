@@ -1621,10 +1621,11 @@ const logout = (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    // Match cookie attributes used when setting the auth cookie so browsers clear it reliably cross-site
     res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "none",
       path: "/",
     });
 
