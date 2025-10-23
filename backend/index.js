@@ -32,154 +32,112 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-// Build allowed CORS origins from env (supports comma-separated list)
-const parseAllowedOrigins = () => {
-  const list = [];
-  const primary =
-    process.env.NODE_ENV === "production"
-      ? process.env.PRODUCTION_FRONTEND_URL
-      : process.env.DEVELOPMENT_FRONTEND_URL;
-    const sanitize = (s) => s.trim().replace(/^['"]|['"]$/g, "").replace(/\/$/, "");
-  if (primary) list.push(sanitize(primary));
+// Build allowed origins list from env
+// Supports a comma-separated CORS_ALLOWED_ORIGINS for multiple domains (e.g., vercel preview + prod)
+// Fallback to single PRODUCTION_FRONTEND_URL or DEVELOPMENT_FRONTEND_URL
+const resolveAllowedOrigins = () => {
+  const origins = new Set();
+
+  const normalize = (v) =>
+    v
+      .trim()
+      .toLowerCase()
+      .replace(/\/$/, ""); // remove trailing slash
+
+  const addIf = (v) => {
+    if (v && typeof v === "string" && v.trim()) origins.add(normalize(v));
+  };
+
+  // Primary comma-separated list
   if (process.env.CORS_ALLOWED_ORIGINS) {
     process.env.CORS_ALLOWED_ORIGINS.split(",")
-      .map(sanitize)
+      .map((s) => s.trim())
       .filter(Boolean)
-      .forEach((o) => list.push(o));
+      .forEach((o) => origins.add(normalize(o)));
   }
-  // de-duplicate
-  return Array.from(new Set(list));
-};
 
-const allowedOrigins = parseAllowedOrigins();
-// In production, default to allowing *.onrender.com previews unless explicitly disabled
-const allowRenderPreviews = String(
-  process.env.ALLOW_RENDER_PREVIEWS ?? (process.env.NODE_ENV === "production" ? "true" : "false")
-)
-  .toLowerCase()
-  .trim() === "true";
-const logCorsRequests = String(process.env.LOG_CORS_REQUESTS || "false").toLowerCase() === "true";
-const enableCorsDebugRoute = String(process.env.DEBUG_CORS || "false").toLowerCase() === "true";
-
-// Support wildcard patterns in CORS_ALLOWED_ORIGINS such as "https://*.onrender.com" or "*.onrender.com"
-const buildWildcardRegex = (pattern) => {
-  const p = pattern.trim();
-  const hasScheme = /^https?:\/\//i.test(p);
-  if (hasScheme) {
-    // e.g., https://*.onrender.com
-    const escaped = p
-      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-      .replace(/\\\*\\\./g, "([^.]+\\.)+");
-    return new RegExp(`^${escaped}$`, "i");
+  // Backwards-compatible fallbacks
+  if (process.env.NODE_ENV === "production") {
+    addIf(process.env.PRODUCTION_FRONTEND_URL);
+    addIf(process.env.PRODUCTION_ADMIN_URL);
   } else {
-    // e.g., *.onrender.com (host-only); allow http or https
-    const escapedHost = p
-      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-      .replace(/\\\*\\\./g, "([^.]+\\.)+");
-    return new RegExp(`^https?:\/\/${escapedHost}$`, "i");
+    addIf(process.env.DEVELOPMENT_FRONTEND_URL);
+    addIf(process.env.DEVELOPMENT_ADMIN_URL);
   }
+
+  // Always allow localhost for local testing if defined
+  addIf(process.env.LOCALHOST_FRONTEND_URL);
+
+  return Array.from(origins);
 };
 
-const wildcardPatterns = allowedOrigins
-  .filter((o) => o.includes("*"))
-  .map(buildWildcardRegex);
-const exactOrigins = allowedOrigins.filter((o) => !o.includes("*"));
-const exactOriginsLc = exactOrigins.map((o) => o.toLowerCase());
+let allowedOrigins = resolveAllowedOrigins();
+// Ensure primary Vercel production domain is allowed by default (user-specific)
+try {
+  const normalize = (v) => (v ? v.trim().toLowerCase().replace(/\/$/, "") : v);
+  const defaultVercel = normalize("https://fix-it-capstone.vercel.app");
+  if (
+    defaultVercel &&
+    !allowedOrigins.includes(defaultVercel)
+  ) {
+    allowedOrigins.push(defaultVercel);
+  }
+} catch (_) {}
+console.log("🌐 CORS allowed origins:", allowedOrigins);
 
-// 1) App and security middleware
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Behind a proxy (Render/Heroku) - needed for secure cookies and IPs
 app.set("trust proxy", 1);
 
-// Helmet
+// 1) Security headers
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-);
-// HSTS in production
-if (process.env.NODE_ENV === "production") {
-  app.use(
-    helmet.hsts({
-      maxAge: 15552000, // 180 days
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
       includeSubDomains: true,
       preload: true,
-    })
-  );
-}
-
-// Port
-const PORT = process.env.PORT || 3000;
+    },
+  })
+);
 
 // 2) CORS
-// Optional: log incoming Origin headers before CORS check
-if (logCorsRequests) {
-  app.use((req, _res, next) => {
-    const origin = req.headers.origin || "<none>";
-    console.log(`➡️  Incoming request: ${req.method} ${req.path} | Origin: ${origin}`);
-    next();
-  });
-}
-
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow server-to-server or same-origin (no Origin header)
-      if (!origin) return callback(null, true);
-      const oLc = origin.toLowerCase();
+      // Allow non-browser tools (no origin) and exact matches
+      const normalizedOrigin = origin
+        ? origin.toLowerCase().replace(/\/$/, "")
+        : null;
+      const allowExact = !origin || allowedOrigins.includes(normalizedOrigin);
 
-      // Exact match list
-      if (exactOriginsLc.includes(oLc)) return callback(null, true);
+      // Optional: allow all vercel.app subdomains for previews if enabled
+      const allowVercelPreview =
+        process.env.ALLOW_VERCEL_PREVIEWS === "true" &&
+        typeof origin === "string" &&
+        /\.vercel\.app$/.test(origin);
 
-      // Wildcard patterns
-      if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
-
-      // Optional: allow any onrender.com preview/frontends if enabled
-      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) {
+      if (allowExact || allowVercelPreview) {
         return callback(null, true);
       }
 
-      callback(new Error("Not allowed by CORS: " + origin));
+      console.warn("🚫 CORS blocked origin:", origin);
+      console.warn("   Normalized:", normalizedOrigin);
+      console.warn("   Allowed list:", allowedOrigins);
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
 );
-
-// Explicitly handle preflight for all routes
-app.options("*", cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    const oLc = origin.toLowerCase();
-    if (exactOriginsLc.includes(oLc)) return callback(null, true);
-    if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
-    if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) return callback(null, true);
-    callback(new Error("Not allowed by CORS: " + origin));
-  },
-  credentials: true,
-}));
-
-// Log allowed origins on boot
-console.log("🌐 CORS allowed origins (exact):", exactOrigins);
-if (wildcardPatterns.length > 0) console.log("🌐 CORS wildcard patterns:", wildcardPatterns.map((r) => r.toString()));
-if (allowRenderPreviews) console.log("🌐 CORS: ALLOW_RENDER_PREVIEWS enabled for *.onrender.com");
-
-// Optional debug endpoint to inspect CORS evaluation (do NOT enable in production long-term)
-if (enableCorsDebugRoute) {
-  app.get("/debug/cors", (req, res) => {
-    const origin = req.query.origin || req.headers.origin || "";
-    const matchesList = allowedOrigins.includes(origin);
-    const matchesRenderWildcard = /^https:\/\/.*\.onrender\.com$/.test(origin);
-    res.json({
-      origin,
-      allowedOrigins,
-      allowRenderPreviews,
-      matchesList,
-      matchesRenderWildcard,
-      wouldAllow:
-        (!origin) || matchesList || (allowRenderPreviews && matchesRenderWildcard),
-      note: "Set DEBUG_CORS=false to disable this route in production",
-    });
-  });
-}
 
 // 3) Request parsing
 app.use(express.json());
@@ -234,14 +192,7 @@ const server = http.createServer(app);
 // =====================
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const oLc = origin.toLowerCase();
-      if (exactOriginsLc.includes(oLc)) return callback(null, true);
-      if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
-      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) return callback(null, true);
-      return callback("Not allowed by CORS (socket): " + origin);
-    },
+    origin: allowedOrigins,
     credentials: true,
   },
 });
