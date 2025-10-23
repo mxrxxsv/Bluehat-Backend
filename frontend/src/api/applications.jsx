@@ -1,16 +1,15 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/applications",
+  baseURL: "https://fixit-capstone.onrender.com/applications",
   withCredentials: true,
 });
 
 const InvitationAPI = axios.create({
-  baseURL: "http://localhost:5000/invitations",
+  baseURL: "https://fixit-capstone.onrender.com/invitations",
   withCredentials: true,
 });
 
-// Application endpoints
 export const getMyApplications = async () => {
   try {
     const response = await API.get("/worker/sent");

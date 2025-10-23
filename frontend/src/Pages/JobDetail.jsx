@@ -20,8 +20,6 @@ const JobDetails = () => {
   const [showModal, setShowModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
   const [proposedPrice, setProposedPrice] = useState("");
-  const [durationValue, setDurationValue] = useState("");
-  const [durationUnit, setDurationUnit] = useState("days");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -32,9 +30,9 @@ const JobDetails = () => {
         const res = await getJobById(id);
         const jobData = res.data.data || res.data;
         setJob(jobData);
-        console.log("✅ Job data:", jobData);
+        console.log("Job data:", jobData);
       } catch (err) {
-        console.error("❌ Error fetching job:", err);
+        console.error("Error fetching job:", err);
         setError("Job not found.");
       } finally {
         setLoadingJob(false);
@@ -123,12 +121,12 @@ const JobDetails = () => {
               <img
                 src={
                   typeof job.client?.profilePicture === "string" &&
-                    job.client.profilePicture.trim() !== ""
+                  job.client.profilePicture.trim() !== ""
                     ? job.client.profilePicture
                     : job.client?.profilePicture?.url &&
                       job.client.profilePicture.url.trim() !== ""
-                      ? job.client.profilePicture.url
-                      : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                    ? job.client.profilePicture.url
+                    : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-8 h-8 rounded-full object-cover"
@@ -205,9 +203,12 @@ const JobDetails = () => {
             ) : null}
           </>
         ) : (
-          <p className="text-red-500 font-medium">
-            Please log in to apply or edit jobs.
-          </p>
+          <button
+            onClick={() => navigate("/signup")}
+            className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+          >
+            Create Account
+          </button>
         )}
       </div>
 

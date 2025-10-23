@@ -63,14 +63,6 @@ const ChatPage = () => {
     const [agreeToastMessage, setAgreeToastMessage] = useState("");
     const agreeToastTimer = useRef(null);
 
-    useEffect(() => {
-        if (contractBanner || showAgreeToast || agreeToastMessage) {
-            setIsSidebarOpen(false);
-        } else {
-            setIsSidebarOpen(true);
-        }
-    }, [contractBanner, showAgreeToast, agreeToastMessage]);
-
     // Pull agreement context from navigation state or sessionStorage (fallback)
     const agreementContextFromState = (location.state && location.state.agreementContext) || null;
     let persistedAgreementContext = null;
@@ -98,6 +90,14 @@ const ChatPage = () => {
     }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
 
     // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
+
+     useEffect(() => {
+        if (contractBanner || showAgreeToast || agreeToastMessage || showAgreementBanner) {
+            setIsSidebarOpen(false);
+        } else {
+            setIsSidebarOpen(true);
+        }
+    }, [contractBanner, showAgreeToast, agreeToastMessage, showAgreementBanner]);
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
@@ -135,7 +135,7 @@ const ChatPage = () => {
 
     // ---------- socket.io ----------
     useEffect(() => {
-        socket.current = io("http://localhost:5000", { withCredentials: true });
+        socket.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
 
         socket.current.on("receiveMessage", (msg) => {
             if (!msg) return;
@@ -581,7 +581,7 @@ const ChatPage = () => {
         try {
             if (agreementContext.kind === "application") {
                 const resp = await axios.get(
-                    `http://localhost:5000/applications/debug/${agreementContext.id}`,
+                    `https://fixit-capstone.onrender.com/applications/debug/${agreementContext.id}`,
                     { withCredentials: true }
                 );
                 const data = resp?.data?.data;

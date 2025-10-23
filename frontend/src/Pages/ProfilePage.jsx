@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience, removeSkillCategory, updateWorkerBiography } from "../api/profile";
-import { getAllJobs } from "../api/jobs";
+import { getAllJobs, updateJob, deleteJob } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
 import AddCertificate from "../components/AddCertificate";
 import AddExperience from "../components/AddExperience";
 import BiographyModal from "../components/BiographyModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import AddressInput from "../components/AddressInput";
 
 
 const formatAddress = (address) => {
@@ -44,8 +45,28 @@ const ProfilePage = () => {
   const [deleteAction, setDeleteAction] = useState(null);
   const [deleteItemName, setDeleteItemName] = useState("");
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [isUpdateConfirmOpen, setIsUpdateConfirmOpen] = useState(false);
+  const [isJobUpdating, setIsJobUpdating] = useState(false);
+  const [isJobDeleting, setIsJobDeleting] = useState(false);
+  const [editJob, setEditJob] = useState({
+    title: "",
+    description: "",
+    location: "",
+    price: "",
+  });
 
-  // ✅ Load user
+  // Helper: lock editing for hired/in_progress/completed
+  const isJobLocked = (job) =>
+    ["hired", "in_progress", "completed"].includes(
+      (job?.status || "").toLowerCase()
+    );
+
+
+  // Load user
   useEffect(() => {
     checkAuth()
       .then((res) => {
@@ -59,7 +80,7 @@ const ProfilePage = () => {
       });
   }, []);
 
-  // ✅ Load jobs (if client) or portfolio (if freelancer)
+  // Load jobs (if client) or portfolio (if freelancer)
   useEffect(() => {
     if (!currentUser) return;
 
@@ -233,6 +254,82 @@ const ProfilePage = () => {
     }
   };
 
+  // 🟡 Edit button
+const handleEditJob = (job) => {
+  if (isJobLocked(job)) return;
+  setSelectedJob(job);
+  setEditJob({
+    title: job.title || "",
+    description: job.description || "",
+    location: job.location || "",
+    // keep as string for the input, convert on save
+    price: job.price !== undefined && job.price !== null ? String(job.price) : "",
+  });
+  setIsEditModalOpen(true);
+};
+
+// 🟢 Save updated job
+const handleUpdateJob = async () => {
+  try {
+    if (!selectedJob?.id) return;
+
+    // Build payload with only allowed fields for backend (no title on schema)
+    const payload = {
+      description: editJob.description?.trim() || undefined,
+      location: editJob.location?.trim() || undefined,
+      price:
+        editJob.price === "" || editJob.price === null || editJob.price === undefined
+          ? undefined
+          : Number(editJob.price),
+    };
+
+    // Remove undefined fields
+    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+
+    setIsJobUpdating(true);
+    await updateJob(selectedJob.id, payload);
+
+    setUserPosts((prev) =>
+      prev.map((job) =>
+        job.id === selectedJob.id
+          ? {
+              ...job,
+              ...payload,
+            }
+          : job
+      )
+    );
+    setIsUpdateConfirmOpen(false);
+    setIsEditModalOpen(false);
+  } catch (err) {
+    console.error("Failed to update job:", err);
+  } finally {
+    setIsJobUpdating(false);
+  }
+};
+
+// 🟠 Open delete confirm
+const handleConfirmDelete = (job) => {
+  if (isJobLocked(job)) return;
+  setJobToDelete(job);
+  setIsDeleteConfirmOpen(true);
+};
+
+// 🔴 Delete job
+const handleDeleteJob = async () => {
+  if (!jobToDelete?.id) return;
+  try {
+    setIsJobDeleting(true);
+    await deleteJob(jobToDelete.id);
+    setUserPosts((prev) => prev.filter((job) => job.id !== jobToDelete.id));
+    setIsDeleteConfirmOpen(false);
+  } catch (err) {
+    console.error("Failed to delete job:", err);
+  } finally {
+    setIsJobDeleting(false);
+  }
+};
+
   const confirmDelete = (action, name = "this") => {
     setDeleteAction(() => action);
     setDeleteItemName(name);
@@ -286,347 +383,510 @@ const ProfilePage = () => {
 
 
       {/* Content Based on Role */}
-      {
-        userType === "client" ? (
-          <>
-            <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center">
+      {userType === "client" ? (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gray-700">
               Your Job Posts
             </h3>
-            {postsLoading ? (
-              <p className="text-gray-500 text-center">Loading jobs...</p>
-            ) : userPosts.length > 0 ? (
-              <div className="space-y-4">
-                {userPosts.map((post) => (
-                  <div key={post.id} className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
-                    <div className="rounded-xl p-4 bg-white transition-all">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-[#252525] opacity-75">
-                          {post.client?.name || "Client Name"}
-                        </span>
-                        <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                          {/* <Clock size={16} /> */}
-                          {new Date(post.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
+            <button
+              onClick={() => setIsEditMode((prev) => !prev)}
+              className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+            >
+              {isEditMode ? "Done" : "Edit"}
+            </button>
+          </div>
 
-                      </div>
-                      <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                        <Briefcase size={20} className="text-blue-400" />
-                        {post.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                          {post.category?.name || "Uncategorized"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                        <span className="flex items-center gap-1">
-                          <MapPin size={16} /> {post.location}
-                        </span>
-                        <span className="font-bold text-green-400">
-                          ₱{post.price?.toLocaleString() || 0}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center">
-                You have not posted any jobs yet.
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            {/* Credential Section */}
-
-            <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
-
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => setIsEditMode((prev) => !prev)}
-                  className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+          {postsLoading ? (
+            <p className="text-gray-500 text-center">Loading jobs...</p>
+          ) : userPosts.length > 0 ? (
+            <div className="space-y-4">
+              {userPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
                 >
-                  {isEditMode ? "Done" : "Edit"}
-                </button>
-              </div>
+                  <div className="rounded-xl p-4 bg-white transition-all">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                        {post.client?.name || "Client Name"}
+                      </span>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {new Date(post.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
 
-              {/* ================= EXPERIENCE ================= */}
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                  Work Experience
-                  {isEditMode && (
-                    <button
-                      onClick={() => setIsAddExperienceOpen(true)}
-                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                    >
-                      + Add
-                    </button>
-                  )}
-                </h3>
-                {currentUser.experience && currentUser.experience.length > 0 ? (
-                  <div className="space-y-4">
-                    {currentUser.experience.map((exp) => (
-                      <div
-                        key={exp._id}
-                        className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
-                      >
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-800">
-                            {exp.position || "Unknown Position"}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {exp.companyName || "Unknown Company"}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {exp.startYear} – {exp.endYear || "Present"}
-                          </p>
-                          <p className="text-gray-700 mt-2 text-sm">
-                            {exp.responsibilities || "No details provided."}
-                          </p>
-                        </div>
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <Briefcase size={20} className="text-blue-400" />
+                      {post.description}
+                    </p>
 
-                        {/* ✅ Delete button at bottom */}
-                        {isEditMode && (
-                          <div className="mt-3 flex justify-end">
-                            <button
-                              onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
-                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                    <div className="flex flex-wrap gap-2 mt-3 items-center">
+                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                        {post.category?.name || "Uncategorized"}
+                      </span>
+                      
+                    </div>
+
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} /> {post.location}
+                      </span>
+                      
+                      <span className="font-bold text-green-400">
+                        ₱{post.price?.toLocaleString() || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-start mt-2">
+                    {post.status && (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs shadow-sm ${
+                            ((post.status || "").toLowerCase() === "open" && "bg-green-100 text-green-600") ||
+                            ((post.status || "").toLowerCase() === "hired" && "bg-yellow-100 text-yellow-700") ||
+                            ((post.status || "").toLowerCase() === "in_progress" && "bg-blue-100 text-blue-700") ||
+                            ((post.status || "").toLowerCase() === "completed" && "bg-gray-200 text-gray-600") ||
+                            ((post.status || "").toLowerCase() === "cancelled" && "bg-red-100 text-red-600") ||
+                            "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {(post.status || "").replace("_", " ")}
+                        </span>
+                      )}
                       </div>
-                    ))}
+
+                    {/* ✅ Action buttons (visible only in Edit mode) */}
+                    {isEditMode && !isJobLocked(post) && (
+                      <div className="flex justify-end gap-2 mt-4">
+                        <button
+                          onClick={() => handleEditJob(post)}
+                          className="px-3 py-1 bg-[#5eb6f3] text-white rounded-lg hover:bg-sky-500 cursor-pointer text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleConfirmDelete(post)}
+                          className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-gray-500">No work experience added yet.</p>
-                )}
-              </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center">
+              You have not posted any jobs yet.
+            </p>
+          )}
 
+          {/* Edit Job Modal */}
+          {isEditModalOpen && selectedJob && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-lg">
+                <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                  Edit Job
+                </h3>
 
-
-              {isAddExperienceOpen && (
-                <AddExperience
-                  onClose={() => setIsAddExperienceOpen(false)}
-                  onAdd={(newExperience) =>
-                    setCurrentUser((prev) => ({
-                      ...prev,
-                      experiences: [...(prev.experiences || []), newExperience],
-                    }))
+                <textarea
+                  placeholder="Description"
+                  value={editJob.description}
+                  onChange={(e) =>
+                    setEditJob({ ...editJob, description: e.target.value })
                   }
-                  onRefresh={fetchExperiences}
+                  className="w-full border rounded-lg px-3 py-2 mb-3 text-sm resize-none"
                 />
-              )}
+                <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
+                  Address
+                </label>
+                <AddressInput
+                  value={editJob.location}
+                  onChange={(address) =>
+                    setEditJob({ ...editJob, location: address })
+                  }
+                />
+                <input
+                  type="number"
+                  placeholder="Price (₱)"
+                  value={editJob.price}
+                  onChange={(e) =>
+                    setEditJob({ ...editJob, price: e.target.value })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 mb-3 text-sm mt-4"
+                />
 
-              {/* ================= SKILLS ================= */}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-3 py-1 text-gray-500 hover:text-gray-700 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setIsUpdateConfirmOpen(true)}
+                    className="px-4 py-1 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 cursor-pointer text-sm"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-              <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
-                Skills
+          {/* ✅ Delete Confirmation */}
+          {isDeleteConfirmOpen && jobToDelete && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md text-center">
+                <h3 className="text-lg font-semibold mb-2 text-gray-700">
+                  Confirm Delete
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to delete this job post?
+                </p>
+
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setIsDeleteConfirmOpen(false)}
+                    disabled={isJobDeleting}
+                    className={`px-4 py-2 ${isJobDeleting ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteJob}
+                    disabled={isJobDeleting}
+                    className={`px-4 py-2 rounded-lg ${isJobDeleting ? 'bg-red-300 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                  >
+                    {isJobDeleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Update Confirmation */}
+          {isUpdateConfirmOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md text-center">
+                <h3 className="text-lg font-semibold mb-2 text-gray-700">
+                  Confirm Update
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to save these changes to your job post?
+                </p>
+
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setIsUpdateConfirmOpen(false)}
+                    disabled={isJobUpdating}
+                    className={`px-4 py-2 ${isJobUpdating ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpdateJob}
+                    disabled={isJobUpdating}
+                    className={`px-4 py-2 rounded-lg ${isJobUpdating ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                  >
+                    {isJobUpdating ? 'Saving...' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Credential Section */}
+
+          <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
+
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setIsEditMode((prev) => !prev)}
+                className="px-3 py-0.5 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+              >
+                {isEditMode ? "Done" : "Edit"}
+              </button>
+            </div>
+
+            {/* ================= EXPERIENCE ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Work Experience
                 {isEditMode && (
                   <button
-                    onClick={() => setIsAddSkillOpen(true)}
+                    onClick={() => setIsAddExperienceOpen(true)}
                     className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
                   >
                     + Add
                   </button>
                 )}
               </h3>
-              {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.skillsByCategory.map((skill, index) => (
+              {currentUser.experience && currentUser.experience.length > 0 ? (
+                <div className="space-y-4">
+                  {currentUser.experience.map((exp) => (
                     <div
-                      key={index}
-                      className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
+                      key={exp._id}
+                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
                     >
-                      <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {exp.position || "Unknown Position"}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {exp.companyName || "Unknown Company"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {exp.startYear} – {exp.endYear || "Present"}
+                        </p>
+                        <p className="text-gray-700 mt-2 text-sm">
+                          {exp.responsibilities || "No details provided."}
+                        </p>
+                      </div>
+
+                      {/* ✅ Delete button at bottom */}
                       {isEditMode && (
-                        <button
-                          onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
-                          className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                        >
-                          ✕
-                        </button>
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No work experience added yet.</p>
+              )}
+            </div>
+
+
+
+            {isAddExperienceOpen && (
+              <AddExperience
+                onClose={() => setIsAddExperienceOpen(false)}
+                onAdd={(newExperience) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    experiences: [...(prev.experiences || []), newExperience],
+                  }))
+                }
+                onRefresh={fetchExperiences}
+              />
+            )}
+
+            {/* ================= SKILLS ================= */}
+
+            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
+              Skills
+              {isEditMode && (
+                <button
+                  onClick={() => setIsAddSkillOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              )}
+            </h3>
+            {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {currentUser.skillsByCategory.map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
+                  >
+                    <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
+                    {isEditMode && (
+                      <button
+                        onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
+                        className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+              </div>
+            ) : (
+              <p className="text-gray-500">No skills added yet.</p>
+            )}
+
+            {/* AddSkill Modal */}
+            {isAddSkillOpen && (
+              <AddSkill
+                onClose={() => setIsAddSkillOpen(false)}
+                onAdd={(newSkills) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    skills: [...(prev.skills || []), ...newSkills],
+                  }))
+                }
+                onRefresh={fetchSkills}
+              />
+            )}
+
+
+
+            {/* ================= PORTFOLIO ================= */}
+            <div className="mb-8 mt-4">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Portfolio
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddPortfolioOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
+              </h3>
+
+              {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {currentUser.portfolio.map((item) => (
+                    <div
+                      key={item._id}
+                      className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
+                    >
+                      {/* Image Section */}
+                      <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <img
+                          src={
+                            item.image?.url
+                              ? item.image.url
+                              : "https://via.placeholder.com/300x200?text=No+Image"
+                          }
+                          alt={item.projectTitle || "Portfolio Project"}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="mt-3 flex-1">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {item.projectTitle || "Untitled Project"}
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {item.description || "No description provided."}
+                        </p>
+                      </div>
+
+                      {/* Delete Button at Bottom */}
+                      {isEditMode && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
 
                 </div>
+
               ) : (
-                <p className="text-gray-500">No skills added yet.</p>
+                <p className="text-gray-500">You have not added any portfolio projects yet.</p>
+
               )}
+            </div>
 
-              {/* AddSkill Modal */}
-              {isAddSkillOpen && (
-                <AddSkill
-                  onClose={() => setIsAddSkillOpen(false)}
-                  onAdd={(newSkills) =>
-                    setCurrentUser((prev) => ({
-                      ...prev,
-                      skills: [...(prev.skills || []), ...newSkills],
-                    }))
-                  }
-                  onRefresh={fetchSkills}
-                />
-              )}
-
-
-
-              {/* ================= PORTFOLIO ================= */}
-              <div className="mb-8 mt-4">
-                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                  Portfolio
-                  {isEditMode && (
-                    <button
-                      onClick={() => setIsAddPortfolioOpen(true)}
-                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                    >
-                      + Add
-                    </button>
-                  )}
-                </h3>
-
-                {currentUser.portfolio && currentUser.portfolio.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {currentUser.portfolio.map((item) => (
-                      <div
-                        key={item._id}
-                        className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
-                      >
-                        {/* Image Section */}
-                        <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                          <img
-                            src={
-                              item.image?.url
-                                ? item.image.url
-                                : "https://via.placeholder.com/300x200?text=No+Image"
-                            }
-                            alt={item.projectTitle || "Portfolio Project"}
-                            className="w-full h-full object-cover rounded-md"
-                          />
-                        </div>
-
-                        {/* Content Section */}
-                        <div className="mt-3 flex-1">
-                          <h4 className="text-lg font-semibold text-gray-800">
-                            {item.projectTitle || "Untitled Project"}
-                          </h4>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {item.description || "No description provided."}
-                          </p>
-                        </div>
-
-                        {/* Delete Button at Bottom */}
-                        {isEditMode && (
-                          <div className="mt-4 flex justify-end">
-                            <button
-                              onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
-                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                  </div>
-
-                ) : (
-                  <p className="text-gray-500">You have not added any portfolio projects yet.</p>
-
-                )}
-              </div>
-
-              {/* Show AddPortfolio modal */}
-              {isAddPortfolioOpen && (
-                <AddPortfolio
-                  onClose={() => setIsAddPortfolioOpen(false)}
-                  onAdd={(newPortfolio) =>
-                    setCurrentUser((prev) => ({
-                      ...prev,
-                      portfolio: [...(prev.portfolio || []), newPortfolio],
-                    }))
-                  }
-                  onRefresh={fetchPortfolios}
-                />
-              )}
+            {/* Show AddPortfolio modal */}
+            {isAddPortfolioOpen && (
+              <AddPortfolio
+                onClose={() => setIsAddPortfolioOpen(false)}
+                onAdd={(newPortfolio) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    portfolio: [...(prev.portfolio || []), newPortfolio],
+                  }))
+                }
+                onRefresh={fetchPortfolios}
+              />
+            )}
 
 
 
-              {/* ================= CERTIFICATES ================= */}
-              <div className="mb-8 mt-4">
-                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                  Certificates
-                  {isEditMode && (
-                    <button
-                      onClick={() => setIsAddCertificateOpen(true)}
-                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                    >
-                      + Add
-                    </button>
-                  )}
-
-                </h3>
-                {currentUser.certificates && currentUser.certificates.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {currentUser.certificates.map((cert, index) => (
-                      <div
-                        key={index}
-                        className="shadow-sm p-3 rounded-md bg-white text-left flex flex-col justify-between"
-                      >
-                        <img
-                          src={
-                            cert.url
-                              ? cert.url
-                              : "https://via.placeholder.com/300x200?text=No+Certificate"
-                          }
-                          alt="Certificate"
-                          className="w-full h-40 object-cover rounded-md"
-                        />
-
-                        {/* Delete Button */}
-                        {isEditMode && (
-                          <div className="mt-3 flex justify-end">
-                            <button
-                              onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
-                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No certificates uploaded yet.</p>
+            {/* ================= CERTIFICATES ================= */}
+            <div className="mb-8 mt-4">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Certificates
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddCertificateOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
                 )}
 
-              </div>
+              </h3>
+              {currentUser.certificates && currentUser.certificates.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {currentUser.certificates.map((cert, index) => (
+                    <div
+                      key={index}
+                      className="shadow-sm p-3 rounded-md bg-white text-left flex flex-col justify-between"
+                    >
+                      <img
+                        src={
+                          cert.url
+                            ? cert.url
+                            : "https://via.placeholder.com/300x200?text=No+Certificate"
+                        }
+                        alt="Certificate"
+                        className="w-full h-40 object-cover rounded-md"
+                      />
 
-              {isAddCertificateOpen && (
-                <AddCertificate
-                  onClose={() => setIsAddCertificateOpen(false)}
-                  onAdd={(newCertificate) =>
-                    setCurrentUser((prev) => ({
-                      ...prev,
-                      certificates: [...(prev.certificates || []), newCertificate],
-                    }))
-                  }
-                  onRefresh={fetchCertificates}
-                />
+                      {/* Delete Button */}
+                      {isEditMode && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No certificates uploaded yet.</p>
               )}
 
             </div>
 
-          </>
-        )
+            {isAddCertificateOpen && (
+              <AddCertificate
+                onClose={() => setIsAddCertificateOpen(false)}
+                onAdd={(newCertificate) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    certificates: [...(prev.certificates || []), newCertificate],
+                  }))
+                }
+                onRefresh={fetchCertificates}
+              />
+            )}
+
+          </div>
+
+        </>
+      )
       }
 
       {/* Modal for editing biography */}

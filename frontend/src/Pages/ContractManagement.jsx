@@ -10,9 +10,12 @@ import {
   DollarSign,
   Calendar,
   MessageSquare,
+  Eye,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
+import ContractDetailsModal from "../components/ContractDetailsModal";
+import NotificationModal from "../components/NotificationModal";
 import {
   getWorkerContracts,
   getClientContracts,
@@ -22,8 +25,8 @@ import {
   submitFeedback,
 } from "../api/feedback.jsx";
 import { createOrGetConversation } from "../api/message.jsx";
-import worker from '../assets/worker.png';
-import client from '../assets/client.png';
+import worker from "../assets/worker.png";
+import client from "../assets/client.png";
 import { checkAuth } from "../api/auth";
 
 const ContractManagement = () => {
@@ -37,6 +40,34 @@ const ContractManagement = () => {
     contract: null,
   });
   const [feedback, setFeedback] = useState({ rating: 5, comment: "" });
+  const [contractDetailsModal, setContractDetailsModal] = useState({
+    show: false,
+    contractId: null,
+  });
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
+
+  const showNotification = (type, title, message) => {
+    setNotification({
+      show: true,
+      type,
+      title,
+      message,
+    });
+  };
+
+  // const closeNotification = () => {
+  //   setNotification({
+  //     show: false,
+  //     type: "info",
+  //     title: "",
+  //     message: "",
+  //   });
+  // };
 
   useEffect(() => {
     loadUserAndContracts();
@@ -52,21 +83,29 @@ const ContractManagement = () => {
       const user = authRes.data.data;
       setCurrentUser(user);
 
-      // Setup socket connection once
       if (!socketRef.current) {
-        socketRef.current = io("http://localhost:5000", { withCredentials: true });
+        socketRef.current = io("https://fixit-capstone.onrender.com", {
+          withCredentials: true,
+        });
         const credId = user?.credentialId || user?._id || user?.id;
         if (credId) socketRef.current.emit("registerUser", String(credId));
 
         const refreshContracts = async () => {
           try {
-            const list = user.userType === "worker" ? await getWorkerContracts() : await getClientContracts();
+            const list =
+              user.userType === "worker"
+                ? await getWorkerContracts()
+                : await getClientContracts();
             setContracts(list || []);
-          } catch (_) {}
+          } catch (error) {
+            console.log("Failed to refresh contracts:", error);
+          }
         };
-        ["contract:created", "contract:updated", "contract:feedback"].forEach((ev) => {
-          socketRef.current.on(ev, refreshContracts);
-        });
+        ["contract:created", "contract:updated", "contract:feedback"].forEach(
+          (ev) => {
+            socketRef.current.on(ev, refreshContracts);
+          }
+        );
       }
 
       // Load contracts based on user type
@@ -87,7 +126,11 @@ const ContractManagement = () => {
 
   useEffect(() => {
     return () => {
-      try { socketRef.current?.disconnect(); } catch (_) {}
+      try {
+        socketRef.current?.disconnect();
+      } catch (error) {
+        console.log("Socket disconnect error:", error);
+      }
     };
   }, []);
 
@@ -96,11 +139,19 @@ const ContractManagement = () => {
       console.log("Attempting to start work for contract:", contractId);
       const result = await startWork(contractId);
       console.log("Start work result:", result);
-      alert("Work started successfully!");
+      showNotification(
+        "success",
+        "Work Started",
+        "Work started successfully! You can now begin working on this contract."
+      );
       loadUserAndContracts();
     } catch (error) {
       console.error("Start work error:", error);
-      alert("Failed to start work: " + error.message);
+      showNotification(
+        "error",
+        "Start Work Failed",
+        `Failed to start work: ${error.message}`
+      );
     }
   };
 
@@ -109,21 +160,37 @@ const ContractManagement = () => {
       console.log("Attempting to complete work for contract:", contractId);
       const result = await completeWork(contractId);
       console.log("Complete work result:", result);
-      alert("Work marked as completed! Waiting for client confirmation.");
+      showNotification(
+        "success",
+        "Work Completed",
+        "Work marked as completed! The contract is now waiting for client confirmation."
+      );
       loadUserAndContracts();
     } catch (error) {
       console.error("Complete work error:", error);
-      alert("Failed to mark work as completed: " + error.message);
+      showNotification(
+        "error",
+        "Complete Work Failed",
+        `Failed to mark work as completed: ${error.message}`
+      );
     }
   };
 
   const handleConfirmCompletion = async (contractId) => {
     try {
       await confirmWorkCompletion(contractId);
-      alert("Work completion confirmed! You can now submit feedback.");
+      showNotification(
+        "success",
+        "Work Confirmed",
+        "Work completion confirmed successfully! You can now submit feedback for this contract."
+      );
       loadUserAndContracts();
     } catch (error) {
-      alert("Failed to confirm completion: " + error.message);
+      showNotification(
+        "error",
+        "Confirmation Failed",
+        `Failed to confirm completion: ${error.message}`
+      );
     }
   };
 
@@ -131,7 +198,11 @@ const ContractManagement = () => {
     try {
       // Frontend validation
       if (!feedback.comment || feedback.comment.trim().length < 5) {
-        alert("Feedback must be at least 5 characters long");
+        showNotification(
+          "warning",
+          "Validation Error",
+          "Feedback must be at least 5 characters long"
+        );
         return;
       }
 
@@ -149,29 +220,51 @@ const ContractManagement = () => {
         rating: feedback.rating,
         feedback: feedback.comment, // Backend expects 'feedback' not 'comment'
       });
-      alert("Feedback submitted successfully!");
+      showNotification(
+        "success",
+        "Feedback Submitted",
+        "Your feedback has been submitted successfully!"
+      );
       setFeedbackModal({ show: false, contract: null });
       setFeedback({ rating: 5, comment: "" });
       loadUserAndContracts();
     } catch (error) {
       console.error("Feedback submission error:", error);
-      alert("Failed to submit feedback: " + error.message);
+      showNotification(
+        "error",
+        "Feedback Failed",
+        `Failed to submit feedback: ${error.message}`
+      );
     }
+  };
+
+  const handleViewDetails = (contractId) => {
+    setContractDetailsModal({
+      show: true,
+      contractId: contractId,
+    });
+  };
+
+  const handleCloseDetailsModal = () => {
+    setContractDetailsModal({
+      show: false,
+      contractId: null,
+    });
   };
 
   const handleMessageClick = async (contract) => {
     try {
-      
       // Determine the other party's details
       const otherParty =
         currentUser?.userType === "worker"
           ? { credentialId: contract.clientId, userType: "client" }
           : { credentialId: contract.workerId, userType: "worker" };
-      
+
       // Determine the other party's credential and type
       const isWorker = currentUser?.userType === "worker";
       const target = isWorker ? contract?.clientId : contract?.workerId;
-      const targetCredentialId = target?.credentialId && String(target.credentialId);
+      const targetCredentialId =
+        target?.credentialId && String(target.credentialId);
       const targetUserType = isWorker ? "client" : "worker";
 
       if (!targetCredentialId) {
@@ -186,8 +279,12 @@ const ContractManagement = () => {
           participantCredentialId: targetCredentialId,
           participantUserType: targetUserType,
         });
-      } catch (_) {
+      } catch (error) {
         // non-fatal; ChatPage can still create lazily
+        console.log(
+          "Conversation creation failed, will create lazily:",
+          error.message
+        );
       }
 
       // Navigate to chat with explicit selection + contract banner
@@ -200,7 +297,11 @@ const ContractManagement = () => {
       });
     } catch (error) {
       console.error("Failed to navigate to conversation:", error);
-      alert("Failed to open conversation");
+      showNotification(
+        "error",
+        "Navigation Failed",
+        "Failed to open conversation"
+      );
     }
   };
 
@@ -285,12 +386,16 @@ const ContractManagement = () => {
             {contracts.map((contract) => (
               <div
                 key={contract._id}
-                className="bg-white rounded-[20px] shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-[20px] shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleViewDetails(contract._id)}
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2">
+                      <h3
+                        className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2 cursor-pointer transition-colors"
+                        
+                      >
                         {contract.jobId.description || "Contract Work"}
                       </h3>
                       <div className="flex flex-col items-left gap-4 text-sm text-gray-600 mb-3">
@@ -310,7 +415,8 @@ const ContractManagement = () => {
                         </div>
                       </div>
                       <p className="text-sm flex items-center text-left text-gray-500 mb-3">
-                        Contract Type: {(contract.contractType).replaceAll("_", " ")}
+                        Contract Type:{" "}
+                        {contract.contractType.replaceAll("_", " ")}
                       </p>
                       <p className="text-sm flex items-center text-left text-gray-500 mb-3">
                         Contract ID: {contract._id}
@@ -350,11 +456,11 @@ const ContractManagement = () => {
                         )}
                         {contract.contractStatus ===
                           "awaiting_client_confirmation" && (
-                            <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded-md">
-                              <Clock size={16} className="mr-2" />
-                              Waiting for client confirmation
-                            </div>
-                          )}
+                          <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded-md">
+                            <Clock size={16} className="mr-2" />
+                            Waiting for client confirmation
+                          </div>
+                        )}
                         {contract.contractStatus === "completed" &&
                           !contract.workerFeedback && (
                             <button
@@ -375,16 +481,16 @@ const ContractManagement = () => {
                       <>
                         {contract.contractStatus ===
                           "awaiting_client_confirmation" && (
-                            <button
-                              onClick={() =>
-                                handleConfirmCompletion(contract._id)
-                              }
-                              className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
-                            >
-                              <CheckCircle size={16} className="mr-2" />
-                              Confirm Completion
-                            </button>
-                          )}
+                          <button
+                            onClick={() =>
+                              handleConfirmCompletion(contract._id)
+                            }
+                            className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                          >
+                            <CheckCircle size={16} className="mr-2" />
+                            Confirm Completion
+                          </button>
+                        )}
                         {contract.contractStatus === "completed" &&
                           !contract.clientFeedback && (
                             <button
@@ -400,6 +506,15 @@ const ContractManagement = () => {
                       </>
                     )}
 
+                    {/* View Details button for all contracts */}
+                    <button
+                      onClick={() => handleViewDetails(contract._id)}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                    >
+                      <Eye size={16} className="mr-2" />
+                      View Details
+                    </button>
+
                     {/* Message button for all contracts */}
                     <button
                       onClick={() => handleMessageClick(contract)}
@@ -413,10 +528,16 @@ const ContractManagement = () => {
                   {/* Show feedback if exists */}
                   {(contract.clientFeedback || contract.workerFeedback) && (
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-[#545454] mb-4">Feedback</h4>
+                      <h4 className="font-medium text-[#545454] mb-4">
+                        Feedback
+                      </h4>
                       {contract.clientFeedback && (
                         <div className="bg-white p-2 border-l-4 border-sky-500 pl-4 shadow-sm">
-                          <img className="w-5 h-5 text-gray-500 mx-auto mb-3" src={client} alt="client" />
+                          <img
+                            className="w-5 h-5 text-gray-500 mx-auto mb-3"
+                            src={client}
+                            alt="client"
+                          />
                           <p className="text-sm font-medium text-gray-900">
                             Client Feedback:
                           </p>
@@ -445,7 +566,11 @@ const ContractManagement = () => {
                       )}
                       {contract.workerFeedback && (
                         <div className="bg-white p-2 border-l-4 border-green-500 pl-4 shadow-sm">
-                          <img className="w-5 h-5 text-gray-500 mx-auto mb-3" src={worker} alt="worker" />
+                          <img
+                            className="w-5 h-5 text-gray-500 mx-auto mb-3"
+                            src={worker}
+                            alt="worker"
+                          />
                           <p className="text-sm font-medium text-gray-900">
                             Worker Feedback:
                           </p>
@@ -479,6 +604,15 @@ const ContractManagement = () => {
             ))}
           </div>
         )}
+
+        {/* Contract Details Modal */}
+        <ContractDetailsModal
+          contractId={contractDetailsModal.contractId}
+          isOpen={contractDetailsModal.show}
+          onClose={handleCloseDetailsModal}
+          currentUser={currentUser}
+        />
+
         {/* Feedback Modal */}
         {feedbackModal.show && (
           <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-50">
@@ -497,14 +631,17 @@ const ContractManagement = () => {
                     <button
                       key={star}
                       onClick={() => setFeedback({ ...feedback, rating: star })}
-                      className={`p-1 transition-transform transform hover:scale-110 cursor-pointer ${star <= feedback.rating
+                      className={`p-1 transition-transform transform hover:scale-110 cursor-pointer ${
+                        star <= feedback.rating
                           ? "text-yellow-400"
                           : "text-gray-300 hover:text-yellow-300"
-                        }`}
+                      }`}
                     >
                       <Star
                         size={26}
-                        className={star <= feedback.rating ? "fill-current" : ""}
+                        className={
+                          star <= feedback.rating ? "fill-current" : ""
+                        }
                       />
                     </button>
                   ))}
@@ -535,7 +672,9 @@ const ContractManagement = () => {
               {/* Buttons */}
               <div className="flex gap-3 justify-end">
                 <button
-                  onClick={() => setFeedbackModal({ show: false, contract: null })}
+                  onClick={() =>
+                    setFeedbackModal({ show: false, contract: null })
+                  }
                   className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100 transition cursor-pointer"
                 >
                   Cancel
@@ -550,6 +689,17 @@ const ContractManagement = () => {
             </div>
           </div>
         )}
+
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={() =>
+            setNotification({ show: false, type: "", title: "", message: "" })
+          }
+        />
       </div>
     </div>
   );

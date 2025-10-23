@@ -7,6 +7,8 @@ const cors = require("cors");
 const mongoSanitize = require("express-mongo-sanitize");
 const connectDb = require("./db/connectDb");
 const { authLimiter } = require("./utils/rateLimit");
+const { scheduleInvitationCleanup } = require("./utils/cleanupTasks");
+const logger = require("./utils/logger");
 const http = require("http");
 const { Server } = require("socket.io");
 const socketBus = require("./socket");
@@ -247,6 +249,16 @@ connectDb()
   .then(() => {
     server.listen(PORT, () => {
       console.log(`🚀 Server listening on port ${PORT}`);
+
+      // Initialize cleanup tasks
+      scheduleInvitationCleanup();
+      console.log(
+        "📧 Invitation cleanup scheduler initialized - runs every hour"
+      );
+      logger.info("Invitation cleanup scheduler started", {
+        schedule: "every hour (0 * * * *)",
+        timestamp: new Date().toISOString(),
+      });
     });
 
     const shutdown = () => {
