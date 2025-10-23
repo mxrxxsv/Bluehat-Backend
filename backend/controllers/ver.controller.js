@@ -1452,6 +1452,7 @@ const login = async (req, res) => {
       success: true,
       message: "Login successful",
       code: "LOGIN_SUCCESS",
+      token,
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
