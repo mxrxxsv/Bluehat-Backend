@@ -39,10 +39,11 @@ const parseAllowedOrigins = () => {
     process.env.NODE_ENV === "production"
       ? process.env.PRODUCTION_FRONTEND_URL
       : process.env.DEVELOPMENT_FRONTEND_URL;
-  if (primary) list.push(primary.trim());
+  const sanitize = (s) => s.trim().replace(/^['"]|['"]$/g, "");
+  if (primary) list.push(sanitize(primary));
   if (process.env.CORS_ALLOWED_ORIGINS) {
     process.env.CORS_ALLOWED_ORIGINS.split(",")
-      .map((s) => s.trim())
+      .map(sanitize)
       .filter(Boolean)
       .forEach((o) => list.push(o));
   }
@@ -52,6 +53,8 @@ const parseAllowedOrigins = () => {
 
 const allowedOrigins = parseAllowedOrigins();
 const allowRenderPreviews = String(process.env.ALLOW_RENDER_PREVIEWS || "false").toLowerCase() === "true";
+const logCorsRequests = String(process.env.LOG_CORS_REQUESTS || "false").toLowerCase() === "true";
+const enableCorsDebugRoute = String(process.env.DEBUG_CORS || "false").toLowerCase() === "true";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -76,6 +79,15 @@ app.use(
 );
 
 // 2) CORS
+// Optional: log incoming Origin headers before CORS check
+if (logCorsRequests) {
+  app.use((req, _res, next) => {
+    const origin = req.headers.origin || "<none>";
+    console.log(`➡️  Incoming request: ${req.method} ${req.path} | Origin: ${origin}`);
+    next();
+  });
+}
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -99,6 +111,25 @@ app.use(
 // Log allowed origins on boot
 console.log("🌐 CORS allowed origins:", allowedOrigins);
 if (allowRenderPreviews) console.log("🌐 CORS: ALLOW_RENDER_PREVIEWS enabled for *.onrender.com");
+
+// Optional debug endpoint to inspect CORS evaluation (do NOT enable in production long-term)
+if (enableCorsDebugRoute) {
+  app.get("/debug/cors", (req, res) => {
+    const origin = req.query.origin || req.headers.origin || "";
+    const matchesList = allowedOrigins.includes(origin);
+    const matchesRenderWildcard = /^https:\/\/.*\.onrender\.com$/.test(origin);
+    res.json({
+      origin,
+      allowedOrigins,
+      allowRenderPreviews,
+      matchesList,
+      matchesRenderWildcard,
+      wouldAllow:
+        (!origin) || matchesList || (allowRenderPreviews && matchesRenderWildcard),
+      note: "Set DEBUG_CORS=false to disable this route in production",
+    });
+  });
+}
 
 // 3) Request parsing
 app.use(express.json());
