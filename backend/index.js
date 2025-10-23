@@ -32,14 +32,47 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-const allowedOrigins = [
-  process.env.NODE_ENV === "production"
-    ? process.env.PRODUCTION_FRONTEND_URL
-    : process.env.DEVELOPMENT_FRONTEND_URL,
-];
+// Build allowed origins list from env
+// Supports a comma-separated CORS_ALLOWED_ORIGINS for multiple domains (e.g., vercel preview + prod)
+// Fallback to single PRODUCTION_FRONTEND_URL or DEVELOPMENT_FRONTEND_URL
+const resolveAllowedOrigins = () => {
+  const origins = new Set();
+
+  const addIf = (v) => {
+    if (v && typeof v === "string" && v.trim()) origins.add(v.trim());
+  };
+
+  // Primary comma-separated list
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    process.env.CORS_ALLOWED_ORIGINS.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((o) => origins.add(o));
+  }
+
+  // Backwards-compatible fallbacks
+  if (process.env.NODE_ENV === "production") {
+    addIf(process.env.PRODUCTION_FRONTEND_URL);
+    addIf(process.env.PRODUCTION_ADMIN_URL);
+  } else {
+    addIf(process.env.DEVELOPMENT_FRONTEND_URL);
+    addIf(process.env.DEVELOPMENT_ADMIN_URL);
+  }
+
+  // Always allow localhost for local testing if defined
+  addIf(process.env.LOCALHOST_FRONTEND_URL);
+
+  return Array.from(origins);
+};
+
+const allowedOrigins = resolveAllowedOrigins();
+console.log("🌐 CORS allowed origins:", allowedOrigins);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Behind a proxy (Render/Heroku) - needed for secure cookies and IPs
+app.set("trust proxy", 1);
 
 // 1) Security headers
 app.use(
@@ -64,11 +97,21 @@ app.use(
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // Allow non-browser tools (no origin) and exact matches
+      const allowExact = !origin || allowedOrigins.includes(origin);
+
+      // Optional: allow all vercel.app subdomains for previews if enabled
+      const allowVercelPreview =
+        process.env.ALLOW_VERCEL_PREVIEWS === "true" &&
+        typeof origin === "string" &&
+        /\.vercel\.app$/.test(origin);
+
+      if (allowExact || allowVercelPreview) {
+        return callback(null, true);
       }
+
+      console.warn("🚫 CORS blocked origin:", origin);
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
