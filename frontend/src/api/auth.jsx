@@ -26,6 +26,17 @@ export const login = async (data) => {
     return res;
 };
 export const checkAuth = () => API.get("/check-auth");
-export const Logout = () => API.post("/logout");
+export const Logout = async () => {
+    try {
+        const res = await API.post("/logout");
+        // Clear stored token on logout
+        localStorage.removeItem("token");
+        return res;
+    } catch (e) {
+        // Still clear token locally even if server logout fails
+        localStorage.removeItem("token");
+        throw e;
+    }
+};
 export const forgotPassword = (data) => API.post("/forgot-password", data);
 export const resetPassword = (data) => API.post("/reset-password", data);
