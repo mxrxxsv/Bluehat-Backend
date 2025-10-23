@@ -39,7 +39,7 @@ const parseAllowedOrigins = () => {
     process.env.NODE_ENV === "production"
       ? process.env.PRODUCTION_FRONTEND_URL
       : process.env.DEVELOPMENT_FRONTEND_URL;
-  const sanitize = (s) => s.trim().replace(/^['"]|['"]$/g, "");
+    const sanitize = (s) => s.trim().replace(/^['"]|['"]$/g, "").replace(/\/$/, "");
   if (primary) list.push(sanitize(primary));
   if (process.env.CORS_ALLOWED_ORIGINS) {
     process.env.CORS_ALLOWED_ORIGINS.split(",")
@@ -52,31 +52,63 @@ const parseAllowedOrigins = () => {
 };
 
 const allowedOrigins = parseAllowedOrigins();
-const allowRenderPreviews = String(process.env.ALLOW_RENDER_PREVIEWS || "false").toLowerCase() === "true";
+// In production, default to allowing *.onrender.com previews unless explicitly disabled
+const allowRenderPreviews = String(
+  process.env.ALLOW_RENDER_PREVIEWS ?? (process.env.NODE_ENV === "production" ? "true" : "false")
+)
+  .toLowerCase()
+  .trim() === "true";
 const logCorsRequests = String(process.env.LOG_CORS_REQUESTS || "false").toLowerCase() === "true";
 const enableCorsDebugRoute = String(process.env.DEBUG_CORS || "false").toLowerCase() === "true";
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+// Support wildcard patterns in CORS_ALLOWED_ORIGINS such as "https://*.onrender.com" or "*.onrender.com"
+const buildWildcardRegex = (pattern) => {
+  const p = pattern.trim();
+  const hasScheme = /^https?:\/\//i.test(p);
+  if (hasScheme) {
+    // e.g., https://*.onrender.com
+    const escaped = p
+      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\\\*\\\./g, "([^.]+\\.)+");
+    return new RegExp(`^${escaped}$`, "i");
+  } else {
+    // e.g., *.onrender.com (host-only); allow http or https
+    const escapedHost = p
+      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\\\*\\\./g, "([^.]+\\.)+");
+    return new RegExp(`^https?:\/\/${escapedHost}$`, "i");
+  }
+};
 
-// 1) Security headers
+const wildcardPatterns = allowedOrigins
+  .filter((o) => o.includes("*"))
+  .map(buildWildcardRegex);
+const exactOrigins = allowedOrigins.filter((o) => !o.includes("*"));
+const exactOriginsLc = exactOrigins.map((o) => o.toLowerCase());
+
+// 1) App and security middleware
+const app = express();
+app.set("trust proxy", 1);
+
+// Helmet
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+// HSTS in production
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    helmet.hsts({
+      maxAge: 15552000, // 180 days
+      includeSubDomains: true,
+      preload: true,
+    })
+  );
+}
+
+// Port
+const PORT = process.env.PORT || 3000;
 
 // 2) CORS
 // Optional: log incoming Origin headers before CORS check
@@ -93,12 +125,16 @@ app.use(
     origin: function (origin, callback) {
       // Allow server-to-server or same-origin (no Origin header)
       if (!origin) return callback(null, true);
+      const oLc = origin.toLowerCase();
 
       // Exact match list
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (exactOriginsLc.includes(oLc)) return callback(null, true);
+
+      // Wildcard patterns
+      if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
 
       // Optional: allow any onrender.com preview/frontends if enabled
-      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/.test(origin)) {
+      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) {
         return callback(null, true);
       }
 
@@ -108,8 +144,22 @@ app.use(
   })
 );
 
+// Explicitly handle preflight for all routes
+app.options("*", cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    const oLc = origin.toLowerCase();
+    if (exactOriginsLc.includes(oLc)) return callback(null, true);
+    if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
+    if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS: " + origin));
+  },
+  credentials: true,
+}));
+
 // Log allowed origins on boot
-console.log("🌐 CORS allowed origins:", allowedOrigins);
+console.log("🌐 CORS allowed origins (exact):", exactOrigins);
+if (wildcardPatterns.length > 0) console.log("🌐 CORS wildcard patterns:", wildcardPatterns.map((r) => r.toString()));
 if (allowRenderPreviews) console.log("🌐 CORS: ALLOW_RENDER_PREVIEWS enabled for *.onrender.com");
 
 // Optional debug endpoint to inspect CORS evaluation (do NOT enable in production long-term)
@@ -186,8 +236,10 @@ const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/.test(origin)) return callback(null, true);
+      const oLc = origin.toLowerCase();
+      if (exactOriginsLc.includes(oLc)) return callback(null, true);
+      if (wildcardPatterns.some((rx) => rx.test(origin))) return callback(null, true);
+      if (allowRenderPreviews && /^https:\/\/.*\.onrender\.com$/i.test(origin)) return callback(null, true);
       return callback("Not allowed by CORS (socket): " + origin);
     },
     credentials: true,
