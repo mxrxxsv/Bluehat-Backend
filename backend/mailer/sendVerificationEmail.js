@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 const { VERIFY_EMAIL_TEMPLATE } = require("./mailerTemplate");
 
-const createTransporter = (port = 465, secure = true) => {
+const createTransporter = (port = 587, secure = false, extra = {}) => {
   const user = process.env.EMAIL;
   const pass = process.env.PASSWORD;
   if (!user || !pass) {
@@ -11,19 +11,24 @@ const createTransporter = (port = 465, secure = true) => {
     host: "smtp.gmail.com",
     port,
     secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
     auth: { user, pass },
+    ...extra,
   });
 };
 
 const getVerifiedTransporter = async () => {
-  // Try SMTPS 465 first, then STARTTLS 587
+  // Prefer STARTTLS 587 first (commonly allowed), then SMTPS 465
   const attempts = [
-    { port: 465, secure: true, label: "smtps:465" },
-    { port: 587, secure: false, label: "starttls:587" },
+    { port: 587, secure: false, label: "starttls:587", extra: { requireTLS: true, tls: { minVersion: "TLSv1.2" } } },
+    { port: 465, secure: true, label: "smtps:465", extra: {} },
   ];
   for (const opt of attempts) {
     try {
-      const t = createTransporter(opt.port, opt.secure);
+      console.log("🔌 Trying SMTP verify using", opt.label);
+      const t = createTransporter(opt.port, opt.secure, opt.extra);
       await t.verify();
       console.log("✅ SMTP verify passed (verification email) using", opt.label);
       return t;
@@ -31,8 +36,9 @@ const getVerifiedTransporter = async () => {
       console.error("❌ SMTP verify failed (verification email) using", opt.label, e.message);
     }
   }
-  // Fallback to default without verify
-  return createTransporter(465, true);
+  console.error("❌ All SMTP attempts failed. Hosting may block outbound SMTP. Consider an email API (SendGrid/Resend/Mailgun).");
+  // Fallback to default without verify (may still fail if blocked)
+  return createTransporter(587, false, { requireTLS: true });
 };
 
 const sendVerificationEmail = async (email, verifyUrl) => {

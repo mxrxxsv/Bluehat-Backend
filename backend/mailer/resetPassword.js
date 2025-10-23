@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 const { PASSWORD_RESET_REQUEST_TEMPLATE } = require("./mailerTemplate");
 
-const createTransporter = (port = 465, secure = true) => {
+const createTransporter = (port = 587, secure = false, extra = {}) => {
   const user = process.env.EMAIL;
   const pass = process.env.PASSWORD;
   if (!user || !pass) {
@@ -11,18 +11,23 @@ const createTransporter = (port = 465, secure = true) => {
     host: "smtp.gmail.com",
     port,
     secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
     auth: { user, pass },
+    ...extra,
   });
 };
 
 const getVerifiedTransporter = async () => {
   const attempts = [
-    { port: 465, secure: true, label: "smtps:465" },
-    { port: 587, secure: false, label: "starttls:587" },
+    { port: 587, secure: false, label: "starttls:587", extra: { requireTLS: true, tls: { minVersion: "TLSv1.2" } } },
+    { port: 465, secure: true, label: "smtps:465", extra: {} },
   ];
   for (const opt of attempts) {
     try {
-      const t = createTransporter(opt.port, opt.secure);
+      console.log("🔌 Trying SMTP verify using", opt.label);
+      const t = createTransporter(opt.port, opt.secure, opt.extra);
       await t.verify();
       console.log("✅ SMTP verify passed (reset password) using", opt.label);
       return t;
@@ -30,8 +35,10 @@ const getVerifiedTransporter = async () => {
       console.error("❌ SMTP verify failed (reset password) using", opt.label, e.message);
     }
   }
-  return createTransporter(465, true);
+  console.error("❌ All SMTP attempts failed. Hosting may block outbound SMTP. Consider an email API (SendGrid/Resend/Mailgun).");
+  return createTransporter(587, false, { requireTLS: true });
 };
+
 const forgotPassword = async (email, userName, resetUrl) => {
   try {
     const transporter = await getVerifiedTransporter();
