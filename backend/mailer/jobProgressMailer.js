@@ -54,8 +54,20 @@ const sendJobProgressEmail = async (emailData) => {
       jobDescription,
       proposedRate,
       message,
-      jobUrl: jobUrl || `${process.env.FRONTEND_URL}/find-work`,
-      dashboardUrl: dashboardUrl || `${process.env.FRONTEND_URL}/find-work`,
+      jobUrl:
+        jobUrl ||
+        `${
+          process.env.NODE_ENV === "production"
+            ? process.env.PRODUCTION_FRONTEND_URL
+            : process.env.DEVELOPMENT_FRONTEND_URL
+        }/find-work`,
+      dashboardUrl:
+        dashboardUrl ||
+        `${
+          process.env.NODE_ENV === "production"
+            ? process.env.PRODUCTION_FRONTEND_URL
+            : process.env.DEVELOPMENT_FRONTEND_URL
+        }/find-work`,
       rating,
       feedback,
     });

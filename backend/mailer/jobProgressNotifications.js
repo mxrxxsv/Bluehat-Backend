@@ -169,7 +169,9 @@ const sendJobProgressEmail = async (
     }
 
     const frontendUrl =
-      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
 
     // Replace placeholders in HTML
     let htmlContent = template.html

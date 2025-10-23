@@ -69,7 +69,10 @@ const sendWorkerInvitationEmail = async (workerEmail, jobDescription) => {
   });
 
   try {
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl =
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
 
     console.log("🔍 Email config:", {
       frontendUrl,
@@ -111,7 +114,9 @@ const sendApplicationStatusEmail = async (
 ) => {
   try {
     const frontendUrl =
-      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
 
     let template, subject;
     switch (emailType) {

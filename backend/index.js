@@ -32,7 +32,12 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-const allowedOrigins = [process.env.FRONTEND_URL];
+const allowedOrigins = [
+  process.env.NODE_ENV === "production"
+    ? process.env.PRODUCTION_FRONTEND_URL
+    : process.env.DEVELOPMENT_FRONTEND_URL,
+];
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 

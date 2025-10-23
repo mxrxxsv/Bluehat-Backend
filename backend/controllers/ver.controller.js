@@ -653,7 +653,9 @@ const signup = async (req, res) => {
 
     // ✅ Send verification email
     const frontendUrl =
-      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
     const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
 
     try {
@@ -1725,7 +1727,9 @@ const forgotPassword = async (req, res) => {
 
     // ✅ Build reset URL and send email
     const frontendUrl =
-      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     try {
@@ -2005,7 +2009,9 @@ const resendEmailVerification = async (req, res) => {
 
     // Send verification email
     const frontendUrl =
-      process.env.FRONTEND_URL || process.env.DEV_FRONTEND_URL;
+      process.env.NODE_ENV === "production"
+        ? process.env.PRODUCTION_FRONTEND_URL
+        : process.env.DEVELOPMENT_FRONTEND_URL;
     const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
 
     try {

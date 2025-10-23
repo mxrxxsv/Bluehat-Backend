@@ -2,8 +2,9 @@ import axios from "axios";
 
 // ✅ Axios instance configured for cookies
 const auth = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/admin", 
-  withCredentials: true, 
+  // baseURL: "https://fixit-capstone.onrender.com/admin",
+  baseURL: "http://localhost:5000/admin",
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,4 +28,3 @@ export const checkAuth = () => auth.get("/check-auth");
 export const getProfile = () => auth.get("/profile");
 
 export default auth;
- 
