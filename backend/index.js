@@ -53,7 +53,7 @@ const resolveAllowedOrigins = () => {
     process.env.CORS_ALLOWED_ORIGINS.split(",")
       .map((s) => s.trim())
       .filter(Boolean)
-      .forEach((o) => origins.add(o));
+      .forEach((o) => origins.add(normalize(o)));
   }
 
   // Backwards-compatible fallbacks
@@ -71,7 +71,18 @@ const resolveAllowedOrigins = () => {
   return Array.from(origins);
 };
 
-const allowedOrigins = resolveAllowedOrigins();
+let allowedOrigins = resolveAllowedOrigins();
+// Ensure primary Vercel production domain is allowed by default (user-specific)
+try {
+  const normalize = (v) => (v ? v.trim().toLowerCase().replace(/\/$/, "") : v);
+  const defaultVercel = normalize("https://fix-it-capstone.vercel.app");
+  if (
+    defaultVercel &&
+    !allowedOrigins.includes(defaultVercel)
+  ) {
+    allowedOrigins.push(defaultVercel);
+  }
+} catch (_) {}
 console.log("🌐 CORS allowed origins:", allowedOrigins);
 
 const app = express();
@@ -104,8 +115,10 @@ app.use(
   cors({
     origin: function (origin, callback) {
       // Allow non-browser tools (no origin) and exact matches
-      const allowExact =
-        !origin || allowedOrigins.includes(origin.toLowerCase().replace(/\/$/, ""));
+      const normalizedOrigin = origin
+        ? origin.toLowerCase().replace(/\/$/, "")
+        : null;
+      const allowExact = !origin || allowedOrigins.includes(normalizedOrigin);
 
       // Optional: allow all vercel.app subdomains for previews if enabled
       const allowVercelPreview =
@@ -118,6 +131,8 @@ app.use(
       }
 
       console.warn("🚫 CORS blocked origin:", origin);
+      console.warn("   Normalized:", normalizedOrigin);
+      console.warn("   Allowed list:", allowedOrigins);
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
