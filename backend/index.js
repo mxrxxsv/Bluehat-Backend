@@ -38,8 +38,14 @@ const contractRoute = require("./routes/workContract.route");
 const resolveAllowedOrigins = () => {
   const origins = new Set();
 
+  const normalize = (v) =>
+    v
+      .trim()
+      .toLowerCase()
+      .replace(/\/$/, ""); // remove trailing slash
+
   const addIf = (v) => {
-    if (v && typeof v === "string" && v.trim()) origins.add(v.trim());
+    if (v && typeof v === "string" && v.trim()) origins.add(normalize(v));
   };
 
   // Primary comma-separated list
@@ -98,7 +104,8 @@ app.use(
   cors({
     origin: function (origin, callback) {
       // Allow non-browser tools (no origin) and exact matches
-      const allowExact = !origin || allowedOrigins.includes(origin);
+      const allowExact =
+        !origin || allowedOrigins.includes(origin.toLowerCase().replace(/\/$/, ""));
 
       // Optional: allow all vercel.app subdomains for previews if enabled
       const allowVercelPreview =
