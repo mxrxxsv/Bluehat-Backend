@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const { VERIFY_EMAIL_TEMPLATE } = require("./mailerTemplate");
+const { sendEmailViaApi } = require("./mailerProvider");
 
 const createTransporter = (port = 587, secure = false, extra = {}) => {
   const user = process.env.EMAIL;
@@ -43,16 +44,24 @@ const getVerifiedTransporter = async () => {
 
 const sendVerificationEmail = async (email, verifyUrl) => {
   try {
+    const html = VERIFY_EMAIL_TEMPLATE.replace("{verifyURL}", verifyUrl);
+    // Try API first (avoids SMTP port blocks)
+    const api = await sendEmailViaApi({ to: email, subject: "Verify Your Email", html });
+    if (api.ok) {
+      console.log("✅ Email sent via API provider");
+      return true;
+    }
+
+    // Fallback to SMTP
     const transporter = await getVerifiedTransporter();
-    let mailOptions = {
+    const info = await transporter.sendMail({
       from: `"FixIt" <${process.env.EMAIL}>`,
       to: email,
       subject: "Verify Your Email",
-      html: VERIFY_EMAIL_TEMPLATE.replace("{verifyURL}", verifyUrl),
+      html,
       category: "Email Verification",
-    };
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent:", info.response);
+    });
+    console.log("✅ Email sent via SMTP:", info.response);
     return true;
   } catch (error) {
     console.error("❌ Error sending email:", error.message);

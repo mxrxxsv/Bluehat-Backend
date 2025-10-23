@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const { PASSWORD_RESET_REQUEST_TEMPLATE } = require("./mailerTemplate");
+const { sendEmailViaApi } = require("./mailerProvider");
 
 const createTransporter = (port = 587, secure = false, extra = {}) => {
   const user = process.env.EMAIL;
@@ -41,20 +42,24 @@ const getVerifiedTransporter = async () => {
 
 const forgotPassword = async (email, userName, resetUrl) => {
   try {
+    const html = PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetUrl).replace("{userName}", userName);
+    // Try API first
+    const api = await sendEmailViaApi({ to: email, subject: "Reset your password", html });
+    if (api.ok) {
+      console.log("✅ Reset email sent via API provider");
+      return true;
+    }
+
+    // Fallback to SMTP
     const transporter = await getVerifiedTransporter();
-    let mailOptions = {
+    const info = await transporter.sendMail({
       from: `"FixIt" <${process.env.EMAIL}>`,
       to: email,
       subject: "Reset your password",
-      html: PASSWORD_RESET_REQUEST_TEMPLATE.replace(
-        "{resetURL}",
-        resetUrl
-      ).replace("{userName}", userName),
+      html,
       category: "Email Verification",
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent:", info.response);
+    });
+    console.log("✅ Email sent via SMTP:", info.response);
     return true;
   } catch (error) {
     console.error("❌ Error sending email:", error.message);

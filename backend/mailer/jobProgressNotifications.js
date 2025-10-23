@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { sendEmailViaApi } = require("./mailerProvider");
 
 const createTransporter = (port = 587, secure = false, extra = {}) => {
   const user = process.env.EMAIL;
@@ -231,9 +232,17 @@ const sendJobProgressEmail = async (
       subject: mailOptions.subject,
     });
 
+    // Try API first
+    const api = await sendEmailViaApi({ to: recipientEmail, subject: template.subject, html: htmlContent });
+    if (api.ok) {
+      console.log("✅ Job progress email sent via API provider");
+      return true;
+    }
+
+    // Fallback to SMTP
     const transporter = await getVerifiedTransporter();
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Job progress email sent:", info.response);
+    console.log("✅ Job progress email sent via SMTP:", info.response);
     return true;
   } catch (error) {
     console.error("❌ Error sending job progress email:", error.message);

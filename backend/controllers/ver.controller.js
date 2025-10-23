@@ -1452,8 +1452,6 @@ const login = async (req, res) => {
       success: true,
       message: "Login successful",
       code: "LOGIN_SUCCESS",
-      // Expose token so clients can use Authorization header in environments where third-party cookies are blocked
-      token,
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),
