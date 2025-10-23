@@ -1,9 +1,10 @@
 import axios from "axios";
+import API_CONFIG from "../config/api.js";
 
-// Axios instance for skills
+// Axios instance for skills with environment-aware URL
 const skillApi = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/skills",
-  withCredentials: true, 
+  baseURL: API_CONFIG.getApiUrl("skills"),
+  ...API_CONFIG.axiosConfig,
 });
 
 // ===== Skill API FUNCTIONS =====

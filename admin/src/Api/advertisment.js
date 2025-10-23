@@ -1,9 +1,10 @@
 import axios from "axios";
+import API_CONFIG from "../config/api.js";
 
-// Axios instance for advertisements
+// Axios instance for advertisements with environment-aware URL
 const advertisementApi = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/advertisement",
-  withCredentials: true,
+  baseURL: API_CONFIG.getApiUrl("advertisement"),
+  ...API_CONFIG.axiosConfig,
 });
 
 // ===== Advertisement API FUNCTIONS =====

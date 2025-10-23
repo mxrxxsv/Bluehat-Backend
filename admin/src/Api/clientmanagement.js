@@ -1,10 +1,9 @@
 import axios from "axios";
-
-const BASE_URL = import.meta.env.VITE_API_URL || "https://fixit-capstone.onrender.com";
+import API_CONFIG from "../config/api.js";
 
 const API = axios.create({
-  baseURL: BASE_URL,
-  withCredentials: true,
+  baseURL: API_CONFIG.current.baseURL,
+  ...API_CONFIG.axiosConfig,
 });
 
 // Add request interceptor for auth token

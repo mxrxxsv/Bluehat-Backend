@@ -1,8 +1,8 @@
 import axios from "axios";
+import API_CONFIG from "../config/api.js";
 
-// ✅ Set your backend API base URL
-const API_BASE_URL = "http://localhost:5000/api/dashboard";
-// ⚠️ Change to your deployed backend URL if needed
+// ✅ Environment-aware API base URL
+const API_BASE_URL = API_CONFIG.getApiUrl("dashboard");
 
 // ===== GET DASHBOARD DATA =====
 export const fetchDashboardData = async (userType = "all") => {

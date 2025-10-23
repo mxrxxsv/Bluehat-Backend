@@ -17,7 +17,7 @@ const {
   getAllAdmins,
 } = require("../controllers/admin.controller");
 
-// ✅ Security headers for admin routes
+//  Security headers for admin routes
 router.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -33,7 +33,7 @@ router.use(
   })
 );
 
-// ✅ Custom request logging for admin routes
+// Custom request logging for admin routes
 const requestLogger = (req, res, next) => {
   const start = Date.now();
 

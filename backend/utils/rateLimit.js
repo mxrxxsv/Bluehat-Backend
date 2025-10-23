@@ -6,7 +6,7 @@ const logger = require("./logger");
 // ✅ General purpose auth limiter (login/signup/profile updates)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 100 requests per window
+  max: 500, // 500 requests per window
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase()?.trim();
     return email || req.ip;
@@ -53,7 +53,7 @@ const authLimiter = rateLimit({
   },
 });
 
-// ✅ Stricter limiter for verification endpoints (verify/resend-code)
+// Stricter limiter for verification endpoints (verify/resend-code)
 const verifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // 10 verification attempts per window
@@ -101,7 +101,7 @@ const verifyLimiter = rateLimit({
   },
 });
 
-// ✅ NEW: Password reset limiter (forgot-password/reset-password)
+// Password reset limiter (forgot-password/reset-password)
 const resetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour window
   max: 5, // 5 password reset attempts per hour
@@ -150,7 +150,7 @@ const resetLimiter = rateLimit({
   },
 });
 
-// ✅ NEW: Admin operations limiter (higher limits for admin actions)
+//Admin operations limiter (higher limits for admin actions)
 const adminLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 200, // 200 admin requests per window
@@ -200,7 +200,7 @@ const adminLimiter = rateLimit({
   },
 });
 
-// ✅ NEW: File upload limiter (for advertisement images)
+//File upload limiter (for advertisement images)
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 file uploads per window
@@ -246,7 +246,6 @@ const uploadLimiter = rateLimit({
   },
 });
 
-// ✅ NEW: Profile operations limiter (profile updates, image uploads)
 const profileLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // 50 profile operations per window
@@ -295,7 +294,6 @@ const profileLimiter = rateLimit({
   },
 });
 
-// ✅ NEW: Global API limiter (fallback protection)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // 1000 requests per window per IP
@@ -333,9 +331,9 @@ const globalLimiter = rateLimit({
 module.exports = {
   authLimiter,
   verifyLimiter,
-  resetLimiter, // ✅ NEW: For password reset operations
-  adminLimiter, // ✅ NEW: For admin operations
-  uploadLimiter, // ✅ NEW: For file uploads
-  profileLimiter, // ✅ NEW: For profile operations
-  globalLimiter, // ✅ NEW: Global fallback protection
+  resetLimiter,
+  adminLimiter,
+  uploadLimiter,
+  profileLimiter,
+  globalLimiter,
 };

@@ -216,7 +216,7 @@ router.use("*", (req, res) => {
       "GET /auth/verify-email?token=xxx - Verify email address",
       "POST /auth/verify - Complete account setup with TOTP",
       "POST /auth/resend-code - Resend QR code for TOTP",
-      "POST /auth/resend-email-verification - Resend email verification link", // ✅ ADD this line
+      "POST /auth/resend-email-verification - Resend email verification link",
       "POST /auth/login - User login with credentials + TOTP",
       "POST /auth/forgot-password - Request password reset",
       "POST /auth/reset-password - Reset password with token",

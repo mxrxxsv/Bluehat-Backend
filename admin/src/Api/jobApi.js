@@ -1,8 +1,9 @@
 import axios from "axios";
+import API_CONFIG from "../config/api.js";
 
 const api = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/jobs", 
-  withCredentials: true, 
+  baseURL: API_CONFIG.getApiUrl("jobs"),
+  ...API_CONFIG.axiosConfig,
 });
 
 // ✅ Fetch all pending jobs

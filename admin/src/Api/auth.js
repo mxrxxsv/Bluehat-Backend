@@ -1,13 +1,10 @@
 import axios from "axios";
+import API_CONFIG from "../config/api.js";
 
-// ✅ Axios instance configured for cookies
+// ✅ Axios instance with environment-aware URL
 const auth = axios.create({
-  // baseURL: "https://fixit-capstone.onrender.com/admin",
-  baseURL: "http://localhost:5000/admin",
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: API_CONFIG.getApiUrl("admin"),
+  ...API_CONFIG.axiosConfig,
 });
 
 // ===== API FUNCTIONS =====
