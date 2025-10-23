@@ -1433,8 +1433,8 @@ const login = async (req, res) => {
     matchingUser.lockUntil = undefined;
     matchingUser.lastLogin = new Date();
 
-    await matchingUser.save();
-    generateTokenandSetCookie(res, matchingUser);
+  await matchingUser.save();
+  const token = generateTokenandSetCookie(res, matchingUser);
 
     const processingTime = Date.now() - startTime;
 
@@ -1452,6 +1452,8 @@ const login = async (req, res) => {
       success: true,
       message: "Login successful",
       code: "LOGIN_SUCCESS",
+      // Expose token so clients can use Authorization header in environments where third-party cookies are blocked
+      token,
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),

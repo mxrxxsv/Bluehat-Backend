@@ -1,7 +1,13 @@
 const jwt = require("jsonwebtoken");
 
+// Accept auth token from either cookie (preferred) or Authorization: Bearer header
 const verifyToken = (req, res, next) => {
-  const token = req.cookies.token;
+  const authHeader = req.get("Authorization") || "";
+  let token = req.cookies?.token;
+
+  if (!token && authHeader.startsWith("Bearer ")) {
+    token = authHeader.slice(7).trim();
+  }
 
   if (!token) {
     return res.status(401).json({ success: false, message: "No token found" });
