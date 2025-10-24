@@ -1,7 +1,7 @@
 import axios from "axios";
-
+import { baseURL } from "../utils/appMode.js";
 const API = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/id-verification",
+  baseURL: baseURL + "/id-verification",
   withCredentials: true,
 });
 
@@ -10,7 +10,7 @@ const API = axios.create({
 // ======================
 export const uploadIDPicture = async (userId, file) => {
   const formData = new FormData();
-  formData.append("image", file);      
+  formData.append("image", file);
   formData.append("userId", userId);
 
   const { data } = await API.post("/upload-id-picture", formData, {
@@ -25,7 +25,7 @@ export const uploadIDPicture = async (userId, file) => {
 // ======================
 export const uploadSelfie = async (userId, file) => {
   const formData = new FormData();
-  formData.append("image", file);      
+  formData.append("image", file);
   formData.append("userId", userId);
 
   const { data } = await API.post("/upload-selfie", formData, {

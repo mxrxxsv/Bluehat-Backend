@@ -1,8 +1,8 @@
 import axios from "axios";
-
+import { baseURL } from "../utils/appMode.js";
 const API = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/profile", 
-  withCredentials: true, 
+  baseURL: baseURL + "/profile",
+  withCredentials: true,
 });
 
 // ========================
@@ -61,5 +61,4 @@ export const deleteExperience = (id) => API.delete(`/experience/${id}`);
 // SKILL CATEGORIES
 // ========================
 export const addSkillCategory = (data) => API.post("/skill-category", data);
-export const removeSkillCategory = (id) =>
-  API.delete(`/skill-category/${id}`);
+export const removeSkillCategory = (id) => API.delete(`/skill-category/${id}`);

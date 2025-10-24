@@ -1,7 +1,7 @@
 import axios from "axios";
-
+import { baseURL } from "../utils/appMode.js";
 const advertisementApi = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/advertisement",
+  baseURL: baseURL + "/advertisement",
   withCredentials: true,
 });
 

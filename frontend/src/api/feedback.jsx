@@ -1,7 +1,7 @@
 import axios from "axios";
-
+import { baseURL } from "../utils/appMode.js";
 const ContractAPI = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/contracts",
+  baseURL: baseURL + "/contracts",
   withCredentials: true,
 });
 

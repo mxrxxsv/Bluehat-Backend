@@ -1,7 +1,7 @@
 import axios from "axios";
-
+import { baseURL } from "../utils/appMode.js";
 const API = axios.create({
-  baseURL: "https://fixit-capstone.onrender.com/invitations",
+  baseURL: baseURL + "/invitations",
   withCredentials: true,
 });
 
