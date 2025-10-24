@@ -92,10 +92,12 @@ const ChatPage = () => {
     // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
 
      useEffect(() => {
+        // Keep sidebar closed on mobile by default; open on desktop when no banners/toasts
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
         if (contractBanner || showAgreeToast || agreeToastMessage || showAgreementBanner) {
             setIsSidebarOpen(false);
         } else {
-            setIsSidebarOpen(true);
+            setIsSidebarOpen(!isMobile);
         }
     }, [contractBanner, showAgreeToast, agreeToastMessage, showAgreementBanner]);
 
