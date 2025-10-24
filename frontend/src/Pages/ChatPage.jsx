@@ -135,16 +135,7 @@ const ChatPage = () => {
 
     // ---------- socket.io ----------
     useEffect(() => {
-        const SOCKET_URL = "https://fixit-capstone.onrender.com";
-        const socketOptions = {
-            path: "/socket.io",
-            transports: ["websocket"],
-            withCredentials: true,
-            reconnection: true,
-            reconnectionAttempts: 5,
-            timeout: 20000,
-        };
-        socket.current = io(SOCKET_URL, socketOptions);
+        socket.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
 
         socket.current.on("receiveMessage", (msg) => {
             if (!msg) return;

@@ -5,14 +5,6 @@ const API = axios.create({
   withCredentials: true, // send cookies for authentication
 });
 
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 // ================= CONVERSATION =================
 export const getConversations = () => API.get("/conversations");
 export const createOrGetConversation = (data) => API.post("/conversations", data);

@@ -65,16 +65,7 @@ const ApplicationsPage = () => {
 
         // Connect socket and register to user room
         if (!socketRef.current) {
-          const SOCKET_URL = "https://fixit-capstone.onrender.com";
-          const socketOptions = {
-            path: "/socket.io",
-            transports: ["websocket"],
-            withCredentials: true,
-            reconnection: true,
-            reconnectionAttempts: 5,
-            timeout: 20000,
-          };
-          socketRef.current = io(SOCKET_URL, socketOptions);
+          socketRef.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
           const credId = user?.credentialId || user?._id || user?.id;
           if (credId) socketRef.current.emit("registerUser", String(credId));
 

@@ -10,17 +10,6 @@ const InvitationAPI = axios.create({
   withCredentials: true,
 });
 
-// Attach Authorization header from localStorage token for both clients
-[API, InvitationAPI].forEach((client) => {
-  client.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
-});
-
 export const getMyApplications = async () => {
   try {
     const response = await API.get("/worker/sent");

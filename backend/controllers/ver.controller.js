@@ -1434,7 +1434,7 @@ const login = async (req, res) => {
     matchingUser.lastLogin = new Date();
 
   await matchingUser.save();
-  const token = generateTokenandSetCookie(res, matchingUser);
+  generateTokenandSetCookie(res, matchingUser);
 
     const processingTime = Date.now() - startTime;
 
@@ -1452,7 +1452,6 @@ const login = async (req, res) => {
       success: true,
       message: "Login successful",
       code: "LOGIN_SUCCESS",
-      token,
       meta: {
         processingTime: `${processingTime}ms`,
         timestamp: new Date().toISOString(),

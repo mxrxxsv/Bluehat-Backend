@@ -32,64 +32,14 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
-// Build allowed origins list from env
-// Supports a comma-separated CORS_ALLOWED_ORIGINS for multiple domains (e.g., vercel preview + prod)
-// Fallback to single PRODUCTION_FRONTEND_URL or DEVELOPMENT_FRONTEND_URL
-const resolveAllowedOrigins = () => {
-  const origins = new Set();
-
-  const normalize = (v) =>
-    v
-      .trim()
-      .toLowerCase()
-      .replace(/\/$/, ""); // remove trailing slash
-
-  const addIf = (v) => {
-    if (v && typeof v === "string" && v.trim()) origins.add(normalize(v));
-  };
-
-  // Primary comma-separated list
-  if (process.env.CORS_ALLOWED_ORIGINS) {
-    process.env.CORS_ALLOWED_ORIGINS.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .forEach((o) => origins.add(normalize(o)));
-  }
-
-  // Backwards-compatible fallbacks
-  if (process.env.NODE_ENV === "production") {
-    addIf(process.env.PRODUCTION_FRONTEND_URL);
-    addIf(process.env.PRODUCTION_ADMIN_URL);
-  } else {
-    addIf(process.env.DEVELOPMENT_FRONTEND_URL);
-    addIf(process.env.DEVELOPMENT_ADMIN_URL);
-  }
-
-  // Always allow localhost for local testing if defined
-  addIf(process.env.LOCALHOST_FRONTEND_URL);
-
-  return Array.from(origins);
-};
-
-let allowedOrigins = resolveAllowedOrigins();
-// Ensure primary Vercel production domain is allowed by default (user-specific)
-try {
-  const normalize = (v) => (v ? v.trim().toLowerCase().replace(/\/$/, "") : v);
-  const defaultVercel = normalize("https://fixit-capstone-gg32.onrender.com");
-  if (
-    defaultVercel &&
-    !allowedOrigins.includes(defaultVercel)
-  ) {
-    allowedOrigins.push(defaultVercel);
-  }
-} catch (_) {}
-console.log("🌐 CORS allowed origins:", allowedOrigins);
+const allowedOrigins = [
+  process.env.NODE_ENV === "production"
+    ? process.env.PRODUCTION_FRONTEND_URL
+    : process.env.DEVELOPMENT_FRONTEND_URL,
+];
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Behind a proxy (Render/Heroku) - needed for secure cookies and IPs
-app.set("trust proxy", 1);
 
 // 1) Security headers
 app.use(
@@ -114,26 +64,11 @@ app.use(
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow non-browser tools (no origin) and exact matches
-      const normalizedOrigin = origin
-        ? origin.toLowerCase().replace(/\/$/, "")
-        : null;
-      const allowExact = !origin || allowedOrigins.includes(normalizedOrigin);
-
-      // Optional: allow all vercel.app subdomains for previews if enabled
-      const allowVercelPreview =
-        process.env.ALLOW_VERCEL_PREVIEWS === "true" &&
-        typeof origin === "string" &&
-        /\.vercel\.app$/.test(origin);
-
-      if (allowExact || allowVercelPreview) {
-        return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
       }
-
-      console.warn("🚫 CORS blocked origin:", origin);
-      console.warn("   Normalized:", normalizedOrigin);
-      console.warn("   Allowed list:", allowedOrigins);
-      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
