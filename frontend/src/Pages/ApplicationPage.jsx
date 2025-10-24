@@ -709,7 +709,7 @@ const ApplicationsPage = () => {
 
                       {/* Job Title (for worker) */}
                       {userType === "worker" && (
-                        <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                        <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1 text-left line-clamp-1 md:text-base">
                           <Briefcase className="w-4 h-4" />
                           {app.jobId?.description?.substring(0, 50) || "Job"}
                         </p>
@@ -809,7 +809,7 @@ const ApplicationsPage = () => {
                       </p>
 
                       {/* Job Title */}
-                      <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1 text-left line-clamp-1 md:text-base">
                         <Briefcase className="w-4 h-4" />
                         {invitation.jobId?.description?.substring(0, 50) ||
                           "Job"}
