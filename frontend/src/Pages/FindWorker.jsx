@@ -362,7 +362,7 @@ const FindWorker = () => {
 
                       <p
                         className={`
-                                    absolute bottom-1 md:bottom-3 right-2
+                                    absolute bottom-1 md:bottom-4 right-2
                                     inline-flex items-center gap-2
                                     text-xs md:text-[12px] font-semibold
                                     px-2 py-1.5 rounded-full 
