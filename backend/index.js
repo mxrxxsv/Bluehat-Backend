@@ -75,7 +75,7 @@ let allowedOrigins = resolveAllowedOrigins();
 // Ensure primary Vercel production domain is allowed by default (user-specific)
 try {
   const normalize = (v) => (v ? v.trim().toLowerCase().replace(/\/$/, "") : v);
-  const defaultVercel = normalize("https://fix-it-capstone.vercel.app");
+  const defaultVercel = normalize("https://fixit-capstone-gg32.onrender.com");
   if (
     defaultVercel &&
     !allowedOrigins.includes(defaultVercel)
