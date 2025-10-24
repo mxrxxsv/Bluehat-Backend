@@ -335,7 +335,7 @@ const FindWorker = () => {
                         </div>
                       </div>
 
-                      <div className="absolute top-1 right-4 md:top-4 px-3 py-1">
+                      <div className="absolute top-1.5 right-4 md:top-4 px-3 py-1">
                         <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -362,7 +362,7 @@ const FindWorker = () => {
 
                       <p
                         className={`
-                                    absolute bottom-2 md:bottom-4 right-2
+                                    absolute bottom-1 md:bottom-3 right-2
                                     inline-flex items-center gap-2
                                     text-xs md:text-[12px] font-semibold
                                     px-2 py-1.5 rounded-full 
