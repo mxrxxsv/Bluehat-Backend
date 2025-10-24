@@ -6,11 +6,8 @@ const api = axios.create({
   ...API_CONFIG.axiosConfig,
 });
 
-// ✅ Fetch all pending jobs
-export const getPendingJobs = () => api.get("/admin/pending");
+// ✅ Fetch all jobs
+export const getAllJobs = (params = {}) => api.get("/", { params });
 
-// ✅ Approve (verify) a job
-export const approveJob = (id) => api.patch(`/${id}/verify`);
-
-// ✅ Reject a job
-export const rejectJob = (id) => api.patch(`/${id}/reject`);
+// ✅ Delete a job (soft delete)
+export const deleteJob = (id) => api.delete(`/${id}`);

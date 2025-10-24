@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { getAllSkills, addSkill, updateSkill, deleteSkill } from "../Api/skillApi";
-import { getPendingJobs, approveJob, rejectJob } from "../Api/jobApi";
+import {
+  getAllSkills,
+  addSkill,
+  updateSkill,
+  deleteSkill,
+} from "../Api/skillApi";
 
 const Content = () => {
   const [categories, setCategories] = useState([]);
@@ -29,7 +33,7 @@ const Content = () => {
     } finally {
       setLoading(false);
     }
-  }
+  };
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -53,7 +57,9 @@ const Content = () => {
   const handleUpdate = async () => {
     if (!selectedCategory || !editCategoryName.trim()) return;
     try {
-      const res = await updateSkill(selectedCategory._id, { categoryName: editCategoryName });
+      const res = await updateSkill(selectedCategory._id, {
+        categoryName: editCategoryName,
+      });
       if (res.data.success) {
         fetchCategories();
         setSelectedCategory(null);
@@ -71,7 +77,9 @@ const Content = () => {
     try {
       const res = await deleteSkill(categoryToDelete._id);
       if (res.data.success) {
-        setCategories((prev) => prev.filter((cat) => cat._id !== categoryToDelete._id));
+        setCategories((prev) =>
+          prev.filter((cat) => cat._id !== categoryToDelete._id)
+        );
         setCategoryToDelete(null);
         setShowDeleteModal(false);
       }
@@ -115,7 +123,9 @@ const Content = () => {
                   key={cat._id}
                   className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition duration-200"
                 >
-                  <span className="text-gray-700 font-medium">{cat.categoryName}</span>
+                  <span className="text-gray-700 font-medium">
+                    {cat.categoryName}
+                  </span>
                   <div className="flex gap-3">
                     <button
                       className="text-[#55b3f3] font-semibold hover:underline cursor-pointer"
@@ -227,7 +237,10 @@ const Modal = ({ title, children, onClose }) => (
     <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-lg">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{title}</h2>
-        <button onClick={onClose} className="text-gray-500 font-bold text-xl cursor-pointer">
+        <button
+          onClick={onClose}
+          className="text-gray-500 font-bold text-xl cursor-pointer"
+        >
           &times;
         </button>
       </div>

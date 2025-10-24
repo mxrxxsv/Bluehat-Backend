@@ -5,7 +5,7 @@ import Dashboard from "./Pages/Dashboard";
 import Content from "./Pages/Content";
 import Advertisement from "./Pages/Advertisment";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import JobPending from "./Pages/JobPending";
+import Job from "./Pages/Job";
 import ClientManagement from "./Pages/ClientManagement";
 import WorkerManagement from "./Pages/WorkerManagement";
 import Verification from "./Pages/Verification";
@@ -54,7 +54,7 @@ function App() {
             path="/job-pending"
             element={
               <ProtectedRoute>
-                <JobPending />
+                <Job />
               </ProtectedRoute>
             }
           />
