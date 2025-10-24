@@ -13,7 +13,8 @@ const setAdminTokenCookie = (res, token) => {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Strict for dev, none for prod cross-origin
+    path: "/",
   });
 };
 

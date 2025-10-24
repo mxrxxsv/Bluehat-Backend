@@ -1,43 +1,12 @@
 const nodemailer = require("nodemailer");
-const { sendEmailViaApi } = require("./mailerProvider");
 
-const createTransporter = (port = 587, secure = false, extra = {}) => {
-  const user = process.env.EMAIL;
-  const pass = process.env.PASSWORD;
-  if (!user || !pass) {
-    console.error("❌ EMAIL/PASSWORD env vars missing for mailer. EMAIL set:", !!user, " PASSWORD set:", !!pass);
-  }
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port,
-    secure,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    auth: { user, pass },
-    ...extra,
-  });
-};
-
-const getVerifiedTransporter = async () => {
-  const attempts = [
-    { port: 587, secure: false, label: "starttls:587", extra: { requireTLS: true, tls: { minVersion: "TLSv1.2" } } },
-    { port: 465, secure: true, label: "smtps:465", extra: {} },
-  ];
-  for (const opt of attempts) {
-    try {
-      console.log("🔌 Trying SMTP verify using", opt.label);
-      const t = createTransporter(opt.port, opt.secure, opt.extra);
-      await t.verify();
-      console.log("✅ SMTP verify passed (job progress) using", opt.label);
-      return t;
-    } catch (e) {
-      console.error("❌ SMTP verify failed (job progress) using", opt.label, e.message);
-    }
-  }
-  console.error("❌ All SMTP attempts failed. Hosting may block outbound SMTP. Consider an email API (SendGrid/Resend/Mailgun).");
-  return createTransporter(587, false, { requireTLS: true });
-};
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.PASSWORD,
+  },
+});
 
 // Email templates for job progress notifications
 const EMAIL_TEMPLATES = {
@@ -232,17 +201,8 @@ const sendJobProgressEmail = async (
       subject: mailOptions.subject,
     });
 
-    // Try API first
-    const api = await sendEmailViaApi({ to: recipientEmail, subject: template.subject, html: htmlContent });
-    if (api.ok) {
-      console.log("✅ Job progress email sent via API provider");
-      return true;
-    }
-
-    // Fallback to SMTP
-    const transporter = await getVerifiedTransporter();
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Job progress email sent via SMTP:", info.response);
+    console.log("✅ Job progress email sent:", info.response);
     return true;
   } catch (error) {
     console.error("❌ Error sending job progress email:", error.message);
