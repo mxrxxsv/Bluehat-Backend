@@ -236,12 +236,6 @@ const FindWork = () => {
   }, []);
 
 
-  // Fetch logged-in user
-  useEffect(() => {
-    checkAuth()
-      .then((res) => setUser(res.data?.data))
-      .catch(() => setUser(null));
-  }, []);
 
   // Filter jobs
   const filteredJobs = Array.isArray(jobPosts)
