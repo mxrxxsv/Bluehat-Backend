@@ -173,7 +173,7 @@ const Header = () => {
                     <Link
                       to="/signup"
                       className="hidden md:block text-[#252525] mr-4 focus:ring-1 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center border-2 border-sky-400 rounded-[20px] shadow-sm hover:bg-sky-400 hover:text-white cursor-pointer hover:shadow-md hidden md:flex"
-                      
+
                     >
                       Sign up
                     </Link>
@@ -439,32 +439,38 @@ const Header = () => {
                     Advertisement
                   </Link>
                 </li>
-                <li className="md:hidden">
-                  <Link
-                    onClick={() => setIsOpen(false)}
-                    to="/applications"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
-                      ? "text-sky-500"
-                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                      }`}
-                  >
-                    {user?.userType === "worker"
-                      ? "My Applications"
-                      : "Applications Received"}
-                  </Link>
-                </li>
-                <li className="md:hidden">
-                  <Link
-                    onClick={() => setIsOpen(false)}
-                    to="/contracts"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
-                      ? "text-sky-500"
-                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                      }`}
-                  >
-                    My Contracts
-                  </Link>
-                </li>
+                
+                {user && (
+                  <>
+                    <li className="md:hidden">
+                      <Link
+                        onClick={() => setIsOpen(false)}
+                        to="/applications"
+                        className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
+                            ? "text-sky-500"
+                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                          }`}
+                      >
+                        {user?.userType === "worker"
+                          ? "My Applications"
+                          : "Applications Received"}
+                      </Link>
+                    </li>
+                    <li className="md:hidden">
+                      <Link
+                        onClick={() => setIsOpen(false)}
+                        to="/contracts"
+                        className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
+                            ? "text-sky-500"
+                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                          }`}
+                      >
+                        My Contracts
+                      </Link>
+                    </li>
+                  </>
+                )}
+
               </ul>
             </nav>
           </>

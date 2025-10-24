@@ -316,7 +316,7 @@ const FindWorker = () => {
                             <MapPin className="w-4 h-4 text-gray-500" />
                             {worker.location}
                           </p>
-                          <div className="flex flex-wrap gap-2 mt-3">
+                          {/* <div className="flex flex-wrap gap-2 mt-3">
                             {worker.skills.slice(0, 3).map((skill, index) => (
                               <span
                                 key={skill.skillCategoryId || index}
@@ -331,7 +331,7 @@ const FindWorker = () => {
                                 +{worker.skills.length - 3} more
                               </span>
                             )}
-                          </div>
+                          </div> */}
                         </div>
                       </div>
 

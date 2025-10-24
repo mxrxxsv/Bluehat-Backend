@@ -327,7 +327,7 @@ const ContractManagement = () => {
       awaiting_client_confirmation: {
         color: "bg-orange-100 text-orange-800 border-orange-200",
         icon: AlertCircle,
-        text: "Awaiting Client Confirmation",
+        text: "Confirmation",
       },
       completed: {
         color: "bg-green-100 text-green-800 border-green-200",
