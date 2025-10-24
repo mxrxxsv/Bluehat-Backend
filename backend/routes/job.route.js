@@ -4,6 +4,7 @@ const helmet = require("helmet");
 
 // Middleware imports
 const verifyToken = require("../middleware/verifyToken");
+const verifyAdmin = require("../middleware/verifyAdmin");
 const { authLimiter } = require("../utils/rateLimit");
 const logger = require("../utils/logger");
 
@@ -76,6 +77,64 @@ const requestLogger = (req, res, next) => {
 };
 
 router.use(requestLogger);
+
+// Middleware to verify either user or admin token
+const verifyUserOrAdmin = async (req, res, next) => {
+  // Try admin token first
+  const adminToken = req.cookies.adminToken;
+  if (adminToken) {
+    try {
+      const jwt = require("jsonwebtoken");
+      const Admin = require("../models/Admin");
+
+      const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+      const admin = await Admin.findById(decoded.id).select(
+        "-username -password -code"
+      );
+
+      if (admin) {
+        req.admin = admin;
+        req.admin.role = "admin";
+        return next();
+      }
+    } catch (error) {
+      // Continue to try user token
+    }
+  }
+
+  // Try user token
+  const userToken = req.cookies.token;
+  if (userToken) {
+    try {
+      const jwt = require("jsonwebtoken");
+      const Credential = require("../models/Credential");
+
+      const decoded = jwt.verify(userToken, process.env.JWT_SECRET);
+      const credential = await Credential.findById(decoded.id).select(
+        "-password"
+      );
+
+      if (credential) {
+        req.user = {
+          id: credential._id,
+          email: credential.email,
+          userType: credential.userType,
+          isVerified: credential.isVerified,
+        };
+        return next();
+      }
+    } catch (error) {
+      // Both tokens failed
+    }
+  }
+
+  // No valid token found
+  return res.status(401).json({
+    success: false,
+    message: "Authentication required",
+    code: "AUTH_REQUIRED",
+  });
+};
 
 // ==================== PUBLIC ROUTES ====================
 
@@ -164,11 +223,11 @@ router.put("/:id", authLimiter, verifyToken, updateJob);
 
 /**
  * @route   DELETE /jobs/:id
- * @desc    Soft delete job posting (owner only)
- * @access  Private (Client - Owner)
+ * @desc    Soft delete job posting (owner or admin)
+ * @access  Private (Client - Owner or Admin)
  * @params  id - ObjectId of the job
  */
-router.delete("/:id", authLimiter, verifyToken, deleteJob);
+router.delete("/:id", authLimiter, verifyUserOrAdmin, deleteJob);
 
 // ==================== ERROR HANDLING ====================
 
