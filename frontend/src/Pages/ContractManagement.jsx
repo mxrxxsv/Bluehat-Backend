@@ -84,9 +84,11 @@ const ContractManagement = () => {
       setCurrentUser(user);
 
       if (!socketRef.current) {
+
         socketRef.current = io("https://fixit-capstone.onrender.com", {
           withCredentials: true,
         });
+        
         const credId = user?.credentialId || user?._id || user?.id;
         if (credId) socketRef.current.emit("registerUser", String(credId));
 
@@ -320,7 +322,7 @@ const ContractManagement = () => {
       awaiting_client_confirmation: {
         color: "bg-orange-100 text-orange-800 border-orange-200",
         icon: AlertCircle,
-        text: "Awaiting Client Confirmation",
+        text: "Confirmation",
       },
       completed: {
         color: "bg-green-100 text-green-800 border-green-200",

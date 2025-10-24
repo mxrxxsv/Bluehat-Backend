@@ -9,7 +9,7 @@ const createTransporter = () => {
     passwordSet: !!process.env.PASSWORD,
   });
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: process.env.EMAIL,

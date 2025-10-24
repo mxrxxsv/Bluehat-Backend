@@ -10,10 +10,10 @@ const generateTokenandSetCookie = (res, credential) => {
   );
 
   res.cookie("token", token, {
-    httpOnly: true, //XSS attack
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none", //csrf
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true, // XSS attack prevention
+    secure: process.env.NODE_ENV === "production", // HTTPS only in production
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Strict for dev, none for prod cross-origin
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
   });
 

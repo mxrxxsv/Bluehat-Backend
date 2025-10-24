@@ -10,9 +10,9 @@ const generateVerifyToken = (res, email, userType) => {
   );
 
   res.cookie("code", code, {
-    httpOnly: true, //XSS attack
+    httpOnly: true, // XSS attack prevention
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", //csrf
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Strict for dev, none for prod cross-origin
     maxAge: 1 * 24 * 60 * 60 * 1000,
     path: "/",
   });

@@ -316,7 +316,7 @@ const FindWorker = () => {
                             <MapPin className="w-4 h-4 text-gray-500" />
                             {worker.location}
                           </p>
-                          <div className="flex flex-wrap gap-2 mt-3">
+                          {/* <div className="flex flex-wrap gap-2 mt-3">
                             {worker.skills.slice(0, 3).map((skill, index) => (
                               <span
                                 key={skill.skillCategoryId || index}
@@ -331,11 +331,11 @@ const FindWorker = () => {
                                 +{worker.skills.length - 3} more
                               </span>
                             )}
-                          </div>
+                          </div> */}
                         </div>
                       </div>
 
-                      <div className="absolute top-4 right-4 px-3 py-1">
+                      <div className="absolute top-2 right-4 md:top-4 px-3 py-1">
                         <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -362,7 +362,7 @@ const FindWorker = () => {
 
                       <p
                         className={`
-                                    absolute bottom-2 md:bottom-4 right-2
+                                    absolute bottom-1 md:bottom-4 right-2
                                     inline-flex items-center gap-2
                                     text-xs md:text-[12px] font-semibold
                                     px-2 py-1.5 rounded-full 
