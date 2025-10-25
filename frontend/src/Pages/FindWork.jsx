@@ -582,7 +582,13 @@ const FindWork = () => {
               <div
                 key={job.id || job._id}
                 className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
-                onClick={() => navigate(`/invite-workers/${job.id || job._id}`)}
+                onClick={() => {
+    if (userData?.userType === "client") {
+      navigate(`/invite-workers/${job.id || job._id}`);
+    } else if (userData?.userType === "worker") {
+      navigate(`/job/${job.id || job._id}`);
+    }
+  }}
               >
                 <div className="rounded-xl p-4 bg-white transition-all">
                   <div className="flex justify-between items-center mb-2">
