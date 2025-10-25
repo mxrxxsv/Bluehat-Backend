@@ -24,6 +24,7 @@ import ApplicationsPage from "./Pages/ApplicationPage";
 import InviteWorkersPage from "./Pages/InviteWorkersPage";
 import FeedbackPage from "./Pages/FeedbackPage";
 import ContractManagement from "./Pages/ContractManagement";
+import ClientProfile from "./Pages/ClientProfile";
 function App() {
   return (
     <>
@@ -48,6 +49,7 @@ function App() {
         <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} />
         <Route path="/feedback/:contractId" element={<FeedbackPage />} />
         <Route path="/contracts" element={<ContractManagement />} />
+  <Route path="/client/:id" element={<ClientProfile />} />
 
         <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />

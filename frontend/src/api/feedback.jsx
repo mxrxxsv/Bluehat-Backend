@@ -89,6 +89,45 @@ export const cancelContract = async (contractId) => {
   }
 };
 
+// Get reviews for a specific client (with statistics)
+export const getClientReviewsById = async (clientId, options = {}) => {
+  try {
+    const { page = 1, limit = 10, rating } = options;
+    const params = { page, limit };
+    if (rating) params.rating = rating;
+
+    const response = await ContractAPI.get(`/reviews/client/${clientId}`, {
+      params,
+    });
+    // Returns: { success, data: { reviews, pagination, statistics, client }, ... }
+    return response.data;
+  } catch (error) {
+    console.error("Get client reviews failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to load client reviews"
+    );
+  }
+};
+
+// Get reviews for a specific worker (with statistics)
+export const getWorkerReviewsById = async (workerId, options = {}) => {
+  try {
+    const { page = 1, limit = 10, rating } = options;
+    const params = { page, limit };
+    if (rating) params.rating = rating;
+
+    const response = await ContractAPI.get(`/reviews/worker/${workerId}`, {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Get worker reviews failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to load worker reviews"
+    );
+  }
+};
+
 // Get client contracts (with feedback)
 export const getClientContracts = async () => {
   try {
@@ -123,6 +162,8 @@ export default {
   completeWork,
   confirmWorkCompletion,
   cancelContract,
+  getClientReviewsById,
+  getWorkerReviewsById,
   getClientContracts,
   getWorkerContracts,
 };
