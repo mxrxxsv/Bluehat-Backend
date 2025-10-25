@@ -764,6 +764,7 @@ const getWorkerById = async (req, res) => {
       skillsByCategory: worker.skillsByCategory,
       portfolio: worker.portfolio || [],
       experience: worker.experience || [],
+      education: worker.education || [],
       certificates: worker.certificates || [],
       reviews: worker.reviews || [],
       status: worker.status,

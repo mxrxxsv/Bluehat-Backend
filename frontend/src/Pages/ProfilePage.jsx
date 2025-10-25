@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
 import { checkAuth } from "../api/auth";
-import { uploadProfilePicture, removeProfilePicture, deletePortfolio, deleteCertificate, deleteExperience, removeSkillCategory, updateWorkerBiography } from "../api/profile";
+import {
+  uploadProfilePicture,
+  removeProfilePicture,
+  deletePortfolio,
+  deleteCertificate,
+  deleteExperience,
+  removeSkillCategory,
+  updateWorkerBiography,
+} from "../api/profile";
+import { deleteEducation } from "../api/education";
 import { getAllJobs, updateJob, deleteJob } from "../api/jobs";
 import AddPortfolio from "../components/AddPortfolio";
 import AddSkill from "../components/AddSkill";
 import AddCertificate from "../components/AddCertificate";
 import AddExperience from "../components/AddExperience";
+import AddEducation from "../components/AddEducation";
 import BiographyModal from "../components/BiographyModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import AddressInput from "../components/AddressInput";
 
-
 const formatAddress = (address) => {
   if (!address || typeof address !== "object") return "Unknown";
-  const parts = [address.barangay, address.city, address.province].filter(Boolean);
+  const parts = [address.barangay, address.city, address.province].filter(
+    Boolean
+  );
   return parts.length ? parts.join(", ") : "Unknown";
 };
 
@@ -36,6 +47,7 @@ const ProfilePage = () => {
   const [isAddSkillOpen, setIsAddSkillOpen] = useState(false);
   const [isAddCertificateOpen, setIsAddCertificateOpen] = useState(false);
   const [isAddExperienceOpen, setIsAddExperienceOpen] = useState(false);
+  const [isAddEducationOpen, setIsAddEducationOpen] = useState(false);
 
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -65,7 +77,6 @@ const ProfilePage = () => {
       (job?.status || "").toLowerCase()
     );
 
-
   // Load user
   useEffect(() => {
     checkAuth()
@@ -93,7 +104,6 @@ const ProfilePage = () => {
           setUserPosts(jobs);
         })
         .catch((err) => {
-
           setUserPosts([]);
         })
         .finally(() => setPostsLoading(false));
@@ -101,7 +111,6 @@ const ProfilePage = () => {
       setUserPosts(currentUser.portfolio || []);
     }
   }, [currentUser]);
-
 
   const fetchPortfolios = async () => {
     try {
@@ -149,8 +158,6 @@ const ProfilePage = () => {
       console.error("Failed to update biography:", err);
     }
   };
-
-
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -206,7 +213,10 @@ const ProfilePage = () => {
         portfolio: prev.portfolio.filter((p) => p._id !== id),
       }));
     } catch (err) {
-      console.error("Failed to delete portfolio:", err.response?.data || err.message);
+      console.error(
+        "Failed to delete portfolio:",
+        err.response?.data || err.message
+      );
     }
   };
 
@@ -219,7 +229,10 @@ const ProfilePage = () => {
         certificates: prev.certificates.filter((c) => c._id !== id),
       }));
     } catch (err) {
-      console.error("Failed to delete certificate:", err.response?.data || err.message);
+      console.error(
+        "Failed to delete certificate:",
+        err.response?.data || err.message
+      );
     }
   };
 
@@ -232,7 +245,35 @@ const ProfilePage = () => {
         experience: prev.experience.filter((e) => e._id !== id),
       }));
     } catch (err) {
-      console.error("Failed to delete experience:", err.response?.data || err.message);
+      console.error(
+        "Failed to delete experience:",
+        err.response?.data || err.message
+      );
+    }
+  };
+
+  const fetchEducation = async () => {
+    try {
+      const res = await checkAuth();
+      setCurrentUser(res.data.data);
+    } catch (err) {
+      console.error("Failed to refresh education:", err);
+    }
+  };
+
+  const handleDeleteEducation = async (id) => {
+    console.log("Deleting education ID:", id);
+    try {
+      await deleteEducation(id);
+      setCurrentUser((prev) => ({
+        ...prev,
+        education: prev.education.filter((e) => e._id !== id),
+      }));
+    } catch (err) {
+      console.error(
+        "Failed to delete education:",
+        err.response?.data || err.message
+      );
     }
   };
 
@@ -255,80 +296,85 @@ const ProfilePage = () => {
   };
 
   // 🟡 Edit button
-const handleEditJob = (job) => {
-  if (isJobLocked(job)) return;
-  setSelectedJob(job);
-  setEditJob({
-    title: job.title || "",
-    description: job.description || "",
-    location: job.location || "",
-    // keep as string for the input, convert on save
-    price: job.price !== undefined && job.price !== null ? String(job.price) : "",
-  });
-  setIsEditModalOpen(true);
-};
-
-// 🟢 Save updated job
-const handleUpdateJob = async () => {
-  try {
-    if (!selectedJob?.id) return;
-
-    // Build payload with only allowed fields for backend (no title on schema)
-    const payload = {
-      description: editJob.description?.trim() || undefined,
-      location: editJob.location?.trim() || undefined,
+  const handleEditJob = (job) => {
+    if (isJobLocked(job)) return;
+    setSelectedJob(job);
+    setEditJob({
+      title: job.title || "",
+      description: job.description || "",
+      location: job.location || "",
+      // keep as string for the input, convert on save
       price:
-        editJob.price === "" || editJob.price === null || editJob.price === undefined
-          ? undefined
-          : Number(editJob.price),
-    };
+        job.price !== undefined && job.price !== null ? String(job.price) : "",
+    });
+    setIsEditModalOpen(true);
+  };
 
-    // Remove undefined fields
-    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+  // 🟢 Save updated job
+  const handleUpdateJob = async () => {
+    try {
+      if (!selectedJob?.id) return;
 
-    setIsJobUpdating(true);
-    await updateJob(selectedJob.id, payload);
+      // Build payload with only allowed fields for backend (no title on schema)
+      const payload = {
+        description: editJob.description?.trim() || undefined,
+        location: editJob.location?.trim() || undefined,
+        price:
+          editJob.price === "" ||
+          editJob.price === null ||
+          editJob.price === undefined
+            ? undefined
+            : Number(editJob.price),
+      };
 
-    setUserPosts((prev) =>
-      prev.map((job) =>
-        job.id === selectedJob.id
-          ? {
-              ...job,
-              ...payload,
-            }
-          : job
-      )
-    );
-    setIsUpdateConfirmOpen(false);
-    setIsEditModalOpen(false);
-  } catch (err) {
-    console.error("Failed to update job:", err);
-  } finally {
-    setIsJobUpdating(false);
-  }
-};
+      // Remove undefined fields
+      Object.keys(payload).forEach(
+        (k) => payload[k] === undefined && delete payload[k]
+      );
 
-// 🟠 Open delete confirm
-const handleConfirmDelete = (job) => {
-  if (isJobLocked(job)) return;
-  setJobToDelete(job);
-  setIsDeleteConfirmOpen(true);
-};
+      setIsJobUpdating(true);
+      await updateJob(selectedJob.id, payload);
 
-// 🔴 Delete job
-const handleDeleteJob = async () => {
-  if (!jobToDelete?.id) return;
-  try {
-    setIsJobDeleting(true);
-    await deleteJob(jobToDelete.id);
-    setUserPosts((prev) => prev.filter((job) => job.id !== jobToDelete.id));
-    setIsDeleteConfirmOpen(false);
-  } catch (err) {
-    console.error("Failed to delete job:", err);
-  } finally {
-    setIsJobDeleting(false);
-  }
-};
+      setUserPosts((prev) =>
+        prev.map((job) =>
+          job.id === selectedJob.id
+            ? {
+                ...job,
+                ...payload,
+              }
+            : job
+        )
+      );
+      setIsUpdateConfirmOpen(false);
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error("Failed to update job:", err);
+    } finally {
+      setIsJobUpdating(false);
+    }
+  };
+
+  // 🟠 Open delete confirm
+  const handleConfirmDelete = (job) => {
+    if (isJobLocked(job)) return;
+    setJobToDelete(job);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // 🔴 Delete job
+  const handleDeleteJob = async () => {
+    if (!jobToDelete?.id) return;
+    try {
+      setIsJobDeleting(true);
+      await deleteJob(jobToDelete.id);
+      setUserPosts((prev) => prev.filter((job) => job.id !== jobToDelete.id));
+      setIsDeleteConfirmOpen(false);
+    } catch (err) {
+      console.error("Failed to delete job:", err);
+    } finally {
+      setIsJobDeleting(false);
+    }
+  };
 
   const confirmDelete = (action, name = "this") => {
     setDeleteAction(() => action);
@@ -336,15 +382,16 @@ const handleDeleteJob = async () => {
     setIsDeleteModalOpen(true);
   };
 
-
-
-
   if (loading) {
-    return <p className="text-center mt-40 text-gray-500">Loading user profile...</p>;
+    return (
+      <p className="text-center mt-40 text-gray-500">Loading user profile...</p>
+    );
   }
 
   if (!currentUser) {
-    return <p className="text-center mt-40 text-red-500">User not authenticated.</p>;
+    return (
+      <p className="text-center mt-40 text-red-500">User not authenticated.</p>
+    );
   }
 
   const { userType, fullName, image, address, biography } = currentUser;
@@ -372,15 +419,15 @@ const handleDeleteJob = async () => {
           </span>
 
           {userType === "worker" && (
-            < p className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer" onClick={() => setIsBioModalOpen(true)} >
+            <p
+              className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer"
+              onClick={() => setIsBioModalOpen(true)}
+            >
               {biography || "No biography provided."}
             </p>
           )}
-
         </div>
       </div>
-
-
 
       {/* Content Based on Role */}
       {userType === "client" ? (
@@ -429,34 +476,41 @@ const handleDeleteJob = async () => {
                       <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
                         {post.category?.name || "Uncategorized"}
                       </span>
-                      
                     </div>
 
                     <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
                         <MapPin size={16} /> {post.location}
                       </span>
-                      
+
                       <span className="font-bold text-green-400">
                         ₱{post.price?.toLocaleString() || 0}
                       </span>
                     </div>
                     <div className="flex justify-start mt-2">
-                    {post.status && (
+                      {post.status && (
                         <span
                           className={`px-3 py-1 rounded-full text-xs shadow-sm ${
-                            ((post.status || "").toLowerCase() === "open" && "bg-green-100 text-green-600") ||
-                            ((post.status || "").toLowerCase() === "hired" && "bg-yellow-100 text-yellow-700") ||
-                            ((post.status || "").toLowerCase() === "in_progress" && "bg-blue-100 text-blue-700") ||
-                            ((post.status || "").toLowerCase() === "completed" && "bg-gray-200 text-gray-600") ||
-                            ((post.status || "").toLowerCase() === "cancelled" && "bg-red-100 text-red-600") ||
+                            ((post.status || "").toLowerCase() === "open" &&
+                              "bg-green-100 text-green-600") ||
+                            ((post.status || "").toLowerCase() === "hired" &&
+                              "bg-yellow-100 text-yellow-700") ||
+                            ((post.status || "").toLowerCase() ===
+                              "in_progress" &&
+                              "bg-blue-100 text-blue-700") ||
+                            ((post.status || "").toLowerCase() ===
+                              "completed" &&
+                              "bg-gray-200 text-gray-600") ||
+                            ((post.status || "").toLowerCase() ===
+                              "cancelled" &&
+                              "bg-red-100 text-red-600") ||
                             "bg-gray-100 text-gray-600"
                           }`}
                         >
                           {(post.status || "").replace("_", " ")}
                         </span>
                       )}
-                      </div>
+                    </div>
 
                     {/* ✅ Action buttons (visible only in Edit mode) */}
                     {isEditMode && !isJobLocked(post) && (
@@ -553,16 +607,24 @@ const handleDeleteJob = async () => {
                   <button
                     onClick={() => setIsDeleteConfirmOpen(false)}
                     disabled={isJobDeleting}
-                    className={`px-4 py-2 ${isJobDeleting ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 ${
+                      isJobDeleting
+                        ? "text-gray-300 cursor-not-allowed"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteJob}
                     disabled={isJobDeleting}
-                    className={`px-4 py-2 rounded-lg ${isJobDeleting ? 'bg-red-300 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                    className={`px-4 py-2 rounded-lg ${
+                      isJobDeleting
+                        ? "bg-red-300 cursor-not-allowed"
+                        : "bg-red-500 hover:bg-red-600"
+                    } text-white`}
                   >
-                    {isJobDeleting ? 'Deleting...' : 'Delete'}
+                    {isJobDeleting ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>
@@ -584,16 +646,24 @@ const handleDeleteJob = async () => {
                   <button
                     onClick={() => setIsUpdateConfirmOpen(false)}
                     disabled={isJobUpdating}
-                    className={`px-4 py-2 ${isJobUpdating ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 ${
+                      isJobUpdating
+                        ? "text-gray-300 cursor-not-allowed"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUpdateJob}
                     disabled={isJobUpdating}
-                    className={`px-4 py-2 rounded-lg ${isJobUpdating ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                    className={`px-4 py-2 rounded-lg ${
+                      isJobUpdating
+                        ? "bg-blue-300 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-600"
+                    } text-white`}
                   >
-                    {isJobUpdating ? 'Saving...' : 'Confirm'}
+                    {isJobUpdating ? "Saving..." : "Confirm"}
                   </button>
                 </div>
               </div>
@@ -605,7 +675,6 @@ const handleDeleteJob = async () => {
           {/* Credential Section */}
 
           <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
-
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setIsEditMode((prev) => !prev)}
@@ -654,7 +723,12 @@ const handleDeleteJob = async () => {
                       {isEditMode && (
                         <div className="mt-3 flex justify-end">
                           <button
-                            onClick={() => confirmDelete(() => handleDeleteExperience(exp._id), exp.position)}
+                            onClick={() =>
+                              confirmDelete(
+                                () => handleDeleteExperience(exp._id),
+                                exp.position
+                              )
+                            }
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -669,8 +743,6 @@ const handleDeleteJob = async () => {
               )}
             </div>
 
-
-
             {isAddExperienceOpen && (
               <AddExperience
                 onClose={() => setIsAddExperienceOpen(false)}
@@ -681,6 +753,85 @@ const handleDeleteJob = async () => {
                   }))
                 }
                 onRefresh={fetchExperiences}
+              />
+            )}
+
+            {/* ================= EDUCATION ================= */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                Education
+                {isEditMode && (
+                  <button
+                    onClick={() => setIsAddEducationOpen(true)}
+                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                  >
+                    + Add
+                  </button>
+                )}
+              </h3>
+              {currentUser.education && currentUser.education.length > 0 ? (
+                <div className="space-y-4">
+                  {currentUser.education.map((edu) => (
+                    <div
+                      key={edu._id}
+                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+                    >
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          {edu.schoolName || "Unknown School"}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {edu.educationLevel || "Unknown Level"}
+                          {edu.degree && ` - ${edu.degree}`}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {edu.startDate
+                            ? new Date(edu.startDate).toLocaleDateString()
+                            : "Unknown"}{" "}
+                          –{" "}
+                          {edu.endDate
+                            ? new Date(edu.endDate).toLocaleDateString()
+                            : "Present"}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Status: {edu.educationStatus || "Unknown"}
+                        </p>
+                      </div>
+
+                      {/* ✅ Delete button at bottom */}
+                      {isEditMode && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={() =>
+                              confirmDelete(
+                                () => handleDeleteEducation(edu._id),
+                                edu.schoolName
+                              )
+                            }
+                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No education added yet.</p>
+              )}
+            </div>
+
+            {isAddEducationOpen && (
+              <AddEducation
+                onClose={() => setIsAddEducationOpen(false)}
+                onAdd={(newEducation) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    education: [...(prev.education || []), newEducation],
+                  }))
+                }
+                onRefresh={fetchEducation}
               />
             )}
 
@@ -697,17 +848,25 @@ const handleDeleteJob = async () => {
                 </button>
               )}
             </h3>
-            {currentUser.skillsByCategory && currentUser.skillsByCategory.length > 0 ? (
+            {currentUser.skillsByCategory &&
+            currentUser.skillsByCategory.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {currentUser.skillsByCategory.map((skill, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
                   >
-                    <span>{skill.skillCategoryId?.categoryName || "Unnamed Skill Category"}</span>
+                    <span>
+                      {skill.skillCategoryId?.categoryName ||
+                        "Unnamed Skill Category"}
+                    </span>
                     {isEditMode && (
                       <button
-                        onClick={() => confirmDelete(() => handleDeleteSkillCategory(skill.skillCategoryId._id))}
+                        onClick={() =>
+                          confirmDelete(() =>
+                            handleDeleteSkillCategory(skill.skillCategoryId._id)
+                          )
+                        }
                         className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                       >
                         ✕
@@ -715,7 +874,6 @@ const handleDeleteJob = async () => {
                     )}
                   </div>
                 ))}
-
               </div>
             ) : (
               <p className="text-gray-500">No skills added yet.</p>
@@ -734,8 +892,6 @@ const handleDeleteJob = async () => {
                 onRefresh={fetchSkills}
               />
             )}
-
-
 
             {/* ================= PORTFOLIO ================= */}
             <div className="mb-8 mt-4">
@@ -785,7 +941,12 @@ const handleDeleteJob = async () => {
                       {isEditMode && (
                         <div className="mt-4 flex justify-end">
                           <button
-                            onClick={() => confirmDelete(() => handleDeletePortfolio(item._id), item.projectTitle)}
+                            onClick={() =>
+                              confirmDelete(
+                                () => handleDeletePortfolio(item._id),
+                                item.projectTitle
+                              )
+                            }
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -794,12 +955,11 @@ const handleDeleteJob = async () => {
                       )}
                     </div>
                   ))}
-
                 </div>
-
               ) : (
-                <p className="text-gray-500">You have not added any portfolio projects yet.</p>
-
+                <p className="text-gray-500">
+                  You have not added any portfolio projects yet.
+                </p>
               )}
             </div>
 
@@ -817,8 +977,6 @@ const handleDeleteJob = async () => {
               />
             )}
 
-
-
             {/* ================= CERTIFICATES ================= */}
             <div className="mb-8 mt-4">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
@@ -831,9 +989,9 @@ const handleDeleteJob = async () => {
                     + Add
                   </button>
                 )}
-
               </h3>
-              {currentUser.certificates && currentUser.certificates.length > 0 ? (
+              {currentUser.certificates &&
+              currentUser.certificates.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {currentUser.certificates.map((cert, index) => (
                     <div
@@ -854,7 +1012,12 @@ const handleDeleteJob = async () => {
                       {isEditMode && (
                         <div className="mt-3 flex justify-end">
                           <button
-                            onClick={() => confirmDelete(() => handleDeleteCertificate(cert._id), cert.title)}
+                            onClick={() =>
+                              confirmDelete(
+                                () => handleDeleteCertificate(cert._id),
+                                cert.title
+                              )
+                            }
                             className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
                           >
                             Delete
@@ -867,7 +1030,6 @@ const handleDeleteJob = async () => {
               ) : (
                 <p className="text-gray-500">No certificates uploaded yet.</p>
               )}
-
             </div>
 
             {isAddCertificateOpen && (
@@ -876,115 +1038,105 @@ const handleDeleteJob = async () => {
                 onAdd={(newCertificate) =>
                   setCurrentUser((prev) => ({
                     ...prev,
-                    certificates: [...(prev.certificates || []), newCertificate],
+                    certificates: [
+                      ...(prev.certificates || []),
+                      newCertificate,
+                    ],
                   }))
                 }
                 onRefresh={fetchCertificates}
               />
             )}
-
           </div>
-
         </>
-      )
-      }
+      )}
 
       {/* Modal for editing biography */}
-      {
-        isBioModalOpen && (
-          <BiographyModal
-            biography={biography}
-            onClose={() => setIsBioModalOpen(false)}
-            onSave={handleSaveBiography}
-          />
-
-        )
-      }
-
+      {isBioModalOpen && (
+        <BiographyModal
+          biography={biography}
+          onClose={() => setIsBioModalOpen(false)}
+          onSave={handleSaveBiography}
+        />
+      )}
 
       {/* Modal for confirming deletions */}
-      {
-        isDeleteModalOpen && (
-          <DeleteConfirmModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={() => {
-              if (deleteAction) deleteAction();
-              setIsDeleteModalOpen(false);
-            }}
-            itemName={deleteItemName}
-          />
-        )
-      }
-
-
+      {isDeleteModalOpen && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={() => {
+            if (deleteAction) deleteAction();
+            setIsDeleteModalOpen(false);
+          }}
+          itemName={deleteItemName}
+        />
+      )}
 
       {/* Modal for profile picture */}
-      {
-        isModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                onClick={() => setIsModalOpen(false)}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              onClick={() => setIsModalOpen(false)}
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex flex-col items-center mt-5">
+              <img
+                src={
+                  preview ||
+                  image ||
+                  "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                }
+                alt="Preview"
+                className="w-32 h-32 rounded-full object-cover mb-4 border"
+              />
+
+              <input
+                type="file"
+                id="fileInput"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <label
+                htmlFor="fileInput"
+                className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-100 transition"
               >
-                <X size={20} />
-              </button>
+                Choose Picture
+              </label>
 
-              <div className="flex flex-col items-center mt-5">
-                <img
-                  src={
-                    preview ||
-                    image ||
-                    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                  }
-                  alt="Preview"
-                  className="w-32 h-32 rounded-full object-cover mb-4 border"
-                />
+              {selectedFile && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Selected: {selectedFile.name}
+                </p>
+              )}
 
-                <input
-                  type="file"
-                  id="fileInput"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
-                <label
-                  htmlFor="fileInput"
-                  className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-600 text-sm hover:bg-gray-100 transition"
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleUpload}
+                  disabled={!selectedFile || uploading}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-blue-400 cursor-pointer"
                 >
-                  Choose Picture
-                </label>
-
-                {selectedFile && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Selected: {selectedFile.name}
-                  </p>
-                )}
-
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={handleUpload}
-                    disabled={!selectedFile || uploading}
-                    className="px-4 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    {uploading ? "Uploading..." : "Upload"}
-                  </button>
-                  <button
-                    onClick={handleRemove}
-                    disabled={uploading}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 cursor-pointer transition-colors"
-                  >
-                    Remove
-                  </button>
-                </div>
+                  {uploading ? "Uploading..." : "Upload"}
+                </button>
+                <button
+                  onClick={handleRemove}
+                  disabled={uploading}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 cursor-pointer transition-colors"
+                >
+                  Remove
+                </button>
               </div>
             </div>
           </div>
-        )
-      }
-    </div >
+        </div>
+      )}
+    </div>
   );
 };
 

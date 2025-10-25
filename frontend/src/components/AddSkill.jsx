@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { addSkillCategory } from "../api/profile";
 import { checkAuth } from "../api/auth";
+import { baseURL } from "../utils/appMode";
 
 const AddSkill = ({ onClose, onAdd }) => {
   const [availableSkills, setAvailableSkills] = useState([]);
@@ -28,7 +29,7 @@ const AddSkill = ({ onClose, onAdd }) => {
   useEffect(() => {
     const fetchSkills = async () => {
       try {
-        const res = await fetch("https://fixit-capstone.onrender.com/skills"); // adjust URL
+        const res = await fetch(`${baseURL}/skills`);
         const data = await res.json();
         setAvailableSkills(
           Array.isArray(data?.data?.categories) ? data.data.categories : []

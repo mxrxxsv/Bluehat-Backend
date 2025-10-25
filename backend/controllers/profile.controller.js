@@ -81,6 +81,64 @@ const addSkillCategorySchema = Joi.object({
   skillCategoryId: Joi.string().hex().length(24).required(),
 });
 
+const addEducationSchema = Joi.object({
+  schoolName: Joi.string().trim().min(2).max(200).required().messages({
+    "string.empty": "School name is required",
+    "string.min": "School name must be at least 2 characters",
+    "string.max": "School name must not exceed 200 characters",
+  }),
+  educationLevel: Joi.string()
+    .valid(
+      "Elementary",
+      "Junior High",
+      "Senior High",
+      "Vocational",
+      "College",
+      "Master's",
+      "Doctorate"
+    )
+    .required()
+    .messages({
+      "any.only": "Invalid education level",
+      "any.required": "Education level is required",
+    }),
+  degree: Joi.string().trim().max(100).allow("", null).optional(),
+  startDate: Joi.string().required().messages({
+    "string.empty": "Start date is required",
+    "any.required": "Start date is required",
+  }),
+  endDate: Joi.string().allow("", null).optional(),
+  educationStatus: Joi.string()
+    .valid("Graduated", "Undergraduate", "Currently Studying")
+    .required()
+    .messages({
+      "any.only": "Invalid education status",
+      "any.required": "Education status is required",
+    }),
+});
+
+const updateEducationSchema = Joi.object({
+  educationId: Joi.string().hex().length(24).required(),
+  schoolName: Joi.string().trim().min(2).max(200).required(),
+  educationLevel: Joi.string()
+    .valid(
+      "Elementary",
+      "Junior High",
+      "Senior High",
+      "Vocational",
+      "College",
+      "Master's",
+      "Doctorate"
+    )
+    .required(),
+  degree: Joi.string().trim().max(100).allow("", null).optional(),
+  startDate: Joi.string().required(),
+  endDate: Joi.string().allow("", null).optional(),
+  educationStatus: Joi.string()
+    .valid("Graduated", "Undergraduate", "Currently Studying")
+    .required(),
+});
+
 const paramIdSchema = Joi.object({
   id: Joi.string().hex().length(24).required(),
 });
@@ -152,7 +210,7 @@ const uploadProfilePicture = async (req, res) => {
     }
 
     const Model = req.user.userType === "client" ? Client : Worker;
-    const profile = await Model.findOne({ credentialId: req.user.id }); 
+    const profile = await Model.findOne({ credentialId: req.user.id });
 
     if (!profile) {
       return res.status(404).json({
@@ -181,7 +239,7 @@ const uploadProfilePicture = async (req, res) => {
         .upload_stream(
           {
             folder: "profile_pictures",
-            public_id: `${req.user.userType}_${req.user.id}_${Date.now()}`, 
+            public_id: `${req.user.userType}_${req.user.id}_${Date.now()}`,
             transformation: [
               { width: 500, height: 500, crop: "fill", gravity: "face" },
               { quality: "auto", fetch_format: "auto" },
@@ -227,7 +285,7 @@ const uploadProfilePicture = async (req, res) => {
     logger.error("Profile picture upload failed", {
       error: err.message,
       stack: err.stack,
-      userId: req.user?.id, 
+      userId: req.user?.id,
       ip: req.ip,
       processingTime: `${processingTime}ms`,
       timestamp: new Date().toISOString(),
@@ -240,7 +298,6 @@ const uploadProfilePicture = async (req, res) => {
     });
   }
 };
-
 
 const removeProfilePicture = async (req, res) => {
   const startTime = Date.now();
@@ -843,7 +900,6 @@ const deletePortfolio = async (req, res) => {
   }
 };
 
-
 // ✅ CERTIFICATE CONTROLLERS
 const uploadCertificate = async (req, res) => {
   const startTime = Date.now();
@@ -1041,7 +1097,6 @@ const deleteCertificate = async (req, res) => {
     });
   }
 };
-
 
 // ✅ EXPERIENCE CONTROLLERS
 const addExperience = async (req, res) => {
@@ -1424,6 +1479,233 @@ const removeSkillCategory = async (req, res) => {
   }
 };
 
+// ✅ EDUCATION CONTROLLERS
+const addEducation = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate input
+    const { error, value } = addEducationSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      logger.warn("Add education validation failed", {
+        errors: error.details,
+        userId: req.user._id,
+        ip: req.ip,
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const sanitizedData = sanitizeInput(value);
+    const userId = req.user._id;
+    const userType = req.user.userType;
+
+    // Get user model
+    const Model = userType === "worker" ? Worker : Client;
+    const user = await Model.findOne({ credentialId: req.user.id });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    // Add education entry
+    user.education.push(sanitizedData);
+    await user.save();
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Education added successfully", {
+      userId,
+      userType,
+      schoolName: sanitizedData.schoolName,
+      processingTime: `${processingTime}ms`,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Education added successfully",
+      code: "EDUCATION_ADDED",
+      data: user.education[user.education.length - 1],
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return handleProfileError(err, res, "Add education", req);
+  }
+};
+
+const updateEducation = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate input
+    const { error, value } = updateEducationSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      logger.warn("Update education validation failed", {
+        errors: error.details,
+        userId: req.user._id,
+        ip: req.ip,
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { educationId, ...updateData } = sanitizeInput(value);
+    const userId = req.user._id;
+    const userType = req.user.userType;
+
+    // Get user model
+    const Model = userType === "worker" ? Worker : Client;
+    const user = await Model.findOne({ credentialId: req.user.id });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    // Find education entry
+    const educationEntry = user.education.id(educationId);
+
+    if (!educationEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Education entry not found",
+        code: "EDUCATION_NOT_FOUND",
+      });
+    }
+
+    // Update education entry
+    Object.assign(educationEntry, updateData);
+    await user.save();
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Education updated successfully", {
+      userId,
+      userType,
+      educationId,
+      processingTime: `${processingTime}ms`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Education updated successfully",
+      code: "EDUCATION_UPDATED",
+      data: educationEntry,
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return handleProfileError(err, res, "Update education", req);
+  }
+};
+
+const deleteEducation = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    // Validate parameter
+    const { error, value } = paramIdSchema.validate(req.params, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid education ID",
+        code: "INVALID_ID",
+      });
+    }
+
+    const { id: educationId } = value;
+    const userId = req.user._id;
+    const userType = req.user.userType;
+
+    // Get user model
+    const Model = userType === "worker" ? Worker : Client;
+    const user = await Model.findOne({ credentialId: req.user.id });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    // Find and remove education entry
+    const educationEntry = user.education.id(educationId);
+
+    if (!educationEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Education entry not found",
+        code: "EDUCATION_NOT_FOUND",
+      });
+    }
+
+    // Remove education entry
+    educationEntry.deleteOne();
+    await user.save();
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Education deleted successfully", {
+      userId,
+      userType,
+      educationId,
+      processingTime: `${processingTime}ms`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Education deleted successfully",
+      code: "EDUCATION_DELETED",
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    return handleProfileError(err, res, "Delete education", req);
+  }
+};
 
 // ✅ GET PROFILE CONTROLLERS
 const getProfile = async (req, res) => {
@@ -1513,5 +1795,8 @@ module.exports = {
   deleteExperience,
   addSkillCategory,
   removeSkillCategory,
+  addEducation,
+  updateEducation,
+  deleteEducation,
   getProfile,
 };

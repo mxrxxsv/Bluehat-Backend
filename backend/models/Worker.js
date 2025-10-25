@@ -115,6 +115,45 @@ const WorkerSchema = new mongoose.Schema(
         },
       },
     ],
+    education: [
+      {
+        schoolName: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        educationLevel: {
+          type: String,
+          required: true,
+          enum: [
+            "Elementary",
+            "Junior High",
+            "Senior High",
+            "Vocational",
+            "College",
+            "Master’s",
+            "Doctorate",
+          ],
+        },
+        degree: {
+          type: String,
+          trim: true,
+        },
+        startDate: {
+          type: Date,
+          required: true,
+        },
+        endDate: {
+          type: String,
+          default: null,
+        },
+        educationStatus: {
+          type: String,
+          enum: ["Graduated", "Undergraduate", "Currently Studying"],
+          required: true,
+        },
+      },
+    ],
     experience: [
       {
         companyName: {
