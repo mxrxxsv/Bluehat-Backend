@@ -147,7 +147,7 @@ const Job = () => {
             <h1 className="text-3xl font-bold text-gray-800">All Job Posts</h1>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#55b3f3] text-white rounded-xl hover:bg-sky-700 transition duration-200"
+              className="flex items-center gap-2 px-4 py-2 bg-[#55b3f3] text-white rounded-xl hover:bg-sky-700 transition duration-200 cursor-pointer"
             >
               <Filter size={20} />
               {showFilters ? "Hide Filters" : "Show Filters"}
@@ -336,7 +336,7 @@ const Job = () => {
                   <button
                     onClick={() => openDeleteModal(job)}
                     disabled={deleteLoading === job.id}
-                    className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
+                    className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200 cursor-pointer"
                     title="Delete job post"
                   >
                     {deleteLoading === job.id ? (
@@ -353,11 +353,11 @@ const Job = () => {
                     </h2>
                     <p className="text-gray-600 mb-2">{job.description}</p>
                     <div className="flex flex-wrap gap-2 text-sm text-gray-500 mt-3">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                      <span className="px-3 py-1 bg-[#55b3f3] text-[#f4f6f6] rounded-full">
                         ₱{job.price?.toLocaleString() || "N/A"}
                       </span>
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
-                        📍 {job.location}
+                      <span className="px-3 py-1 border rounded-full">
+                        {job.location}
                       </span>
                       <span
                         className={`px-3 py-1 rounded-full ${
@@ -459,7 +459,7 @@ const Job = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && jobToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
