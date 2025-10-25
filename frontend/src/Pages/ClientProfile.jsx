@@ -145,10 +145,10 @@ export default function ClientProfile() {
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-35">
       {/* Header */}
       <div className="bg-white shadow rounded-2xl p-4 mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center text-left gap-4">
           <Avatar url={clientInfo?.avatar} size={72} alt={clientInfo?.name} />
           <div>
-            <div className="text-xl font-semibold">{jobs?.[0]?.client?.name || "Client"}</div>
+            <div className="text-xl font-semibold text-[#252525]">{jobs?.[0]?.client?.name || "Client"}</div>
             <div className="flex items-center gap-3 mt-1">
               <Stars value={avg} />
               <span className="text-sm text-gray-600">{total} review{total === 1 ? "" : "s"}</span>
@@ -160,7 +160,7 @@ export default function ClientProfile() {
       {/* Jobs by this client */}
       <div className="bg-white shadow rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Jobs by this client</h2>
+          <h2 className="text-lg font-semibold text-[#252525]">Jobs by this client</h2>
           <span className="text-sm text-gray-500">{jobs.length} result{jobs.length === 1 ? "" : "s"}</span>
         </div>
         <div className="space-y-4">
