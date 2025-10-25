@@ -586,7 +586,7 @@ const FindWork = () => {
                 onClick={() => {
                   if (user?.userType === "client") {
                     navigate(`/invite-workers/${job.id || job._id}`);
-                  } else if (user?.userType === "worker") {
+                  } else {
                     navigate(`/job/${job.id || job._id}`);
                   }
                 }}

@@ -37,15 +37,6 @@ const WorkerPortfolio = () => {
           const stats = payload?.data?.statistics || payload?.statistics || {};
           const reviews = payload?.data?.reviews || payload?.reviews || [];
 
-          // Debug: log fetched reviews payload
-          console.log("[WorkerPortfolio] Worker reviews fetched", {
-            workerId: id,
-            payload,
-            statistics: stats,
-            reviewsCount: Array.isArray(reviews) ? reviews.length : 0,
-            sample: Array.isArray(reviews) ? reviews.slice(0, 2) : [],
-          });
-
           setReviewsState({
             reviews,
             averageRating: Number(
@@ -406,7 +397,7 @@ const WorkerPortfolio = () => {
             >
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
             </svg>
-            <span className="mt-0.5">{averageRating} / 5</span>
+            <span className="mt-0.5">{averageRating}</span>
             <span className="mt-0.5 text-gray-500">
               ({reviewsState.totalReviews || reviews.length})
             </span>
