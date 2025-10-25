@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import skillCategories from "../Objects/skillCategories";
 import skillsByCategory from "../Objects/skillsByCategory";
 import { getWorkers } from "../api/worker";
+import { getWorkerReviewsById } from "../api/feedback";
 
 
 
@@ -55,8 +56,31 @@ const FindWorker = () => {
         };
 
         const data = await getWorkers(query);
-        setWorkers(data.workers || []);
-        console.log("Fetched workers:", data.workers);
+
+        const baseWorkers = data.workers || [];
+
+        // Fetch review stats per worker (frontend-only enrichment; no backend changes)
+        const enriched = await Promise.all(
+          baseWorkers.map(async (w) => {
+            try {
+              const resp = await getWorkerReviewsById(w._id, { page: 1, limit: 1 });
+              const stats = resp?.data?.statistics || resp?.statistics || null;
+              const avg = Number(
+                (stats?.averageRating ?? w.rating ?? 0)
+              );
+              const total = Number(
+                (stats?.totalReviews ?? w.totalRatings ?? (Array.isArray(w.reviews) ? w.reviews.length : 0))
+              );
+              return { ...w, rating: isNaN(avg) ? 0 : avg, totalRatings: isNaN(total) ? 0 : total };
+            } catch (e) {
+              // If reviews endpoint fails (e.g., unauthenticated), keep originals
+              return { ...w, rating: Number(w.rating) || 0, totalRatings: Number(w.totalRatings) || 0 };
+            }
+          })
+        );
+
+        setWorkers(enriched);
+        console.log("Fetched workers (enriched):", enriched);
       } catch (err) {
         setError(err.message || "Failed to fetch workers");
       } finally {
@@ -267,12 +291,20 @@ const FindWorker = () => {
             <div
               className="flex flex-col overflow-y-auto py-4 pr-2 mt-4 max-h-[calc(100vh-340px)] md:max-h-[calc(100vh-220px)]">
               {filteredWorkers.map((worker) => {
-                const avgRating = worker.reviews?.length
-                  ? (
-                    worker.reviews.reduce((sum, r) => sum + r.rating, 0) /
-                    worker.reviews.length
-                  ).toFixed(1)
-                  : "0";
+                // Prefer backend-provided average rating; fallback to computing from reviews if present
+                const avgRating = Number.isFinite(worker.rating)
+                  ? Number(worker.rating).toFixed(1)
+                  : (Array.isArray(worker.reviews) && worker.reviews.length
+                      ? (
+                        worker.reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
+                        worker.reviews.length
+                      ).toFixed(1)
+                      : "0");
+
+                // Show review count from backend if available; fallback to reviews length
+                const reviewCount = Number.isFinite(worker.totalRatings)
+                  ? worker.totalRatings
+                  : (Array.isArray(worker.reviews) ? worker.reviews.length : 0);
 
                 return (
                   <Link
@@ -346,6 +378,7 @@ const FindWorker = () => {
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
                           </svg>
                           <span className="mt-0.5">{avgRating || 0}</span>
+                          <span className="mt-0.5 text-gray-500">({reviewCount})</span>
                         </p>
                       </div>
 

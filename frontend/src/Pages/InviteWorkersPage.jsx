@@ -6,6 +6,7 @@ import WorkerInvitationCard from "../components/WorkerInvitationCard";
 import { checkAuth } from "../api/auth";
 import { getJobById } from "../api/jobs.jsx";
 import { searchWorkers } from "../api/worker.jsx";
+import { getWorkerReviewsById } from "../api/feedback.jsx";
 
 const InviteWorkersPage = () => {
   const { jobId } = useParams();
@@ -47,6 +48,12 @@ const InviteWorkersPage = () => {
     initializePage();
   }, [jobId, navigate]);
 
+  // Navigate to client profile from avatar/name in the job header
+  const goToClientProfile = () => {
+    const clientId = job?.client?.id || job?.client?._id || job?.clientId;
+    if (clientId) navigate(`/client/${clientId}`);
+  };
+
   const loadJobAndWorkers = async () => {
     try {
       setLoading(true);
@@ -57,19 +64,112 @@ const InviteWorkersPage = () => {
       setJob(jobData);
 
       // Load available workers
-      const workerData = await searchWorkers();
+      const workerRes = await searchWorkers();
 
-      // Extract workers array from response
-      const workersArray = workerData.workers || [];
+      // Extract workers array from varying backend shapes safely
+      const workersRaw =
+        workerRes?.data?.data?.workers ||
+        workerRes?.data?.workers ||
+        workerRes?.workers ||
+        workerRes?.data ||
+        [];
 
-      setWorkers(workersArray);
-      setFilteredWorkers(workersArray);
+      // Normalize workers to ensure rating/totalRatings are numeric and text fields are searchable
+      const normalizedWorkers = (Array.isArray(workersRaw) ? workersRaw : []).map((w) => {
+        const rating = Number(
+          w?.rating ?? w?.averageRating ?? 0
+        );
+        const totalRatings = Number(
+          w?.totalRatings ?? w?.reviewCount ?? 0
+        );
+
+        // Support skills as array of strings or array of objects with common name keys
+        const skillsArray = Array.isArray(w?.skills) ? w.skills : [];
+        const skillsText = skillsArray
+          .map((s) =>
+            typeof s === "string"
+              ? s
+              : s?.name || s?.categoryName || s?.title || ""
+          )
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        const firstName = w?.firstName || "";
+        const lastName = w?.lastName || "";
+        const bio = w?.bio || "";
+        const location = w?.location || "";
+
+        return {
+          ...w,
+          rating,
+          totalRatings,
+          // Precomputed lowercase text fields for efficient filtering
+          nameText: `${firstName} ${lastName}`.trim().toLowerCase(),
+          skillsText,
+          bioText: String(bio).toLowerCase(),
+          locationText: String(location).toLowerCase(),
+        };
+      });
+
+      // Debug a small sample to verify shapes in console
+      if (normalizedWorkers.length) {
+        console.log("[InviteWorkers] sample worker:", {
+          _id: normalizedWorkers[0]._id,
+          name: `${normalizedWorkers[0].firstName} ${normalizedWorkers[0].lastName}`,
+          rating: normalizedWorkers[0].rating,
+          totalRatings: normalizedWorkers[0].totalRatings,
+          skillsText: normalizedWorkers[0].skillsText,
+        });
+      }
+
+      // Enrich ratings/review counts from reviews API to ensure accuracy
+      const enrichedWorkers = await enrichWorkersWithReviewStats(
+        normalizedWorkers
+      );
+
+      setWorkers(enrichedWorkers);
+      setFilteredWorkers(enrichedWorkers);
     } catch (error) {
       console.error("Failed to load data:", error);
       alert("Failed to load data. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch review statistics per worker (averageRating, totalReviews)
+  const enrichWorkersWithReviewStats = async (list) => {
+    // Concurrency limiter: process sequentially to avoid flooding server
+    const result = [];
+    for (const w of list) {
+      try {
+        // If we already have ratings and counts, keep them, but refresh for consistency
+        const res = await getWorkerReviewsById(w._id, { page: 1, limit: 1 });
+        const stats = res?.data?.statistics || res?.statistics;
+        if (stats) {
+          const avg = Number(stats.averageRating || 0);
+          const count = Number(stats.totalReviews || 0);
+          const updated = {
+            ...w,
+            rating: isNaN(avg) ? w.rating : avg,
+            totalRatings: isNaN(count) ? w.totalRatings : count,
+          };
+          result.push(updated);
+          console.log("[InviteWorkers] review stats fetched", {
+            workerId: w._id,
+            averageRating: updated.rating,
+            totalReviews: updated.totalRatings,
+          });
+        } else {
+          result.push(w);
+        }
+      } catch (e) {
+        console.warn("[InviteWorkers] review stats fetch failed", w._id, e?.message);
+        result.push(w);
+      }
+    }
+    return result;
   };
 
   useEffect(() => {
@@ -81,32 +181,33 @@ const InviteWorkersPage = () => {
 
     // Search by name or skills
     if (searchTerm) {
-      filtered = filtered.filter((worker) => {
-        const name = `${worker.firstName} ${worker.lastName}`.toLowerCase();
-        const skills = worker.skills?.join(" ").toLowerCase() || "";
-        const bio = worker.bio?.toLowerCase() || "";
-        const search = searchTerm.toLowerCase();
-
-        return (
-          name.includes(search) ||
-          skills.includes(search) ||
-          bio.includes(search)
-        );
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter((w) => {
+        const nameText = w?.nameText ?? `${w?.firstName || ""} ${w?.lastName || ""}`.trim().toLowerCase();
+        const skillsText = w?.skillsText ?? (Array.isArray(w?.skills) ? w.skills.map((s) => (typeof s === "string" ? s : s?.name || s?.categoryName || s?.title || "")).join(" ") : "").toLowerCase();
+        const bioText = w?.bioText ?? String(w?.bio || "").toLowerCase();
+        return nameText.includes(search) || skillsText.includes(search) || bioText.includes(search);
       });
     }
 
     // Filter by location
     if (filters.location) {
-      filtered = filtered.filter((worker) =>
-        worker.location?.toLowerCase().includes(filters.location.toLowerCase())
+      filtered = filtered.filter((w) =>
+        (w?.locationText ?? String(w?.location || "").toLowerCase()).includes(
+          filters.location.toLowerCase()
+        )
       );
     }
 
     // Filter by minimum rating
     if (filters.minRating) {
-      filtered = filtered.filter(
-        (worker) => worker.rating >= Number(filters.minRating)
-      );
+      const min = Number(filters.minRating);
+      filtered = filtered.filter((w) => {
+        const rating = Number(w?.rating ?? 0);
+        const total = Number(w?.totalRatings ?? 0);
+        // When filtering by rating, exclude unrated workers (totalRatings === 0)
+        return total > 0 && rating >= min;
+      });
     }
 
     // Filter by experience level
@@ -222,12 +323,26 @@ const InviteWorkersPage = () => {
                     <div className="flex items-center gap-2">
 
                       <img
-                        src={job.client?.profilePicture || currentUser.avatar}
-                        alt="Client Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
+                        src={
+                          typeof job?.client?.profilePicture === "string" &&
+                          job.client.profilePicture.trim() !== ""
+                            ? job.client.profilePicture
+                            : job?.client?.profilePicture?.url &&
+                              job.client.profilePicture.url.trim() !== ""
+                            ? job.client.profilePicture.url
+                            : currentUser?.avatar ||
+                              "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                        }
+                        alt={job?.client?.name || "Client Avatar"}
+                        className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                        onClick={goToClientProfile}
                       />
 
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                      <span
+                        onClick={goToClientProfile}
+                        className="text-sm font-medium text-[#252525] opacity-75 cursor-pointer hover:underline"
+                        title="View client profile"
+                      >
                         {job.client?.name || "Client Name"}
                       </span>
                     </div>
