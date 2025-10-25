@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getAllJobs } from "../api/jobs";
+import { getAllJobs, getJobById } from "../api/jobs";
 import { getClientReviewsById } from "../api/feedback";
 import { MapPin, Star, Briefcase } from "lucide-react";
 
@@ -42,6 +42,7 @@ export default function ClientProfile() {
   const [stats, setStats] = useState(null);
   const [clientInfo, setClientInfo] = useState(null);
   const [page, setPage] = useState(1);
+  const [jobMap, setJobMap] = useState({}); // cache of enriched jobs by id
 
   // Status color mapping similar to profile job post styling
   const getStatusStyle = (status) => {
@@ -108,6 +109,56 @@ export default function ClientProfile() {
 
     load();
   }, [id]);
+
+  // Enrich missing job details for each review's job header (frontend-only; cached by jobMap)
+  useEffect(() => {
+    const list = reviews || [];
+    if (!list.length) return;
+
+    const idsToFetch = new Set();
+    for (const r of list) {
+      const j = r.jobId || r.job;
+      if (!j) continue;
+      if (typeof j === "string") {
+        if (!jobMap[j]) idsToFetch.add(j);
+      } else if (j && typeof j === "object") {
+        const jid = j._id || j.id;
+        const missingFields = !(j.price && j.location && j.category && j.client);
+        if (jid && missingFields && !jobMap[jid]) idsToFetch.add(jid);
+      }
+    }
+
+    const fetchIds = Array.from(idsToFetch);
+    if (!fetchIds.length) return;
+
+    let cancelled = false;
+    const run = async () => {
+      const entries = await Promise.all(
+        fetchIds.map(async (jid) => {
+          try {
+            const resp = await getJobById(jid);
+            const payload = resp?.data || resp;
+            const jobData = payload?.data?.job || payload?.data || payload?.job || payload;
+            return [jid, jobData];
+          } catch (err) {
+            return [jid, null];
+          }
+        })
+      );
+      if (cancelled) return;
+      setJobMap((prev) => {
+        const next = { ...prev };
+        for (const [jid, jdata] of entries) {
+          if (jdata) next[jid] = jdata;
+        }
+        return next;
+      });
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [reviews, jobMap]);
 
   const loadMoreReviews = async () => {
     try {
@@ -239,8 +290,71 @@ export default function ClientProfile() {
             const reviewer = rev.reviewerId || {};
             const reviewerName = `${reviewer.firstName || ""} ${reviewer.lastName || ""}`.trim() || "Reviewer";
             const reviewerPic = reviewer.profilePicture?.url || reviewer.profilePicture || null;
+            const baseJob = rev.jobId || rev.job || null;
+            const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id || baseJob?.id;
+            const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
             return (
               <div key={rev._id} className="p-3 rounded-xl border border-gray-100">
+                {/* Job post header - FindWork-style block above each review */}
+                {job && (
+                  <div className="w-full mb-3">
+                    <div
+                      className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                      onClick={() => jobId && navigate(`/job/${jobId}`)}
+                      role="button"
+                      aria-label="View job details"
+                    >
+                      <div className="rounded-xl p-4 bg-white transition-all">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={job.client?.profilePicture?.url || clientInfo?.avatar || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                              alt="Client Avatar"
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                            <span className="text-sm font-medium text-[#252525] opacity-75">
+                              {job.client?.name || jobs?.[0]?.client?.name || "Client"}
+                            </span>
+                          </div>
+                          <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                            {rev.reviewDate ? new Date(rev.reviewDate).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }) : ""}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5">
+                            <Briefcase size={20} className="text-blue-400" />
+                          </span>
+                          <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
+                            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                              {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
+                            </span>
+                          )}
+                          {job.status && (
+                            <span className={`${getStatusStyle(job.status)} px-3 py-1 rounded-full text-sm capitalize`}>
+                              {String(job.status).replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                          <span className="flex items-center gap-1">
+                            <MapPin size={16} />
+                            <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location || ""}</span>
+                          </span>
+                          <span className="font-bold text-green-400">
+                            {(typeof job.price === "number" || typeof job.price === "string") ? `₱${Number(job.price).toLocaleString()}` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img

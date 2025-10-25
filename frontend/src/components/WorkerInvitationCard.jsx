@@ -98,7 +98,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
               <div className="flex items-center gap-1 mt-1">
                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
                 <span className="text-sm text-gray-600">
-                  {worker.rating.toFixed(1)} ({worker.reviewCount || 0} reviews)
+                  {Number(worker.rating || 0).toFixed(1)} ({Number(worker.totalRatings || worker.reviewCount || 0)} reviews)
                 </span>
               </div>
             )}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin, Briefcase } from "lucide-react";
 import { getWorkerById } from "../api/worker";
+import { getWorkerReviewsById } from "../api/feedback";
+import { getJobById } from "../api/jobs";
 import { checkAuth } from "../api/auth";
 
 
@@ -15,15 +17,53 @@ const WorkerPortfolio = () => {
   const [error, setError] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
+  const [reviewsState, setReviewsState] = useState({
+    reviews: [],
+    averageRating: 0,
+    totalReviews: 0,
+  });
+  const [jobMap, setJobMap] = useState({}); // cache for enriched job details
 
   useEffect(() => {
     const fetchWorker = async () => {
       try {
         setLoading(true);
         const data = await getWorkerById(id);
-        setWorker(data.worker || data);
-        console.log(data);
-      } catch (err) {
+        const workerData = data.worker || data;
+        setWorker(workerData);
+
+        // Frontend-only enrichment: fetch worker reviews & stats (auth required)
+        try {
+          const resp = await getWorkerReviewsById(id, { page: 1, limit: 10 });
+          const payload = resp?.data || resp; // controller likely wraps in { success, data: { ... } }
+          const stats = payload?.data?.statistics || payload?.statistics || {};
+          const reviews = payload?.data?.reviews || payload?.reviews || [];
+
+          // Debug: log fetched reviews payload
+          console.log("[WorkerPortfolio] Worker reviews fetched", {
+            workerId: id,
+            payload,
+            statistics: stats,
+            reviewsCount: Array.isArray(reviews) ? reviews.length : 0,
+            sample: Array.isArray(reviews) ? reviews.slice(0, 2) : [],
+          });
+
+          setReviewsState({
+            reviews,
+            averageRating: Number(stats?.averageRating ?? workerData?.rating ?? 0),
+            totalReviews: Number(stats?.totalReviews ?? (Array.isArray(workerData?.reviews) ? workerData.reviews.length : 0)),
+          });
+        } catch (e) {
+          console.error("[WorkerPortfolio] Failed to fetch worker reviews; falling back to worker.reviews", e);
+          // Fallback to worker embedded reviews if reviews endpoint not accessible (e.g., unauthenticated)
+          const fallbackReviews = Array.isArray(workerData?.reviews) ? workerData.reviews : [];
+          const avg = fallbackReviews.length
+            ? fallbackReviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / fallbackReviews.length
+            : 0;
+          setReviewsState({ reviews: fallbackReviews, averageRating: avg, totalReviews: fallbackReviews.length });
+        }
+      } catch {
+        // keep existing error UI
       } finally {
         setLoading(false);
       }
@@ -32,20 +72,75 @@ const WorkerPortfolio = () => {
     fetchWorker();
   }, [id]);
 
+  // Enrich missing job details for each review's job header (frontend-only; cached by jobMap)
+  useEffect(() => {
+    const reviews = reviewsState?.reviews || [];
+    if (!reviews.length) return;
+
+    const idsToFetch = new Set();
+    for (const r of reviews) {
+      const j = r.jobId || r.job;
+      if (!j) continue;
+      if (typeof j === "string") {
+        if (!jobMap[j]) idsToFetch.add(j);
+      } else if (j && typeof j === "object") {
+        const jid = j._id;
+        // Fetch if essential fields are missing
+        const missingFields = !(j.price && j.location && j.category && j.client);
+        if (jid && missingFields && !jobMap[jid]) idsToFetch.add(jid);
+      }
+    }
+
+    const fetchIds = Array.from(idsToFetch);
+    if (fetchIds.length) {
+      console.log("[WorkerPortfolio] Enriching job details for reviews", { fetchIds });
+    }
+    if (!fetchIds.length) return;
+
+    let cancelled = false;
+    const run = async () => {
+      const entries = await Promise.all(
+        fetchIds.map(async (jid) => {
+          try {
+            const resp = await getJobById(jid);
+            const payload = resp?.data || resp;
+            const jobData = payload?.data?.job || payload?.data || payload?.job || payload;
+            console.log("[WorkerPortfolio] Job fetched for review", { jobId: jid, job: jobData });
+            return [jid, jobData];
+          } catch (err) {
+            console.warn("[WorkerPortfolio] Failed to fetch job for review", { jobId: jid, error: err });
+            return [jid, null];
+          }
+        })
+      );
+      if (cancelled) return;
+      setJobMap((prev) => {
+        const next = { ...prev };
+        for (const [jid, jdata] of entries) {
+          if (jdata) next[jid] = jdata;
+        }
+        return next;
+      });
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [reviewsState.reviews, jobMap]);
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const userData = await checkAuth();
         setCurrentUser(userData.data.data);
-      } catch (err) {
+      } catch {
         setCurrentUser(null);
       }
     };
 
     fetchUser();
   }, []);
-
-  const { region, province, city, barangay, street } = worker?.address || {};
+  const { province, city, barangay } = worker?.address || {};
 
   const calculateAge = (dobString) => {
     if (!dobString) return null;
@@ -66,14 +161,14 @@ const WorkerPortfolio = () => {
     return "⭐️".repeat(rating) + "☆".repeat(5 - rating);
   };
 
-  const reviews = worker?.reviews || [];
-
-  const averageRating =
-    reviews.length > 0
+  const reviews = reviewsState.reviews || worker?.reviews || [];
+  const averageRating = Number.isFinite(reviewsState.averageRating)
+    ? Number(reviewsState.averageRating).toFixed(1)
+    : (reviews.length > 0
       ? (
-        reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length
       ).toFixed(1)
-      : "0";
+      : "0");
 
 
   return (
@@ -263,31 +358,107 @@ const WorkerPortfolio = () => {
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
             </svg>
             <span className="mt-0.5">{averageRating} / 5</span>
+            <span className="mt-0.5 text-gray-500">({reviewsState.totalReviews || reviews.length})</span>
           </p>
         </div>
 
         <div className="space-y-2">
-          {(worker.reviews || []).map((review, index) => (
-            <div
-              key={index}
-              className="flex items-start gap-4 p-4 rounded-md text-left bg-white shadow-sm"
-            >
-              <img
-              // src={review.clientImage || "/default-client.png"}
-              // src={profile}
-              // alt={review.clientName}
-              // className="w-12 h-12 rounded-full object-cover border"
-              />
-              <div>
-                <p className="font-semibold">{review.clientName}</p>
-                <p className="text-sm text-gray-500">Skill: {review.skill}</p>
-                <p className="text-sm text-yellow-500">
-                  {renderStars(review.rating)}
-                </p>
-                <p className="mt-1 text-gray-700">{review.comment}</p>
+          {(reviews || []).map((review, index) => {
+            const reviewerObj = review.reviewer || review.reviewerId || {};
+            const reviewerName = (review.reviewerName || `${reviewerObj.firstName || ""} ${reviewerObj.lastName || ""}`).trim() || "Anonymous";
+            const avatar = reviewerObj.profilePicture?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+            const text = review.feedback || review.comment || "";
+            const rate = Number(review.rating) || 0;
+            const baseJob = review.jobId || review.job || null;
+            const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id;
+            const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
+            const reviewDate = review.reviewDate || review.createdAt;
+            const clientName = job?.client?.name || `${job?.client?.firstName || ""} ${job?.client?.lastName || ""}`.trim() || reviewerName;
+
+            return (
+              <div
+                key={index}
+                className="flex items-start gap-4 p-4 rounded-md text-left bg-white shadow-sm flex flex-col"
+              >
+                {/* Job post header - full FindWork-style block */}
+                {job && (
+                  <div className="w-full mb-3 space-y-4 pb-4">
+                    <div
+                      className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                      onClick={() => jobId && navigate(`/job/${jobId}`)}
+                      role="button"
+                      aria-label="View job details"
+                    >
+                      <div className="rounded-xl p-4 bg-white transition-all">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+
+                            <img
+                              src={job.client?.profilePicture?.url || avatar}
+                              alt="Client Avatar"
+                              className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => (e.currentTarget.src = "/default-profile.png")}
+                            />
+
+                            <span className="text-sm font-medium text-[#252525] opacity-75">
+                              {clientName}
+                            </span>
+                          </div>
+
+                          <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                            {reviewDate ? new Date(reviewDate).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }) : ""}
+                          </span>
+
+                        </div>
+                        <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                          <span className="flex items-center justify-center w-5 h-5">
+                            <Briefcase size={20} className="text-blue-400" />
+                          </span>
+                          <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
+                        </p>
+
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
+                            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                              {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                          <span className="flex items-center gap-1">
+                            <MapPin size={16} />
+                            <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location || ""}</span>
+                          </span>
+                          <span className="font-bold text-green-400">
+                            {typeof job.price === "number" || typeof job.price === "string" ? `₱${Number(job.price).toLocaleString()}` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+                <div className="p-4 shadow-md rounded-[10px]">
+                  <div className="flex flex-row gap-2">
+                    <img
+                      src={avatar}
+                      alt={clientName}
+                      className="w-8 h-8 rounded-full object-cover border"
+                      onError={(e) => (e.currentTarget.src = "/default-profile.png")}
+                    />
+                    <p className="font-semibold mt-1">{clientName}</p>
+                  </div>
+                  <p className="text-sm text-yellow-500">{renderStars(rate)}</p>
+                  {text && <p className="mt-1 text-gray-700">{text}</p>}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
