@@ -265,14 +265,15 @@ const FindWork = () => {
           const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
           const skills = Array.isArray(userData.skillsByCategory) ? userData.skillsByCategory : [];
           const experiences = Array.isArray(userData.experience) ? userData.experience : [];
+          const education = Array.isArray(userData.education) ? userData.education : [];
 
           const shouldShowModal =
             portfolios.length === 0 ||
             certificates.length === 0 ||
             skills.length === 0 ||
             experiences.length === 0 ||
-            biography.length === 0;
-
+            biography.length === 0 ||
+            education.length === 0;
 
           setShowPortfolioSetup(shouldShowModal);
 
@@ -583,9 +584,9 @@ const FindWork = () => {
                 key={job.id || job._id}
                 className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
                 onClick={() => {
-                  if (userData?.userType === "client") {
+                  if (user?.userType === "client") {
                     navigate(`/invite-workers/${job.id || job._id}`);
-                  } else if (userData?.userType === "worker") {
+                  } else if (user?.userType === "worker") {
                     navigate(`/job/${job.id || job._id}`);
                   }
                 }}
