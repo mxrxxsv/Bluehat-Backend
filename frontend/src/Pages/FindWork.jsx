@@ -121,7 +121,7 @@ const FindWork = () => {
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs
         : [];
-        console.log("Fetched jobs:", jobsArray);
+      console.log("Fetched jobs:", jobsArray);
       setJobPosts(jobsArray);
       setLastRefreshTime(new Date());
 
@@ -317,12 +317,12 @@ const FindWork = () => {
 
           {/* Post Box Skeleton */}
           {user?.userType === "client" && (
-          <div className="bg-white shadow rounded-[20px] p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200" />
-              <div className="flex-1 bg-gray-100 h-10 rounded-full" />
+            <div className="bg-white shadow rounded-[20px] p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200" />
+                <div className="flex-1 bg-gray-100 h-10 rounded-full" />
+              </div>
             </div>
-          </div>
           )}
 
           {/* Job Cards Skeleton (repeat 3 times) */}
@@ -424,16 +424,16 @@ const FindWork = () => {
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
-                      
+
                       <img
                         src={user?.image || currentUser.avatar}
                         alt="Avatar"
                         className="w-8 h-8 rounded-full object-cover"
                       />
-                      
-                    <span className="text-sm font-medium text-[#252525] opacity-75">
-                      {user?.fullName || "Client Name"}
-                    </span>
+
+                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                        {user?.fullName || "Client Name"}
+                      </span>
                     </div>
 
                     <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
@@ -583,12 +583,12 @@ const FindWork = () => {
                 key={job.id || job._id}
                 className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
                 onClick={() => {
-    if (userData?.userType === "client") {
-      navigate(`/invite-workers/${job.id || job._id}`);
-    } else if (userData?.userType === "worker") {
-      navigate(`/job/${job.id || job._id}`);
-    }
-  }}
+                  if (userData?.userType === "client") {
+                    navigate(`/invite-workers/${job.id || job._id}`);
+                  } else if (userData?.userType === "worker") {
+                    navigate(`/job/${job.id || job._id}`);
+                  }
+                }}
               >
                 <div className="rounded-xl p-4 bg-white transition-all">
                   <div className="flex justify-between items-center mb-2">
