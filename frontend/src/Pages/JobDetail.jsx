@@ -23,6 +23,12 @@ const JobDetails = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Navigate to client profile from avatar/name
+  const goToClientProfile = () => {
+    const clientId = job?.client?.id || job?.clientId;
+    if (clientId) navigate(`/client/${clientId}`);
+  };
+
   // Fetch job by ID
   useEffect(() => {
     const fetchJob = async () => {
@@ -128,8 +134,9 @@ const JobDetails = () => {
                     ? job.client.profilePicture.url
                     : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
-                alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover"
+                alt={job.client?.name || "Client Avatar"}
+                className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                onClick={goToClientProfile}
               />
               <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
                 {job.client?.name || "Client Name"}
@@ -181,34 +188,36 @@ const JobDetails = () => {
 
       {/* Bottom Action Button */}
       <div className="flex justify-end md:mt-5">
-        {loadingUser ? (
-          <p className="text-gray-500">Checking user...</p>
-        ) : currentUser ? (
-          <>
-            {currentUser.userType === "worker" ? (
-              <button
-                onClick={() => setShowModal(true)}
-                className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-              >
-                Apply
-              </button>
-            ) : currentUser.userType === "client" &&
-              job.client?.credentialId._id === currentUser.id ? (
-              <button
-                onClick={() => navigate(`/invite-workers/${job.id}`)}
-                className="bg-[#55b3f3] hover:bg-sky-500 mt-4 md:mt-0 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-              >
-                Invite Workers
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <button
-            onClick={() => navigate("/signup")}
-            className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-          >
-            Create Account
-          </button>
+        {String(job?.status || "").toLowerCase() === "open" && (
+          loadingUser ? (
+            <p className="text-gray-500">Checking user...</p>
+          ) : currentUser ? (
+            <>
+              {currentUser.userType === "worker" ? (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+                >
+                  Apply
+                </button>
+              ) : currentUser.userType === "client" &&
+                job.client?.credentialId._id === currentUser.id ? (
+                <button
+                  onClick={() => navigate(`/invite-workers/${job.id}`)}
+                  className="bg-[#55b3f3] hover:bg-sky-500 mt-4 md:mt-0 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+                >
+                  Invite Workers
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/signup")}
+              className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+            >
+              Create Account
+            </button>
+          )
         )}
       </div>
 

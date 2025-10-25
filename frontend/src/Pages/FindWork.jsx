@@ -8,7 +8,7 @@ import {
   CheckCircle,
   RefreshCw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
@@ -23,6 +23,7 @@ const currentUser = {
 };
 
 const FindWork = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
   const [jobPosts, setJobPosts] = useState([]);
@@ -36,6 +37,9 @@ const FindWork = () => {
 
   const [loading, setLoading] = useState(true);
 
+  // Cache of client ratings: { [clientId]: { averageRating, totalReviews } }
+  const [clientRatings, setClientRatings] = useState({});
+
 
   const [newJob, setNewJob] = useState({
     description: "",
@@ -45,6 +49,8 @@ const FindWork = () => {
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  // New: filter category for searching jobs
+  const [filterCategory, setFilterCategory] = useState("");
 
   // NEW: Draft and confirm modal state
   const [draft, setDraft] = useState(null);
@@ -109,6 +115,7 @@ const FindWork = () => {
     try {
       setLoading(true);
       const options = { page: 1, limit: 20, status: "open" };
+      if (filterCategory) options.category = filterCategory;
       if (!useCache) options._t = Date.now();
       const response = await getAllJobs(options);
       const jobsArray = Array.isArray(response.data?.data?.jobs)
@@ -117,6 +124,42 @@ const FindWork = () => {
         console.log("Fetched jobs:", jobsArray);
       setJobPosts(jobsArray);
       setLastRefreshTime(new Date());
+
+      // Prefetch rating stats for distinct clientIds
+      const uniqueClientIds = Array.from(
+        new Set(
+          jobsArray
+            .map((j) => j.clientId)
+            .filter((id) => !!id && typeof id === "string")
+        )
+      );
+      const toFetch = uniqueClientIds.filter((id) => !clientRatings[id]);
+      if (toFetch.length > 0) {
+        // Fetch small pages (limit=1) just to get the statistics
+        const fetchStats = async (clientId) => {
+          try {
+            const { getClientReviewsById } = await import("../api/feedback.jsx");
+            const res = await getClientReviewsById(clientId, { page: 1, limit: 1 });
+            const stats = res?.data?.statistics;
+            if (stats) {
+              setClientRatings((prev) => ({
+                ...prev,
+                [clientId]: {
+                  averageRating: stats.averageRating || 0,
+                  totalReviews: stats.totalReviews || 0,
+                },
+              }));
+            }
+          } catch (e) {
+            console.warn("Failed to fetch client stats for", clientId, e);
+          }
+        };
+        // Run in sequence to avoid flooding
+        for (const id of toFetch) {
+          // eslint-disable-next-line no-await-in-loop
+          await fetchStats(id);
+        }
+      }
     } catch (err) {
       console.error("Error fetching jobs:", err);
     } finally {
@@ -133,11 +176,18 @@ const FindWork = () => {
     }
   };
 
+  const mode = import.meta.env.VITE_APP_MODE;
+
+  const baseURL =
+    mode === "production"
+      ? import.meta.env.VITE_API_PROD_URL
+      : import.meta.env.VITE_API_DEV_URL;
+
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get("https://fixit-capstone.onrender.com/skills");
+        const res = await axios.get(`${baseURL}/skills`);
         const cats = res.data?.data?.categories;
         setCategories(Array.isArray(cats) ? cats : []);
       } catch (err) {
@@ -157,6 +207,13 @@ const FindWork = () => {
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
+
+  // Refetch when category filter changes
+  useEffect(() => {
+    // Avoid firing on first render if you prefer; here we refetch immediately
+    fetchJobs(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCategory]);
 
   // Handle posting a new job
   const handlePostJob = async (e) => {
@@ -234,7 +291,6 @@ const FindWork = () => {
 
     fetchUser();
   }, []);
-
 
 
   // Filter jobs
@@ -315,6 +371,18 @@ const FindWork = () => {
           onChange={(e) => setLocation(e.target.value)}
           className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="w-full md:w-1/4 px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        >
+          <option value="">All categories</option>
+          {categories.map((cat) => (
+            <option key={cat._id} value={cat._id}>
+              {cat.categoryName}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Post Box */}
@@ -507,63 +575,72 @@ const FindWork = () => {
       {/* Job Posts Display */}
       {filteredJobs.length > 0 ? (
         <div className="space-y-4 pb-4">
-          {filteredJobs.map((job) => (
-            <Link
-              key={job.id || job._id}
-              to={`/job/${job.id || job._id}`}
-              className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block"
-            >
-              <div className="rounded-xl p-4 bg-white transition-all">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                      
-                      <img
-                        src={job.client?.profilePicture?.url || currentUser.avatar}
-                        alt="Client Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      
-                    <span className="text-sm font-medium text-[#252525] opacity-75">
-                      {job.client?.name || "Client Name"}
-                    </span>
+          {filteredJobs.map((job) => {
+            const clientId = job.clientId;
+            const rating = clientRatings[clientId];
+            return (
+              <div
+                key={job.id || job._id}
+                className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                onClick={() => navigate(`/job/${job.id || job._id}`)}
+              >
+                <div className="rounded-xl p-4 bg-white transition-all">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (clientId) navigate(`/client/${clientId}`);
+                        }}
+                        className="focus:outline-none"
+                        title="View client profile"
+                      >
+                        <img
+                          src={job.client?.profilePicture?.url || currentUser.avatar}
+                          alt="Client Avatar"
+                          className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                        />
+                      </button>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-[#252525] opacity-75">
+                          {job.client?.name || "Client Name"}
+                        </span>
+                      </div>
                     </div>
-                  {/* <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
-                    {job.client?.name || "Client Name"}
-                  </span> */}
-                  <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                    {/* <Clock size={16} /> */}
-                    {new Date(job.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
+                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                      {new Date(job.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5">
+                      <Briefcase size={20} className="text-blue-400" />
+                    </span>
+                    <span className="line-clamp-1 md:text-base">{job.description}</span>
+                  </p>
 
-                </div>
-                <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                  <span className="flex items-center justify-center w-5 h-5">
-                    <Briefcase size={20} className="text-blue-400" />
-                  </span>
-                  <span className="line-clamp-1 md:text-base">{job.description}</span>
-                </p>
-
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
-                    {job.category?.name || "Uncategorized"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
-                  <span className="flex items-center gap-1">
-                    <MapPin size={16} />
-                    <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location}</span>
-                  </span>
-                  <span className="font-bold text-green-400">
-                    ₱{job.price?.toLocaleString() || 0}
-                  </span>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                      {job.category?.name || "Uncategorized"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={16} />
+                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location}</span>
+                    </span>
+                    <span className="font-bold text-green-400">
+                      ₱{job.price?.toLocaleString() || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center mt-10">
