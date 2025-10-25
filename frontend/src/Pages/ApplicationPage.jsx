@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import { createOrGetConversation } from "../api/message";
+import { baseURL } from "../utils/appMode";
 const ApplicationsPage = () => {
   const navigate = useNavigate();
   const socketRef = useRef(null);
@@ -47,8 +48,15 @@ const ApplicationsPage = () => {
   // Normalize status strings to detect discussion-like states reliably
   const isDiscussionLike = (status) => {
     if (!status) return false;
-    const norm = String(status).toLowerCase().replace(/\s+/g, "_").replace(/-+/g, "_");
-    return norm === "in_discussion" || norm === "client_agreed" || norm === "worker_agreed";
+    const norm = String(status)
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/-+/g, "_");
+    return (
+      norm === "in_discussion" ||
+      norm === "client_agreed" ||
+      norm === "worker_agreed"
+    );
   };
 
   useEffect(() => {
@@ -65,7 +73,7 @@ const ApplicationsPage = () => {
 
         // Connect socket and register to user room
         if (!socketRef.current) {
-          socketRef.current = io("https://fixit-capstone.onrender.com", { withCredentials: true });
+          socketRef.current = io(baseURL, { withCredentials: true });
           const credId = user?.credentialId || user?._id || user?.id;
           if (credId) socketRef.current.emit("registerUser", String(credId));
 
@@ -74,24 +82,33 @@ const ApplicationsPage = () => {
             try {
               const who = await checkAuth();
               let resp;
-              if (who.data.data.userType === "worker") resp = await getWorkerApplications();
+              if (who.data.data.userType === "worker")
+                resp = await getWorkerApplications();
               else resp = await getClientApplications();
               setApplications(resp?.data?.applications || []);
-            } catch (e) { /* noop */ }
+            } catch (e) {
+              /* noop */
+            }
           };
           const onInvitationUpdate = async () => {
             try {
               const who = await checkAuth();
               let inv;
-              if (who.data.data.userType === "worker") inv = await getMyInvitations();
+              if (who.data.data.userType === "worker")
+                inv = await getMyInvitations();
               else inv = await getMySentInvitations();
               setInvitations(inv || []);
-            } catch (e) { /* noop */ }
+            } catch (e) {
+              /* noop */
+            }
           };
           socketRef.current.on("application:updated", onAppUpdate);
           socketRef.current.on("application:discussion_started", onAppUpdate);
           socketRef.current.on("application:agreement", onAppUpdate);
-          socketRef.current.on("contract:created", () => { onAppUpdate(); onInvitationUpdate(); });
+          socketRef.current.on("contract:created", () => {
+            onAppUpdate();
+            onInvitationUpdate();
+          });
         }
 
         // Fetch applications
@@ -122,7 +139,9 @@ const ApplicationsPage = () => {
     fetchData();
 
     return () => {
-      try { socketRef.current?.disconnect(); } catch (_) {}
+      try {
+        socketRef.current?.disconnect();
+      } catch (_) {}
     };
   }, []);
 
@@ -182,7 +201,10 @@ const ApplicationsPage = () => {
 
         // Fallback: derive from updated app if API didn't return convoInfo
         if (!targetCredentialId) {
-          const updated = (appsResponse?.data?.applications || []).find((a) => a._id === applicationId) || selectedApp;
+          const updated =
+            (appsResponse?.data?.applications || []).find(
+              (a) => a._id === applicationId
+            ) || selectedApp;
           if (updated) {
             if (updated.workerId?.credentialId) {
               targetCredentialId = String(updated.workerId.credentialId);
@@ -208,14 +230,22 @@ const ApplicationsPage = () => {
             agreementContext: { kind: "application", id: applicationId },
           };
           try {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           } catch (_) {}
           navigate("/chat", { state: navState });
           return;
         }
 
         // If still missing, just open chat but persist agreement context
-        try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: applicationId })); } catch (_) {}
+        try {
+          sessionStorage.setItem(
+            "chatAgreementContext",
+            JSON.stringify({ kind: "application", id: applicationId })
+          );
+        } catch (_) {}
         navigate("/chat");
       } catch (navErr) {
         console.warn("Navigation to chat failed:", navErr);
@@ -319,7 +349,9 @@ const ApplicationsPage = () => {
 
         // Fallback: derive from updated invitation if API didn't return convoInfo
         if (!targetCredentialId) {
-          const updated = (invitationsResponse || []).find((i) => i._id === invitationId) || selectedInvitation;
+          const updated =
+            (invitationsResponse || []).find((i) => i._id === invitationId) ||
+            selectedInvitation;
           if (updated) {
             if (updated.clientId?.credentialId) {
               targetCredentialId = String(updated.clientId.credentialId);
@@ -343,14 +375,22 @@ const ApplicationsPage = () => {
             agreementContext: { kind: "invitation", id: invitationId },
           };
           try {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           } catch (_) {}
           navigate("/chat", { state: navState });
           return;
         }
 
         // Persist agreement context even when falling back
-        try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: invitationId })); } catch (_) {}
+        try {
+          sessionStorage.setItem(
+            "chatAgreementContext",
+            JSON.stringify({ kind: "invitation", id: invitationId })
+          );
+        } catch (_) {}
         navigate("/chat");
       } catch (navErr) {
         console.warn("Navigation to chat failed:", navErr);
@@ -366,7 +406,10 @@ const ApplicationsPage = () => {
     try {
       if (!selectedApp) return;
       // If client and still pending, start discussion first then navigate (handler already navigates)
-      if (userType === "client" && selectedApp.applicationStatus === "pending") {
+      if (
+        userType === "client" &&
+        selectedApp.applicationStatus === "pending"
+      ) {
         await handleStartDiscussion(selectedApp._id);
         return;
       }
@@ -375,15 +418,21 @@ const ApplicationsPage = () => {
       let targetCredentialId = null;
       let targetUserType = null;
       if (userType === "client") {
-        targetCredentialId = selectedApp?.workerId?.credentialId && String(selectedApp.workerId.credentialId);
+        targetCredentialId =
+          selectedApp?.workerId?.credentialId &&
+          String(selectedApp.workerId.credentialId);
         targetUserType = "worker";
       } else if (userType === "worker") {
-        targetCredentialId = selectedApp?.clientId?.credentialId && String(selectedApp.clientId.credentialId);
+        targetCredentialId =
+          selectedApp?.clientId?.credentialId &&
+          String(selectedApp.clientId.credentialId);
         targetUserType = "client";
       }
 
       if (targetCredentialId && targetUserType) {
-        const includeAgreement = isDiscussionLike(selectedApp.applicationStatus);
+        const includeAgreement = isDiscussionLike(
+          selectedApp.applicationStatus
+        );
         try {
           await createOrGetConversation({
             participantCredentialId: targetCredentialId,
@@ -394,18 +443,28 @@ const ApplicationsPage = () => {
         const navState = {
           targetCredentialId,
           targetUserType,
-          agreementContext: includeAgreement ? { kind: "application", id: selectedApp._id } : undefined,
+          agreementContext: includeAgreement
+            ? { kind: "application", id: selectedApp._id }
+            : undefined,
         };
         try {
           if (navState.agreementContext) {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           }
         } catch (_) {}
         navigate("/chat", { state: navState });
       } else {
         // Fallback: still persist agreement context if in discussion
         if (isDiscussionLike(selectedApp?.applicationStatus)) {
-          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: selectedApp._id })); } catch (_) {}
+          try {
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify({ kind: "application", id: selectedApp._id })
+            );
+          } catch (_) {}
         }
         navigate("/chat");
       }
@@ -418,7 +477,10 @@ const ApplicationsPage = () => {
     try {
       if (!selectedInvitation) return;
       // If worker and still pending, start discussion first then navigate
-      if (userType === "worker" && selectedInvitation.invitationStatus === "pending") {
+      if (
+        userType === "worker" &&
+        selectedInvitation.invitationStatus === "pending"
+      ) {
         await handleStartInvitationDiscussion(selectedInvitation._id);
         return;
       }
@@ -427,15 +489,21 @@ const ApplicationsPage = () => {
       let targetCredentialId = null;
       let targetUserType = null;
       if (userType === "worker") {
-        targetCredentialId = selectedInvitation?.clientId?.credentialId && String(selectedInvitation.clientId.credentialId);
+        targetCredentialId =
+          selectedInvitation?.clientId?.credentialId &&
+          String(selectedInvitation.clientId.credentialId);
         targetUserType = "client";
       } else if (userType === "client") {
-        targetCredentialId = selectedInvitation?.workerId?.credentialId && String(selectedInvitation.workerId.credentialId);
+        targetCredentialId =
+          selectedInvitation?.workerId?.credentialId &&
+          String(selectedInvitation.workerId.credentialId);
         targetUserType = "worker";
       }
 
       if (targetCredentialId && targetUserType) {
-        const includeAgreement = isDiscussionLike(selectedInvitation.invitationStatus);
+        const includeAgreement = isDiscussionLike(
+          selectedInvitation.invitationStatus
+        );
         try {
           await createOrGetConversation({
             participantCredentialId: targetCredentialId,
@@ -446,17 +514,27 @@ const ApplicationsPage = () => {
         const navState = {
           targetCredentialId,
           targetUserType,
-          agreementContext: includeAgreement ? { kind: "invitation", id: selectedInvitation._id } : undefined,
+          agreementContext: includeAgreement
+            ? { kind: "invitation", id: selectedInvitation._id }
+            : undefined,
         };
         try {
           if (navState.agreementContext) {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           }
         } catch (_) {}
         navigate("/chat", { state: navState });
       } else {
         if (isDiscussionLike(selectedInvitation?.invitationStatus)) {
-          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: selectedInvitation._id })); } catch (_) {}
+          try {
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify({ kind: "invitation", id: selectedInvitation._id })
+            );
+          } catch (_) {}
         }
         navigate("/chat");
       }
@@ -469,7 +547,7 @@ const ApplicationsPage = () => {
   const openChatForApplicationItem = async (app) => {
     try {
       if (!app) return;
-      
+
       let justStarted = false;
       let convoInfo = null;
 
@@ -486,14 +564,17 @@ const ApplicationsPage = () => {
       let targetCredentialId = null;
       let targetUserType = null;
       if (userType === "client") {
-        targetCredentialId = app?.workerId?.credentialId && String(app.workerId.credentialId);
+        targetCredentialId =
+          app?.workerId?.credentialId && String(app.workerId.credentialId);
         targetUserType = "worker";
       } else if (userType === "worker") {
-        targetCredentialId = app?.clientId?.credentialId && String(app.clientId.credentialId);
+        targetCredentialId =
+          app?.clientId?.credentialId && String(app.clientId.credentialId);
         targetUserType = "client";
       }
 
-  const includeAgreement = justStarted || isDiscussionLike(app.applicationStatus);
+      const includeAgreement =
+        justStarted || isDiscussionLike(app.applicationStatus);
 
       if (targetCredentialId && targetUserType) {
         try {
@@ -506,17 +587,27 @@ const ApplicationsPage = () => {
         const navState = {
           targetCredentialId,
           targetUserType,
-          agreementContext: includeAgreement ? { kind: "application", id: app._id } : undefined,
+          agreementContext: includeAgreement
+            ? { kind: "application", id: app._id }
+            : undefined,
         };
         try {
           if (navState.agreementContext) {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           }
         } catch (_) {}
         navigate("/chat", { state: navState });
       } else {
         if (includeAgreement) {
-          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "application", id: app._id })); } catch (_) {}
+          try {
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify({ kind: "application", id: app._id })
+            );
+          } catch (_) {}
         }
         navigate("/chat");
       }
@@ -529,7 +620,7 @@ const ApplicationsPage = () => {
   const openChatForInvitationItem = async (inv) => {
     try {
       if (!inv) return;
-      
+
       let justStarted = false;
       let convoInfo = null;
 
@@ -546,14 +637,17 @@ const ApplicationsPage = () => {
       let targetCredentialId = null;
       let targetUserType = null;
       if (userType === "worker") {
-        targetCredentialId = inv?.clientId?.credentialId && String(inv.clientId.credentialId);
+        targetCredentialId =
+          inv?.clientId?.credentialId && String(inv.clientId.credentialId);
         targetUserType = "client";
       } else if (userType === "client") {
-        targetCredentialId = inv?.workerId?.credentialId && String(inv.workerId.credentialId);
+        targetCredentialId =
+          inv?.workerId?.credentialId && String(inv.workerId.credentialId);
         targetUserType = "worker";
       }
 
-  const includeAgreement = justStarted || isDiscussionLike(inv.invitationStatus);
+      const includeAgreement =
+        justStarted || isDiscussionLike(inv.invitationStatus);
 
       if (targetCredentialId && targetUserType) {
         try {
@@ -566,17 +660,27 @@ const ApplicationsPage = () => {
         const navState = {
           targetCredentialId,
           targetUserType,
-          agreementContext: includeAgreement ? { kind: "invitation", id: inv._id } : undefined,
+          agreementContext: includeAgreement
+            ? { kind: "invitation", id: inv._id }
+            : undefined,
         };
         try {
           if (navState.agreementContext) {
-            sessionStorage.setItem("chatAgreementContext", JSON.stringify(navState.agreementContext));
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify(navState.agreementContext)
+            );
           }
         } catch (_) {}
         navigate("/chat", { state: navState });
       } else {
         if (includeAgreement) {
-          try { sessionStorage.setItem("chatAgreementContext", JSON.stringify({ kind: "invitation", id: inv._id })); } catch (_) {}
+          try {
+            sessionStorage.setItem(
+              "chatAgreementContext",
+              JSON.stringify({ kind: "invitation", id: inv._id })
+            );
+          } catch (_) {}
         }
         navigate("/chat");
       }
@@ -646,19 +750,21 @@ const ApplicationsPage = () => {
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
         <button
           onClick={() => setActiveTab("applications")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${activeTab === "applications"
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "applications"
               ? "bg-white text-[#55b3f3] shadow-sm"
               : "text-gray-600 hover:text-gray-800 cursor-pointer"
-            }`}
+          }`}
         >
           Applications ({applications.length})
         </button>
         <button
           onClick={() => setActiveTab("invitations")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${activeTab === "invitations"
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "invitations"
               ? "bg-white text-[#55b3f3] shadow-sm"
               : "text-gray-600 hover:text-gray-800 cursor-pointer"
-            }`}
+          }`}
         >
           {userType === "worker" ? "Invitations Received" : "Invitations Sent"}{" "}
           ({invitations.length})
@@ -688,9 +794,9 @@ const ApplicationsPage = () => {
                       src={
                         userType === "worker"
                           ? app.clientId?.profilePicture?.url ||
-                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                           : app.workerId?.profilePicture?.url ||
-                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                       }
                       alt="Avatar"
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
@@ -701,10 +807,12 @@ const ApplicationsPage = () => {
                       <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
                         <User className="w-4 h-4 text-blue-500" />
                         {userType === "worker"
-                          ? `${app.clientId?.firstName || ""} ${app.clientId?.lastName || ""
-                          }`
-                          : `${app.workerId?.firstName || ""} ${app.workerId?.lastName || ""
-                          }`}
+                          ? `${app.clientId?.firstName || ""} ${
+                              app.clientId?.lastName || ""
+                            }`
+                          : `${app.workerId?.firstName || ""} ${
+                              app.workerId?.lastName || ""
+                            }`}
                       </p>
 
                       {/* Job Title (for worker) */}
@@ -727,30 +835,41 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
-                      onClick={(e) => { e.stopPropagation(); if (["in_discussion","client_agreed","worker_agreed"].includes(app.applicationStatus)) openChatForApplicationItem(app); }}
-                      className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${app.applicationStatus === "accepted"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          [
+                            "in_discussion",
+                            "client_agreed",
+                            "worker_agreed",
+                          ].includes(app.applicationStatus)
+                        )
+                          openChatForApplicationItem(app);
+                      }}
+                      className={`px-2 py-1 sm:px-3 rounded-lg text-xs sm:text-sm font-medium ${
+                        app.applicationStatus === "accepted"
                           ? "bg-green-100 text-green-600"
                           : app.applicationStatus === "rejected"
-                            ? "bg-red-100 text-red-600"
-                            : app.applicationStatus === "in_discussion"
-                              ? "bg-blue-100 text-blue-600"
-                              : app.applicationStatus === "client_agreed" ||
-                                app.applicationStatus === "worker_agreed"
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-gray-100 text-gray-600"
-                        }`}
+                          ? "bg-red-100 text-red-600"
+                          : app.applicationStatus === "in_discussion"
+                          ? "bg-blue-100 text-blue-600"
+                          : app.applicationStatus === "client_agreed" ||
+                            app.applicationStatus === "worker_agreed"
+                          ? "bg-yellow-100 text-yellow-600"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
                     >
                       {app.applicationStatus === "pending"
                         ? "Pending"
                         : app.applicationStatus === "in_discussion"
-                          ? "In Discussion"
-                          : app.applicationStatus === "client_agreed"
-                            ? "Client Agreed"
-                            : app.applicationStatus === "worker_agreed"
-                              ? "Worker Agreed"
-                              : app.applicationStatus === "both_agreed"
-                                ? "Both Agreed"
-                                : app.applicationStatus}
+                        ? "In Discussion"
+                        : app.applicationStatus === "client_agreed"
+                        ? "Client Agreed"
+                        : app.applicationStatus === "worker_agreed"
+                        ? "Worker Agreed"
+                        : app.applicationStatus === "both_agreed"
+                        ? "Both Agreed"
+                        : app.applicationStatus}
                     </span>
 
                     {/* View Details Icon */}
@@ -789,9 +908,9 @@ const ApplicationsPage = () => {
                       src={
                         userType === "worker"
                           ? invitation.clientId?.profilePicture?.url ||
-                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                           : invitation.workerId?.profilePicture?.url ||
-                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                       }
                       alt="Avatar"
                       className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border"
@@ -802,10 +921,12 @@ const ApplicationsPage = () => {
                       <p className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
                         <User className="w-4 h-4 text-blue-500" />
                         {userType === "worker"
-                          ? `${invitation.clientId?.firstName || ""} ${invitation.clientId?.lastName || ""
-                          }`
-                          : `${invitation.workerId?.firstName || ""} ${invitation.workerId?.lastName || ""
-                          }`}
+                          ? `${invitation.clientId?.firstName || ""} ${
+                              invitation.clientId?.lastName || ""
+                            }`
+                          : `${invitation.workerId?.firstName || ""} ${
+                              invitation.workerId?.lastName || ""
+                            }`}
                       </p>
 
                       {/* Job Title */}
@@ -825,9 +946,12 @@ const ApplicationsPage = () => {
 
                       {/* Proposed Rate */}
                       <p className="text-xs sm:text-sm flex text-gray-500 items-center font-medium mt-1">
-                        Proposed Rate: <span className="text-green-600 pl-1"> ${invitation.proposedRate}</span>
+                        Proposed Rate:{" "}
+                        <span className="text-green-600 pl-1">
+                          {" "}
+                          ${invitation.proposedRate}
+                        </span>
                       </p>
-
                     </div>
                   </div>
 
@@ -835,36 +959,47 @@ const ApplicationsPage = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-0">
                     {/* Status Badge */}
                     <span
-                      onClick={(e) => { e.stopPropagation(); if (["in_discussion","client_agreed","worker_agreed"].includes(invitation.invitationStatus)) openChatForInvitationItem(invitation); }}
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${invitation.invitationStatus === "pending"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          [
+                            "in_discussion",
+                            "client_agreed",
+                            "worker_agreed",
+                          ].includes(invitation.invitationStatus)
+                        )
+                          openChatForInvitationItem(invitation);
+                      }}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        invitation.invitationStatus === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : invitation.invitationStatus === "accepted" ||
                             invitation.invitationStatus === "both_agreed"
-                            ? "bg-green-100 text-green-800"
-                            : invitation.invitationStatus === "rejected"
-                              ? "bg-red-100 text-red-800"
-                              : invitation.invitationStatus === "in_discussion" ||
-                                invitation.invitationStatus === "client_agreed" ||
-                                invitation.invitationStatus === "worker_agreed"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                        }`}
+                          ? "bg-green-100 text-green-800"
+                          : invitation.invitationStatus === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : invitation.invitationStatus === "in_discussion" ||
+                            invitation.invitationStatus === "client_agreed" ||
+                            invitation.invitationStatus === "worker_agreed"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
                     >
                       {invitation.invitationStatus === "pending"
                         ? "Pending"
                         : invitation.invitationStatus === "in_discussion"
-                          ? "In Discussion"
-                          : invitation.invitationStatus === "client_agreed"
-                            ? "Client Agreed"
-                            : invitation.invitationStatus === "worker_agreed"
-                              ? "Worker Agreed"
-                              : invitation.invitationStatus === "both_agreed"
-                                ? "Both Agreed"
-                                : invitation.invitationStatus === "accepted"
-                                  ? "Accepted"
-                                  : invitation.invitationStatus === "rejected"
-                                    ? "Rejected"
-                                    : invitation.invitationStatus}
+                        ? "In Discussion"
+                        : invitation.invitationStatus === "client_agreed"
+                        ? "Client Agreed"
+                        : invitation.invitationStatus === "worker_agreed"
+                        ? "Worker Agreed"
+                        : invitation.invitationStatus === "both_agreed"
+                        ? "Both Agreed"
+                        : invitation.invitationStatus === "accepted"
+                        ? "Accepted"
+                        : invitation.invitationStatus === "rejected"
+                        ? "Rejected"
+                        : invitation.invitationStatus}
                     </span>
 
                     {/* View Details Icon */}
@@ -901,9 +1036,9 @@ const ApplicationsPage = () => {
                 src={
                   userType === "worker"
                     ? selectedApp.clientId?.profilePicture?.url ||
-                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                     : selectedApp.workerId?.profilePicture?.url ||
-                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt="Avatar"
                 className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border object-cover"
@@ -917,27 +1052,28 @@ const ApplicationsPage = () => {
                 <p className="text-xs sm:text-sm text-gray-600">
                   Status:{" "}
                   <span
-                    className={`font-medium ${selectedApp.applicationStatus === "accepted"
+                    className={`font-medium ${
+                      selectedApp.applicationStatus === "accepted"
                         ? "text-green-600"
                         : selectedApp.applicationStatus === "rejected"
-                          ? "text-red-600"
-                          : selectedApp.applicationStatus === "in_discussion"
-                            ? "text-blue-600"
-                            : selectedApp.applicationStatus === "client_agreed" ||
-                              selectedApp.applicationStatus === "worker_agreed"
-                              ? "text-yellow-600"
-                              : "text-gray-600"
-                      }`}
+                        ? "text-red-600"
+                        : selectedApp.applicationStatus === "in_discussion"
+                        ? "text-blue-600"
+                        : selectedApp.applicationStatus === "client_agreed" ||
+                          selectedApp.applicationStatus === "worker_agreed"
+                        ? "text-yellow-600"
+                        : "text-gray-600"
+                    }`}
                   >
                     {selectedApp.applicationStatus === "in_discussion"
                       ? "In Discussion"
                       : selectedApp.applicationStatus === "client_agreed"
-                        ? "Client Agreed"
-                        : selectedApp.applicationStatus === "worker_agreed"
-                          ? "Worker Agreed"
-                          : selectedApp.applicationStatus === "both_agreed"
-                            ? "Both Agreed"
-                            : selectedApp.applicationStatus}
+                      ? "Client Agreed"
+                      : selectedApp.applicationStatus === "worker_agreed"
+                      ? "Worker Agreed"
+                      : selectedApp.applicationStatus === "both_agreed"
+                      ? "Both Agreed"
+                      : selectedApp.applicationStatus}
                   </span>
                 </p>
               </div>
@@ -1045,39 +1181,39 @@ const ApplicationsPage = () => {
             {/* Agreement status display */}
             {(selectedApp.applicationStatus === "client_agreed" ||
               selectedApp.applicationStatus === "worker_agreed") && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                    <h3 className="font-semibold text-yellow-800">
-                      Waiting for Agreement
-                    </h3>
-                  </div>
-                  <p className="text-sm text-yellow-700 mb-3">
-                    {selectedApp.applicationStatus === "client_agreed"
-                      ? "Client has agreed. Waiting for worker to agree."
-                      : "Worker has agreed. Waiting for client to agree."}
-                  </p>
-                  {((userType === "client" &&
-                    selectedApp.applicationStatus === "worker_agreed") ||
-                    (userType === "worker" &&
-                      selectedApp.applicationStatus === "client_agreed")) && (
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <button
-                          onClick={() => handleAgreement(selectedApp._id, true)}
-                          className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 cursor-pointer text-sm"
-                        >
-                          <ThumbsUp className="w-4 h-4" /> I Agree Too!
-                        </button>
-                        <button
-                          onClick={() => handleAgreement(selectedApp._id, false)}
-                          className="flex items-center gap-1 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 cursor-pointer text-sm"
-                        >
-                          <ThumbsDown className="w-4 h-4" /> I Don't Agree
-                        </button>
-                      </div>
-                    )}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-yellow-600" />
+                  <h3 className="font-semibold text-yellow-800">
+                    Waiting for Agreement
+                  </h3>
                 </div>
-              )}
+                <p className="text-sm text-yellow-700 mb-3">
+                  {selectedApp.applicationStatus === "client_agreed"
+                    ? "Client has agreed. Waiting for worker to agree."
+                    : "Worker has agreed. Waiting for client to agree."}
+                </p>
+                {((userType === "client" &&
+                  selectedApp.applicationStatus === "worker_agreed") ||
+                  (userType === "worker" &&
+                    selectedApp.applicationStatus === "client_agreed")) && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() => handleAgreement(selectedApp._id, true)}
+                      className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 cursor-pointer text-sm"
+                    >
+                      <ThumbsUp className="w-4 h-4" /> I Agree Too!
+                    </button>
+                    <button
+                      onClick={() => handleAgreement(selectedApp._id, false)}
+                      className="flex items-center gap-1 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 cursor-pointer text-sm"
+                    >
+                      <ThumbsDown className="w-4 h-4" /> I Don't Agree
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Success state */}
             {selectedApp.applicationStatus === "accepted" && (
@@ -1121,9 +1257,9 @@ const ApplicationsPage = () => {
                   src={
                     userType === "worker"
                       ? selectedInvitation.clientId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                       : selectedInvitation.workerId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                   }
                   alt="Profile"
                   className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-gray-300 shadow-sm"
@@ -1131,10 +1267,12 @@ const ApplicationsPage = () => {
                 <div>
                   <h3 className="font-semibold text-gray-800 text-base sm:text-lg">
                     {userType === "worker"
-                      ? `${selectedInvitation.clientId?.firstName || ""} ${selectedInvitation.clientId?.lastName || ""
-                      }`
-                      : `${selectedInvitation.workerId?.firstName || ""} ${selectedInvitation.workerId?.lastName || ""
-                      }`}
+                      ? `${selectedInvitation.clientId?.firstName || ""} ${
+                          selectedInvitation.clientId?.lastName || ""
+                        }`
+                      : `${selectedInvitation.workerId?.firstName || ""} ${
+                          selectedInvitation.workerId?.lastName || ""
+                        }`}
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 mt-0.5 flex items-center">
                     {userType === "worker" ? "Client" : "Worker"}
@@ -1144,21 +1282,25 @@ const ApplicationsPage = () => {
 
               {/* Job Info */}
               <div className="mb-5">
-                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">Job Description</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">
+                  Job Description
+                </h4>
                 <div className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs sm:text-sm text-gray-600 shadow-inner text-left">
-                  {selectedInvitation.jobId?.description || "No job description available."}
+                  {selectedInvitation.jobId?.description ||
+                    "No job description available."}
                 </div>
               </div>
 
               {/* Proposed Rate */}
               <div className="border-t border-gray-100 pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">Proposed Rate</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-1 text-left">
+                  Proposed Rate
+                </h4>
                 <p className="text-xl font-semibold text-green-600 tracking-wide text-left">
                   ₱{selectedInvitation.proposedRate || "0"}
                 </p>
               </div>
             </div>
-
 
             {/* Invitation Description */}
             <div className="mb-4 px-4 mt-4">
@@ -1176,37 +1318,40 @@ const ApplicationsPage = () => {
                 Status:
               </h4>
               <div className="flex justify-start">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${selectedInvitation.invitationStatus === "pending"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : selectedInvitation.invitationStatus === "accepted" ||
-                      selectedInvitation.invitationStatus === "both_agreed"
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedInvitation.invitationStatus === "pending"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : selectedInvitation.invitationStatus === "accepted" ||
+                        selectedInvitation.invitationStatus === "both_agreed"
                       ? "bg-green-100 text-green-800"
                       : selectedInvitation.invitationStatus === "rejected"
-                        ? "bg-red-100 text-red-800"
-                        : selectedInvitation.invitationStatus === "in_discussion" ||
-                          selectedInvitation.invitationStatus === "client_agreed" ||
-                          selectedInvitation.invitationStatus === "worker_agreed"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
+                      ? "bg-red-100 text-red-800"
+                      : selectedInvitation.invitationStatus ===
+                          "in_discussion" ||
+                        selectedInvitation.invitationStatus ===
+                          "client_agreed" ||
+                        selectedInvitation.invitationStatus === "worker_agreed"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-gray-100 text-gray-800"
                   }`}
-              >
-                {selectedInvitation.invitationStatus === "pending"
-                  ? "Pending"
-                  : selectedInvitation.invitationStatus === "in_discussion"
+                >
+                  {selectedInvitation.invitationStatus === "pending"
+                    ? "Pending"
+                    : selectedInvitation.invitationStatus === "in_discussion"
                     ? "In Discussion"
                     : selectedInvitation.invitationStatus === "client_agreed"
-                      ? "Client Agreed"
-                      : selectedInvitation.invitationStatus === "worker_agreed"
-                        ? "Worker Agreed"
-                        : selectedInvitation.invitationStatus === "both_agreed"
-                          ? "Both Agreed"
-                          : selectedInvitation.invitationStatus === "accepted"
-                            ? "Accepted"
-                            : selectedInvitation.invitationStatus === "rejected"
-                              ? "Rejected"
-                              : selectedInvitation.invitationStatus}
-              </span>
+                    ? "Client Agreed"
+                    : selectedInvitation.invitationStatus === "worker_agreed"
+                    ? "Worker Agreed"
+                    : selectedInvitation.invitationStatus === "both_agreed"
+                    ? "Both Agreed"
+                    : selectedInvitation.invitationStatus === "accepted"
+                    ? "Accepted"
+                    : selectedInvitation.invitationStatus === "rejected"
+                    ? "Rejected"
+                    : selectedInvitation.invitationStatus}
+                </span>
               </div>
             </div>
 
@@ -1285,14 +1430,14 @@ const ApplicationsPage = () => {
             {/* Agreement Status Messages */}
             {(selectedInvitation.invitationStatus === "client_agreed" ||
               selectedInvitation.invitationStatus === "worker_agreed") && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <p className="text-blue-800 text-sm font-medium">
-                    {selectedInvitation.invitationStatus === "client_agreed"
-                      ? "Client has agreed. Waiting for worker to agree."
-                      : "Worker has agreed. Waiting for client to agree."}
-                  </p>
-                </div>
-              )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-blue-800 text-sm font-medium">
+                  {selectedInvitation.invitationStatus === "client_agreed"
+                    ? "Client has agreed. Waiting for worker to agree."
+                    : "Worker has agreed. Waiting for client to agree."}
+                </p>
+              </div>
+            )}
 
             {/* Client Agreement Buttons */}
             {userType === "client" &&
@@ -1357,20 +1502,20 @@ const ApplicationsPage = () => {
             {/* Status Messages */}
             {(selectedInvitation.invitationStatus === "accepted" ||
               selectedInvitation.invitationStatus === "both_agreed") && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                  <p className="text-green-800 text-sm font-medium">
-                    {" "}
-                    {selectedInvitation.invitationStatus === "both_agreed"
-                      ? "Both parties agreed! Work contract has been created."
-                      : "Invitation accepted! Work can now begin."}
-                  </p>
-                </div>
-              )}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <p className="text-green-800 text-sm font-medium">
+                  {" "}
+                  {selectedInvitation.invitationStatus === "both_agreed"
+                    ? "Both parties agreed! Work contract has been created."
+                    : "Invitation accepted! Work can now begin."}
+                </p>
+              </div>
+            )}
 
             {selectedInvitation.invitationStatus === "rejected" && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                 <p className="text-red-800 text-sm font-medium">
-                   Invitation was rejected.
+                  Invitation was rejected.
                 </p>
               </div>
             )}

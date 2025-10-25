@@ -413,6 +413,7 @@ const createClientProfile = async (pending, credentialId, session) => {
         url: "",
         public_id: "",
       },
+      education: [],
       blocked: false,
       isVerified: true,
       verifiedAt: new Date(),
@@ -462,6 +463,7 @@ const createWorkerProfile = async (pending, credentialId, session) => {
       skillsByCategory: [],
       portfolio: [],
       experience: [],
+      education: [],
       certificates: [],
       reviews: [],
       status: "available",
@@ -1433,8 +1435,8 @@ const login = async (req, res) => {
     matchingUser.lockUntil = undefined;
     matchingUser.lastLogin = new Date();
 
-  await matchingUser.save();
-  generateTokenandSetCookie(res, matchingUser);
+    await matchingUser.save();
+    generateTokenandSetCookie(res, matchingUser);
 
     const processingTime = Date.now() - startTime;
 
@@ -1576,6 +1578,7 @@ const checkAuth = async (req, res) => {
         isVerified: user.isVerified,
         address: decryptedAddress,
         image: user.profilePicture?.url || null,
+        education: user.education || [],
 
         ...(userType === "worker" && {
           portfolio: user.portfolio || [],

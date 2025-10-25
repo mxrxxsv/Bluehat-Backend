@@ -6,9 +6,7 @@ import { getWorkerReviewsById } from "../api/feedback";
 import { getJobById } from "../api/jobs";
 import { checkAuth } from "../api/auth";
 
-
 const WorkerPortfolio = () => {
-
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -50,17 +48,34 @@ const WorkerPortfolio = () => {
 
           setReviewsState({
             reviews,
-            averageRating: Number(stats?.averageRating ?? workerData?.rating ?? 0),
-            totalReviews: Number(stats?.totalReviews ?? (Array.isArray(workerData?.reviews) ? workerData.reviews.length : 0)),
+            averageRating: Number(
+              stats?.averageRating ?? workerData?.rating ?? 0
+            ),
+            totalReviews: Number(
+              stats?.totalReviews ??
+                (Array.isArray(workerData?.reviews)
+                  ? workerData.reviews.length
+                  : 0)
+            ),
           });
         } catch (e) {
-          console.error("[WorkerPortfolio] Failed to fetch worker reviews; falling back to worker.reviews", e);
+          console.error(
+            "[WorkerPortfolio] Failed to fetch worker reviews; falling back to worker.reviews",
+            e
+          );
           // Fallback to worker embedded reviews if reviews endpoint not accessible (e.g., unauthenticated)
-          const fallbackReviews = Array.isArray(workerData?.reviews) ? workerData.reviews : [];
+          const fallbackReviews = Array.isArray(workerData?.reviews)
+            ? workerData.reviews
+            : [];
           const avg = fallbackReviews.length
-            ? fallbackReviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / fallbackReviews.length
+            ? fallbackReviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) /
+              fallbackReviews.length
             : 0;
-          setReviewsState({ reviews: fallbackReviews, averageRating: avg, totalReviews: fallbackReviews.length });
+          setReviewsState({
+            reviews: fallbackReviews,
+            averageRating: avg,
+            totalReviews: fallbackReviews.length,
+          });
         }
       } catch {
         // keep existing error UI
@@ -86,14 +101,21 @@ const WorkerPortfolio = () => {
       } else if (j && typeof j === "object") {
         const jid = j._id;
         // Fetch if essential fields are missing
-        const missingFields = !(j.price && j.location && j.category && j.client);
+        const missingFields = !(
+          j.price &&
+          j.location &&
+          j.category &&
+          j.client
+        );
         if (jid && missingFields && !jobMap[jid]) idsToFetch.add(jid);
       }
     }
 
     const fetchIds = Array.from(idsToFetch);
     if (fetchIds.length) {
-      console.log("[WorkerPortfolio] Enriching job details for reviews", { fetchIds });
+      console.log("[WorkerPortfolio] Enriching job details for reviews", {
+        fetchIds,
+      });
     }
     if (!fetchIds.length) return;
 
@@ -104,11 +126,18 @@ const WorkerPortfolio = () => {
           try {
             const resp = await getJobById(jid);
             const payload = resp?.data || resp;
-            const jobData = payload?.data?.job || payload?.data || payload?.job || payload;
-            console.log("[WorkerPortfolio] Job fetched for review", { jobId: jid, job: jobData });
+            const jobData =
+              payload?.data?.job || payload?.data || payload?.job || payload;
+            console.log("[WorkerPortfolio] Job fetched for review", {
+              jobId: jid,
+              job: jobData,
+            });
             return [jid, jobData];
           } catch (err) {
-            console.warn("[WorkerPortfolio] Failed to fetch job for review", { jobId: jid, error: err });
+            console.warn("[WorkerPortfolio] Failed to fetch job for review", {
+              jobId: jid,
+              error: err,
+            });
             return [jid, null];
           }
         })
@@ -150,12 +179,9 @@ const WorkerPortfolio = () => {
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   };
 
-
   if (loading) return <p>Loading worker details...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
   if (!worker) return <p>Worker not found.</p>;
-
-
 
   const renderStars = (rating) => {
     return "⭐️".repeat(rating) + "☆".repeat(5 - rating);
@@ -164,12 +190,12 @@ const WorkerPortfolio = () => {
   const reviews = reviewsState.reviews || worker?.reviews || [];
   const averageRating = Number.isFinite(reviewsState.averageRating)
     ? Number(reviewsState.averageRating).toFixed(1)
-    : (reviews.length > 0
-      ? (
-        reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length
+    : reviews.length > 0
+    ? (
+        reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
+        reviews.length
       ).toFixed(1)
-      : "0");
-
+    : "0";
 
   return (
     <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30 bg-white">
@@ -187,12 +213,14 @@ const WorkerPortfolio = () => {
 
       <div className="flex items-start gap-6">
         <img
-          src={worker.profilePicture?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+          src={
+            worker.profilePicture?.url ||
+            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+          }
           alt={worker.fullName || "Worker"}
           onError={(e) => (e.target.src = "/default-profile.png")}
           className="w-24 h-24 rounded-full object-cover border"
         />
-
 
         <div className="flex-1 space-y-1 text-left ">
           <h1 className="text-sm md:text-3xl font-bold">{worker?.fullName}</h1>
@@ -202,15 +230,17 @@ const WorkerPortfolio = () => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
             </svg> */}
-            <span className="font-bold pr-1">Location:</span> {`${barangay}, ${city}, ${province}`}</p>
+            <span className="font-bold pr-1">Location:</span>{" "}
+            {`${barangay}, ${city}, ${province}`}
+          </p>
           <p className="text-[12px] md:text-sm text-gray-500">
-            <span className="font-bold">Age:</span>  {`${calculateAge(worker.dateOfBirth)} years old`} <br />
+            <span className="font-bold">Age:</span>{" "}
+            {`${calculateAge(worker.dateOfBirth)} years old`} <br />
             <span className="font-bold">Gender:</span> {worker?.sex}
           </p>
 
           <div className="mt-3 flex gap-2">
-
-            {currentUser?.userType === 'client' && (
+            {currentUser?.userType === "client" && (
               <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
                 Message
               </button>
@@ -243,7 +273,6 @@ const WorkerPortfolio = () => {
           )}
         </div>
       </div>
-
 
       {/* Portfolio Section */}
       <div>
@@ -305,44 +334,64 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
-
       {/* Work Experience Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">Work Experience</h2>
+        <h2 className="text-xl font-semibold mb-2 text-left">
+          Work Experience
+        </h2>
         <div className="space-y-4">
           {(worker.experience || []).map((exp, index) => (
             <div
               key={exp._id || index}
               className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
             >
-              <h3 className="font-semibold text-lg">{exp.companyName || exp.company}</h3>
+              <h3 className="font-semibold text-lg">
+                {exp.companyName || exp.company}
+              </h3>
               <p className="text-sm text-gray-500">
                 {exp.startYear || exp.years} • {exp.position}
               </p>
-              <p className="mt-1 text-gray-700">{exp.description || exp.responsibilities}</p>
+              <p className="mt-1 text-gray-700">
+                {exp.description || exp.responsibilities}
+              </p>
             </div>
           ))}
         </div>
       </div>
 
-
-      {/* Education */}
-      {/* <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">
-          Education
-        </h2>
+      {/* Education Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">Education</h2>
         <div className="space-y-4">
-          {education.map((edu, index) => (
-            <div key={index} className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm">
-              <h3 className="font-semibold text-lg">{edu.school}</h3>
-              <p className="text-sm text-gray-500">
-                {edu.years} • {edu.attainment}
-              </p>
-            </div>
-          ))}
-        </div>
+          {(worker.education || []).map((edu, index) => {
+            const startDate = edu.startDate
+              ? new Date(edu.startDate).getFullYear()
+              : "";
+            const endDate = edu.endDate
+              ? new Date(edu.endDate).getFullYear()
+              : "Present";
+            const yearRange = startDate ? `${startDate} - ${endDate}` : "";
 
-      </div> */}
+            return (
+              <div
+                key={edu._id || index}
+                className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+              >
+                <h3 className="font-semibold text-lg">{edu.schoolName}</h3>
+                <p className="text-sm text-gray-500">
+                  {yearRange} • {edu.educationLevel}
+                </p>
+                {edu.degree && (
+                  <p className="text-sm text-gray-600 mt-1">{edu.degree}</p>
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Status: {edu.educationStatus}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Reviews Section */}
       <div>
@@ -358,22 +407,35 @@ const WorkerPortfolio = () => {
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
             </svg>
             <span className="mt-0.5">{averageRating} / 5</span>
-            <span className="mt-0.5 text-gray-500">({reviewsState.totalReviews || reviews.length})</span>
+            <span className="mt-0.5 text-gray-500">
+              ({reviewsState.totalReviews || reviews.length})
+            </span>
           </p>
         </div>
 
         <div className="space-y-2">
           {(reviews || []).map((review, index) => {
             const reviewerObj = review.reviewer || review.reviewerId || {};
-            const reviewerName = (review.reviewerName || `${reviewerObj.firstName || ""} ${reviewerObj.lastName || ""}`).trim() || "Anonymous";
-            const avatar = reviewerObj.profilePicture?.url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+            const reviewerName =
+              (
+                review.reviewerName ||
+                `${reviewerObj.firstName || ""} ${reviewerObj.lastName || ""}`
+              ).trim() || "Anonymous";
+            const avatar =
+              reviewerObj.profilePicture?.url ||
+              "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
             const text = review.feedback || review.comment || "";
             const rate = Number(review.rating) || 0;
             const baseJob = review.jobId || review.job || null;
             const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id;
-            const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
+            const job = jobId ? jobMap[jobId] || baseJob : baseJob;
             const reviewDate = review.reviewDate || review.createdAt;
-            const clientName = job?.client?.name || `${job?.client?.firstName || ""} ${job?.client?.lastName || ""}`.trim() || reviewerName;
+            const clientName =
+              job?.client?.name ||
+              `${job?.client?.firstName || ""} ${
+                job?.client?.lastName || ""
+              }`.trim() ||
+              reviewerName;
 
             return (
               <div
@@ -392,12 +454,13 @@ const WorkerPortfolio = () => {
                       <div className="rounded-xl p-4 bg-white transition-all">
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-2">
-
                             <img
                               src={job.client?.profilePicture?.url || avatar}
                               alt="Client Avatar"
                               className="w-8 h-8 rounded-full object-cover"
-                              onError={(e) => (e.currentTarget.src = "/default-profile.png")}
+                              onError={(e) =>
+                                (e.currentTarget.src = "/default-profile.png")
+                              }
                             />
 
                             <span className="text-sm font-medium text-[#252525] opacity-75">
@@ -406,35 +469,53 @@ const WorkerPortfolio = () => {
                           </div>
 
                           <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                            {reviewDate ? new Date(reviewDate).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            }) : ""}
+                            {reviewDate
+                              ? new Date(reviewDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )
+                              : ""}
                           </span>
-
                         </div>
                         <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5">
                             <Briefcase size={20} className="text-blue-400" />
                           </span>
-                          <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
+                          <span className="line-clamp-1 md:text-base">
+                            {job.description || job.title || "Job post"}
+                          </span>
                         </p>
 
                         <div className="flex flex-wrap gap-2 mt-3">
-                          {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
+                          {(job.category?.name ||
+                            job.category?.categoryName ||
+                            (typeof job.category === "string" &&
+                              job.category)) && (
                             <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
-                              {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
+                              {job.category?.name ||
+                                job.category?.categoryName ||
+                                (typeof job.category === "string"
+                                  ? job.category
+                                  : "")}
                             </span>
                           )}
                         </div>
                         <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
                           <span className="flex items-center gap-1">
                             <MapPin size={16} />
-                            <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location || ""}</span>
+                            <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                              {job.location || ""}
+                            </span>
                           </span>
                           <span className="font-bold text-green-400">
-                            {typeof job.price === "number" || typeof job.price === "string" ? `₱${Number(job.price).toLocaleString()}` : ""}
+                            {typeof job.price === "number" ||
+                            typeof job.price === "string"
+                              ? `₱${Number(job.price).toLocaleString()}`
+                              : ""}
                           </span>
                         </div>
                       </div>
@@ -442,14 +523,15 @@ const WorkerPortfolio = () => {
                   </div>
                 )}
 
-
                 <div className="p-4 shadow-md rounded-[10px]">
                   <div className="flex flex-row gap-2">
                     <img
                       src={avatar}
                       alt={clientName}
                       className="w-8 h-8 rounded-full object-cover border"
-                      onError={(e) => (e.currentTarget.src = "/default-profile.png")}
+                      onError={(e) =>
+                        (e.currentTarget.src = "/default-profile.png")
+                      }
                     />
                     <p className="font-semibold mt-1">{clientName}</p>
                   </div>

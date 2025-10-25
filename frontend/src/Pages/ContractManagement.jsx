@@ -28,6 +28,7 @@ import { createOrGetConversation } from "../api/message.jsx";
 import worker from "../assets/worker.png";
 import client from "../assets/client.png";
 import { checkAuth } from "../api/auth";
+import { baseURL } from "../utils/appMode";
 
 const ContractManagement = () => {
   const navigate = useNavigate();
@@ -84,11 +85,10 @@ const ContractManagement = () => {
       setCurrentUser(user);
 
       if (!socketRef.current) {
-
-        socketRef.current = io("https://fixit-capstone.onrender.com", {
+        socketRef.current = io(baseURL, {
           withCredentials: true,
         });
-        
+
         const credId = user?.credentialId || user?._id || user?.id;
         if (credId) socketRef.current.emit("registerUser", String(credId));
 
@@ -394,10 +394,7 @@ const ContractManagement = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3
-                        className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2 cursor-pointer transition-colors"
-                        
-                      >
+                      <h3 className="text-xl font-semibold flex items-center text-[#545454] text-left mb-2 cursor-pointer transition-colors">
                         {contract.jobId.description || "Contract Work"}
                       </h3>
                       <div className="flex flex-col items-left gap-4 text-sm text-gray-600 mb-3">

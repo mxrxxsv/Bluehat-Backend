@@ -42,8 +42,8 @@ const requestLogger = (req, res, next) => {
     url: req.originalUrl,
     ip: req.ip,
     userAgent: req.get("User-Agent"),
-    adminId: req.admin?._id, // ✅ Fixed: Changed from userId to adminId
-    hasAuth: !!req.admin, // ✅ Track if request has auth
+    adminId: req.admin?._id,
+    hasAuth: !!req.admin,
     timestamp: new Date().toISOString(),
   });
 
@@ -58,7 +58,7 @@ const requestLogger = (req, res, next) => {
       statusCode: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip,
-      adminId: req.admin?._id, // ✅ Fixed: Changed from userId to adminId
+      adminId: req.admin?._id,
       hasAuth: !!req.admin,
     });
 

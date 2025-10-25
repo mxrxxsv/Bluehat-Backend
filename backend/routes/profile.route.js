@@ -14,6 +14,9 @@ const {
   deleteExperience,
   addSkillCategory,
   removeSkillCategory,
+  addEducation,
+  updateEducation,
+  deleteEducation,
   getProfile,
 } = require("../controllers/profile.controller");
 
@@ -107,6 +110,16 @@ router.delete(
   authenticateToken,
   profileLimiter,
   removeSkillCategory
+);
+
+// ✅ EDUCATION ROUTES
+router.post("/education", authenticateToken, profileLimiter, addEducation);
+router.put("/education", authenticateToken, profileLimiter, updateEducation);
+router.delete(
+  "/education/:id",
+  authenticateToken,
+  profileLimiter,
+  deleteEducation
 );
 
 module.exports = router;
