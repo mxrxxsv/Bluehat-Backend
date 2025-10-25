@@ -127,12 +127,12 @@ const JobDetails = () => {
               <img
                 src={
                   typeof job.client?.profilePicture === "string" &&
-                  job.client.profilePicture.trim() !== ""
+                    job.client.profilePicture.trim() !== ""
                     ? job.client.profilePicture
                     : job.client?.profilePicture?.url &&
                       job.client.profilePicture.url.trim() !== ""
-                    ? job.client.profilePicture.url
-                    : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      ? job.client.profilePicture.url
+                      : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt={job.client?.name || "Client Avatar"}
                 className="w-8 h-8 rounded-full object-cover cursor-pointer"
@@ -155,9 +155,7 @@ const JobDetails = () => {
             <span className="flex items-center justify-center w-5 h-5">
               <Briefcase size={20} className="text-blue-400" />
             </span>
-            <span className="text-sm md:text-lg mt-5 md:mt-0">
-              {job.description}
-            </span>
+            <span className="line-clamp-1 md:text-base">{job.description}</span>
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
