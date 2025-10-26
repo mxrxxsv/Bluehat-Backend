@@ -273,11 +273,26 @@ const ContractManagement = () => {
       loadUserAndContracts();
     } catch (error) {
       console.error("Feedback submission error:", error);
-      showNotification(
-        "error",
-        "Feedback Failed",
-        `Failed to submit feedback: ${error.message}`
-      );
+      const status = error?.response?.status;
+      const code = error?.response?.data?.code;
+      const message = error?.response?.data?.message || error?.message || "";
+      if (
+        code === "REVIEW_ALREADY_EXISTS" ||
+        status === 409 ||
+        /duplicate key/i.test(message)
+      ) {
+        showNotification(
+          "info",
+          "Already Submitted",
+          "You have already submitted feedback for this contract."
+        );
+      } else {
+        showNotification(
+          "error",
+          "Feedback Failed",
+          `Failed to submit feedback: ${message}`
+        );
+      }
     }
   };
 
