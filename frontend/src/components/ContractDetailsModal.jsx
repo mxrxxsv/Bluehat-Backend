@@ -45,7 +45,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
     setError(null);
     try {
       const response = await getContractById(contractId);
-      console.log("Contract details response:", response);
+      // Removed verbose console logging in production UI
 
       // Handle different response structures
       let contractData;
@@ -130,6 +130,72 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
+
+  // ---- Derived helpers for ratings and counts ----
+  const computeAvgRating = ({ reviewerType, revieweeType } = {}) => {
+    try {
+      const list = getReviews().filter((r) => {
+        const revType = (r?.reviewerType || "").toLowerCase();
+        const reeType = (r?.revieweeType || "").toLowerCase();
+        return (
+          (!reviewerType || revType === reviewerType.toLowerCase()) &&
+          (!revieweeType || reeType === revieweeType.toLowerCase())
+        );
+      });
+      const nums = list
+        .map((r) => Number(r?.rating))
+        .filter((n) => Number.isFinite(n));
+      if (!nums.length) return null;
+      const sum = nums.reduce((a, b) => a + b, 0);
+      return sum / nums.length;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const formatRating = (val) =>
+    Number.isFinite(val) && Number(val) !== 0 ? Number(val).toFixed(1) : "N/A";
+
+  // Prefer backend aggregate avg when it's > 0; otherwise fallback to contract-local reviews
+  const clientAvgBackend = getContract()?.clientId?.averageRating;
+  const workerAvgBackend = getContract()?.workerId?.averageRating;
+
+  const clientAvgFallback = computeAvgRating({
+    reviewerType: "worker",
+    revieweeType: "client",
+  });
+  const workerAvgFallback = computeAvgRating({
+    reviewerType: "client",
+    revieweeType: "worker",
+  });
+
+  // Gate backend averages by evidence of history: prefer contract-local reviews; otherwise only show
+  // backend average if there are historical counts (jobs posted/completed) to avoid fake defaults.
+  const clientReviewsCount = getReviews().filter(
+    (r) => (r?.revieweeType || "").toLowerCase() === "client"
+  ).length;
+  const workerReviewsCount = getReviews().filter(
+    (r) => (r?.revieweeType || "").toLowerCase() === "worker"
+  ).length;
+
+  const clientAvgRating =
+    clientReviewsCount > 0
+      ? clientAvgFallback
+      : Number.isFinite(clientAvgBackend) && clientAvgBackend > 0 &&
+        (getContract()?.clientId?.totalJobsPosted ?? 0) > 0
+      ? clientAvgBackend
+      : null;
+
+  const workerAvgRating =
+    workerReviewsCount > 0
+      ? workerAvgFallback
+      : Number.isFinite(workerAvgBackend) && workerAvgBackend > 0 &&
+        (getContract()?.workerId?.totalJobsCompleted ?? 0) > 0
+      ? workerAvgBackend
+      : null;
+
+  const clientJobsPosted = getContract()?.clientId?.totalJobsPosted;
+  const workerJobsCompleted = getContract()?.workerId?.totalJobsCompleted;
 
   return (
     <div className="fixed inset-0 bg-white/20 backdrop-blur-md  bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -281,17 +347,12 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                             size={16}
                             className="text-yellow-400 fill-current"
                           />
-                          <span className="font-medium">
-                            {getContract().clientId.averageRating?.toFixed(1) ||
-                              "N/A"}
-                          </span>
+                          <span className="font-medium">{formatRating(clientAvgRating)}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Jobs Posted:</span>
-                        <span className="font-medium">
-                          {getContract().clientId.totalJobsPosted || 0}
-                        </span>
+                        <span className="font-medium">{clientJobsPosted ?? "N/A"}</span>
                       </div>
                     </div>
                   </div>
@@ -326,17 +387,12 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                             size={16}
                             className="text-yellow-400 fill-current"
                           />
-                          <span className="font-medium">
-                            {getContract().workerId.averageRating?.toFixed(1) ||
-                              "N/A"}
-                          </span>
+                          <span className="font-medium">{formatRating(workerAvgRating)}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Jobs Completed:</span>
-                        <span className="font-medium">
-                          {getContract().workerId.totalJobsCompleted || 0}
-                        </span>
+                        <span className="font-medium">{workerJobsCompleted ?? "N/A"}</span>
                       </div>
                       {getContract().workerId.skills &&
                         getContract().workerId.skills.length > 0 && (

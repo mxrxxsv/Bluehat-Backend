@@ -920,6 +920,13 @@ const confirmWorkCompletion = async (req, res) => {
       });
     }
 
+    // Increment worker's completed jobs count to reflect actual completions
+    try {
+      await Worker.findByIdAndUpdate(contract.workerId, {
+        $inc: { totalJobsCompleted: 1 },
+      });
+    } catch (_) {}
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Work completion confirmed by client", {

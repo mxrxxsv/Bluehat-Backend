@@ -147,7 +147,7 @@ const InviteWorkersPage = () => {
       setSuggestedWorkers(suggestions);
     } catch (error) {
       console.error("Failed to load data:", error);
-      alert("Failed to load data. Please try again.");
+   
     } finally {
       setLoading(false);
     }
@@ -295,13 +295,6 @@ const InviteWorkersPage = () => {
     }
 
     setFilteredWorkers(filtered);
-  };
-
-  const handleInviteSent = () => {
-    // Refresh or update UI after invitation is sent
-    alert(
-      "Invitation sent! You can track responses in your applications page."
-    );
   };
 
   if (!currentUser || currentUser.userType !== "client") {
@@ -620,7 +613,6 @@ const InviteWorkersPage = () => {
                 <WorkerInvitationCard
                   worker={worker}
                   jobId={jobId}
-                  onInviteSent={handleInviteSent}
                 />
               </div>
             ))}

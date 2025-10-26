@@ -61,6 +61,43 @@ const ContractManagement = () => {
     });
   };
 
+  // Helper: check if current user already submitted feedback for a contract
+  const hasSubmittedFeedback = (contract, user) => {
+    try {
+      if (!contract || !user) return false;
+      const role = (user.userType || "").toLowerCase();
+
+      // Legacy flags on contract
+      if (
+        role === "worker" &&
+        contract.workerFeedback !== undefined &&
+        contract.workerFeedback !== null &&
+        String(contract.workerFeedback).trim().length > 0
+      )
+        return true;
+      if (
+        role === "client" &&
+        contract.clientFeedback !== undefined &&
+        contract.clientFeedback !== null &&
+        String(contract.clientFeedback).trim().length > 0
+      )
+        return true;
+
+      // Reviews array/object from API
+      const raw = contract.reviews ?? contract.review ?? [];
+      const reviews = Array.isArray(raw)
+        ? raw
+        : raw && typeof raw === "object"
+        ? [raw]
+        : [];
+      return reviews.some(
+        (r) => (r?.reviewerType || "").toLowerCase() === role
+      );
+    } catch (_) {
+      return false;
+    }
+  };
+
   // const closeNotification = () => {
   //   setNotification({
   //     show: false,
@@ -461,11 +498,19 @@ const ContractManagement = () => {
                           </div>
                         )}
                         {contract.contractStatus === "completed" &&
-                          !contract.workerFeedback && (
+                          !hasSubmittedFeedback(contract, currentUser) && (
                             <button
-                              onClick={() =>
-                                setFeedbackModal({ show: true, contract })
-                              }
+                              onClick={() => {
+                                if (hasSubmittedFeedback(contract, currentUser)) {
+                                  showNotification(
+                                    "info",
+                                    "Already Submitted",
+                                    "You have already submitted feedback for this contract."
+                                  );
+                                  return;
+                                }
+                                setFeedbackModal({ show: true, contract });
+                              }}
                               className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
                             >
                               <Star size={16} className="mr-2" />
@@ -491,11 +536,19 @@ const ContractManagement = () => {
                           </button>
                         )}
                         {contract.contractStatus === "completed" &&
-                          !contract.clientFeedback && (
+                          !hasSubmittedFeedback(contract, currentUser) && (
                             <button
-                              onClick={() =>
-                                setFeedbackModal({ show: true, contract })
-                              }
+                              onClick={() => {
+                                if (hasSubmittedFeedback(contract, currentUser)) {
+                                  showNotification(
+                                    "info",
+                                    "Already Submitted",
+                                    "You have already submitted feedback for this contract."
+                                  );
+                                  return;
+                                }
+                                setFeedbackModal({ show: true, contract });
+                              }}
                               className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
                             >
                               <Star size={16} className="mr-2" />

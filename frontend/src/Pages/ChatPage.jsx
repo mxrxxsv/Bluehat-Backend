@@ -90,7 +90,10 @@ const ChatPage = () => {
       const key = getSelfAgreedKey(agreementContext);
       if (key) {
         const v = sessionStorage.getItem(key);
-        setSelfAgreed(v === "true");
+        const agreed = v === "true";
+        setSelfAgreed(agreed);
+        // If user already agreed previously, suppress the banner immediately
+        if (agreed) setSuppressAgreementBanner(true);
       }
     } catch (_) {}
   }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
@@ -618,7 +621,7 @@ const ChatPage = () => {
     };
   }, []);
 
-  // Helper: Check if both parties agreed and suppress discussion banner immediately
+  // Helper: Close discussion banner as soon as either party agrees
   const checkBothAgreedAndSuppress = async () => {
     if (!agreementContext) return false;
     try {
@@ -628,11 +631,9 @@ const ChatPage = () => {
           { withCredentials: true }
         );
         const data = resp?.data?.data;
-        const status = String(data?.status || "").toLowerCase();
-        const both =
-          status === "both_agreed" ||
-          (data?.clientAgreed && data?.workerAgreed);
-        if (both) {
+        // Close banner if either side has agreed (client or worker)
+        const either = Boolean(data?.clientAgreed || data?.workerAgreed);
+        if (either) {
           setSuppressAgreementBanner(true);
           try {
             sessionStorage.removeItem("chatAgreementContext");
@@ -650,11 +651,9 @@ const ChatPage = () => {
         const inv = (list || []).find(
           (x) => String(x._id || x.id) === String(agreementContext.id)
         );
-        const invStatus = String(inv?.invitationStatus || "").toLowerCase();
-        const both =
-          invStatus === "both_agreed" ||
-          (inv?.clientAgreed && inv?.workerAgreed);
-        if (both) {
+        // Close banner if either side has agreed
+        const either = Boolean(inv?.clientAgreed || inv?.workerAgreed);
+        if (either) {
           setSuppressAgreementBanner(true);
           try {
             sessionStorage.removeItem("chatAgreementContext");
@@ -677,8 +676,8 @@ const ChatPage = () => {
     const loop = async () => {
       if (cancelled) return;
       if (!hasAgreement || suppressAgreementBanner || contractBanner) return;
-      const both = await checkBothAgreedAndSuppress();
-      if (both) {
+      const closed = await checkBothAgreedAndSuppress();
+      if (closed) {
         setTimeout(() => {
           try {
             refreshContracts();
@@ -963,23 +962,21 @@ const ChatPage = () => {
               } border rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3`}
             >
               <div className="text-left">
-                <div
-                  className={`text-sm ${
-                    selfAgreed ? "text-blue-700" : "text-yellow-700"
-                  }`}
-                >
-                  {selfAgreed ? "Waiting for the other party" : "In discussion"}
-                </div>
+                {/* Hide the self-agreed "Waiting for the other party" line; only show when not agreed */}
+                {!selfAgreed && (
+                  <div className={`text-sm text-yellow-700`}>In discussion</div>
+                )}
                 <div className="text-base font-semibold text-gray-800">
                   {selectedContactId
                     ? contactNames[selectedContactId] || "Your contact"
                     : "Your contact"}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {selfAgreed
-                    ? "You agreed to proceed. We're waiting for the other party to agree."
-                    : "Please indicate if you agree to proceed. A work contract will be created once both parties agree."}
-                </div>
+                {/* Hide the self-agreed explanatory line; keep only the pre-agreement prompt */}
+                {!selfAgreed && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    Please indicate if you agree to proceed. A work contract will be created once both parties agree.
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {!selfAgreed && (
@@ -1002,9 +999,11 @@ const ChatPage = () => {
                         // Hide the discussion banner immediately in favor of a transient toast
                         setSuppressAgreementBanner(true);
 
+                        // Hide and clear persisted agreement context immediately
                         try {
+                          sessionStorage.removeItem("chatAgreementContext");
                           const key = getSelfAgreedKey(agreementContext);
-                          if (key) sessionStorage.setItem(key, "true");
+                          if (key) sessionStorage.removeItem(key);
                         } catch (_) {}
 
                         // Show a transient success toast for 10 seconds
@@ -1103,10 +1102,10 @@ const ChatPage = () => {
           <div
             className={`${
               // shrink the chat area if any banner or toast is showing
-              contractBanner || showAgreementBanner || showAgreeToast
+              contractBanner || showAgreeToast
                 ? "h-[340px] md:h-[250px]"
                 : "h-full md:h-[400px]"
-            } overflow-y-auto px-2 transition-all duration-300`}
+            } overflow-y-auto px-2 transition-all duration-300 text-left`}
           >
             {messages.map((msg, index) => {
               const senderCred = idToString(msg?.sender?.credentialId);

@@ -194,10 +194,7 @@ const FindWork = () => {
   }, []);
 
   // Initial fetch (page 1 only)
-  useEffect(() => {
-    fetchJobs({ useCache: true, pageOverride: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Removed duplicate initial fetch to avoid double API calls on mount.
 
   // Handle Enter key press for search and location
   const handleSearchKeyPress = (e) => {
@@ -249,7 +246,8 @@ const FindWork = () => {
       await createJob(jobData);
 
       // Refresh job list to include the new job
-      await fetchJobs(false);
+  setPage(1);
+  await fetchJobs({ useCache: false, pageOverride: 1 });
 
       resetForm();
       setIsModalOpen(false);

@@ -11,6 +11,7 @@ const FeedbackPage = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({
     rating: 0,
@@ -27,10 +28,11 @@ const FeedbackPage = () => {
         // Check auth first
         const authRes = await checkAuth();
         if (authRes?.data?.success) {
-          setCurrentUser(authRes.data.data);
+          const user = authRes.data.data;
+          setCurrentUser(user);
 
-          // Then load contract
-          await loadContract();
+          // Then load contract with user context for gating
+          await loadContract(user);
         } else {
           navigate("/login");
         }
@@ -43,10 +45,28 @@ const FeedbackPage = () => {
     fetchUserAndContract();
   }, [contractId, navigate]);
 
-  const loadContract = async () => {
+  const loadContract = async (userCtx) => {
     try {
       const contractData = await getContractById(contractId);
       setContract(contractData);
+
+      // Determine if current user already submitted feedback
+      try {
+        const reviewsRaw = contractData?.review || contractData?.reviews || [];
+        const reviews = Array.isArray(reviewsRaw)
+          ? reviewsRaw
+          : reviewsRaw && typeof reviewsRaw === "object"
+          ? [reviewsRaw]
+          : [];
+
+        const userType = (userCtx?.userType || "").toLowerCase();
+        const hasSubmitted = reviews.some(
+          (r) => (r?.reviewerType || "").toLowerCase() === userType
+        );
+        setAlreadySubmitted(Boolean(hasSubmitted));
+      } catch (_) {
+        setAlreadySubmitted(false);
+      }
     } catch (error) {
       console.error("Failed to load contract:", error);
       alert("Failed to load contract details.");
@@ -133,7 +153,7 @@ const FeedbackPage = () => {
 
         <div className="bg-white rounded-xl shadow-md p-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">
-            Leave Feedback
+            {alreadySubmitted ? "Feedback Submitted" : "Leave Feedback"}
           </h1>
 
           {/* Contract Info */}
@@ -151,7 +171,13 @@ const FeedbackPage = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmitFeedback} className="space-y-6">
+          {/* If already submitted, show an info panel instead of the form */}
+          {alreadySubmitted ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
+              You have already submitted feedback for this contract. Thank you!
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitFeedback} className="space-y-6">
             {/* Rating */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -313,7 +339,8 @@ const FeedbackPage = () => {
                 )}
               </button>
             </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
     </div>
