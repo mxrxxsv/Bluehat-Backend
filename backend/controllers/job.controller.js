@@ -383,7 +383,10 @@ const handleJobError = (
 
 // ==================== CONTROLLERS ====================
 
-// ✅ Get all jobs for general users (only open and non-deleted jobs)
+// ✅ Get jobs
+// Default behavior (no clientId, no status): only open and non-deleted jobs for public feed
+// If clientId is provided and status is not provided: return ALL non-deleted jobs for that client (including completed/cancelled)
+// If status is provided: filter by that status explicitly
 const getAllJobs = async (req, res) => {
   const startTime = Date.now();
 
@@ -406,6 +409,9 @@ const getAllJobs = async (req, res) => {
         "string.min": "Location must be at least 2 characters",
         "string.max": "Location cannot exceed 200 characters",
       }),
+      status: Joi.string()
+        .valid("open", "hired", "in_progress", "completed", "cancelled")
+        .optional(),
       // Optional clientId to filter jobs by a specific client (Client _id)
       clientId: Joi.string().hex().length(24).optional(),
     });
@@ -434,14 +440,21 @@ const getAllJobs = async (req, res) => {
       });
     }
 
-    const { page, limit, sortBy, order, category, location, clientId } =
+    const { page, limit, sortBy, order, category, location, clientId, status } =
       sanitizeInput(value);
 
-    // ✅ Filter: only open and non-deleted jobs
-    const filter = {
-      isDeleted: false,
-      status: "open",
-    };
+    // ✅ Base filter: only non-deleted jobs
+    const filter = { isDeleted: false };
+
+    // ✅ Status rules
+    // - If status is explicitly provided, use it
+    // - Else if clientId is provided (profile/client profile), include all statuses
+    // - Else (public feed), default to open
+    if (status) {
+      filter.status = status;
+    } else if (!clientId) {
+      filter.status = "open";
+    }
 
   // ✅ Add optional filters
     if (category) filter.category = category;
@@ -451,12 +464,19 @@ const getAllJobs = async (req, res) => {
     const sortOrder = order === "asc" ? 1 : -1;
 
     // ✅ Get jobs with verified, non-blocked clients only
+    const clientPopulate = clientId
+      ? {
+          path: "clientId",
+          select: "firstName lastName profilePicture isVerified blocked credentialId",
+        }
+      : {
+          path: "clientId",
+          match: { isVerified: true, blocked: { $ne: true } },
+          select: "firstName lastName profilePicture isVerified blocked",
+        };
+
     const jobs = await Job.find(filter)
-      .populate({
-        path: "clientId",
-        match: { isVerified: true, blocked: { $ne: true } },
-        select: "firstName lastName profilePicture isVerified blocked",
-      })
+      .populate(clientPopulate)
       .populate("category", "categoryName")
       .sort({ [sortBy]: sortOrder })
       .skip((page - 1) * limit)
@@ -467,13 +487,16 @@ const getAllJobs = async (req, res) => {
     const verifiedJobs = jobs.filter(
       (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
     );
+    // For client-specific views, do not exclude unverified clients
+    const filteredJobs = clientId ? jobs : verifiedJobs;
 
-    // ✅ Get total count of open jobs from verified clients
+    // ✅ Get total count with the same rules
     let totalCount = 0;
     if (clientId) {
-      // If filtering by specific client, just count with filter
+      // For a specific client, count just with filter
       totalCount = await Job.countDocuments(filter);
     } else {
+      // Public feed: include only verified, non-blocked clients
       totalCount = await Job.countDocuments({
         ...filter,
         clientId: {
@@ -488,7 +511,7 @@ const getAllJobs = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     // ✅ Format response
-    const optimizedJobs = verifiedJobs.map((job) => ({
+  const optimizedJobs = filteredJobs.map((job) => ({
       id: job._id,
       description: job.description,
       price: job.price,
@@ -512,7 +535,7 @@ const getAllJobs = async (req, res) => {
     }));
 
     logger.info("Jobs retrieved successfully", {
-      totalJobs: verifiedJobs.length,
+      totalJobs: filteredJobs.length,
       totalCount,
       page,
       limit,
