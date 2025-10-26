@@ -140,11 +140,15 @@ const ContractManagement = () => {
             console.log("Failed to refresh contracts:", error);
           }
         };
-        ["contract:created", "contract:updated", "contract:feedback"].forEach(
-          (ev) => {
-            socketRef.current.on(ev, refreshContracts);
-          }
-        );
+        [
+          "contract:created",
+          "contract:updated",
+          "contract:feedback",
+          // Ensure UI refreshes when either party submits a review
+          "contract:review_submitted",
+        ].forEach((ev) => {
+          socketRef.current.on(ev, refreshContracts);
+        });
       }
 
       // Load contracts based on user type

@@ -265,6 +265,65 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
+      {/* Work Experience Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">
+          Work Experience
+        </h2>
+        <div className="space-y-4">
+          {(worker.experience || []).map((exp, index) => (
+            <div
+              key={exp._id || index}
+              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+            >
+              <h3 className="font-semibold text-lg">
+                {exp.companyName || exp.company}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {exp.startYear || exp.years} • {exp.position}
+              </p>
+              <p className="mt-1 text-gray-700">
+                {exp.description || exp.responsibilities}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Education Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2 text-left">Education</h2>
+        <div className="space-y-4">
+          {(worker.education || []).map((edu, index) => {
+            const startDate = edu.startDate
+              ? new Date(edu.startDate).getFullYear()
+              : "";
+            const endDate = edu.endDate
+              ? new Date(edu.endDate).getFullYear()
+              : "Present";
+            const yearRange = startDate ? `${startDate} - ${endDate}` : "";
+
+            return (
+              <div
+                key={edu._id || index}
+                className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+              >
+                <h3 className="font-semibold text-lg">{edu.schoolName}</h3>
+                <p className="text-sm text-gray-500">
+                  {yearRange} • {edu.educationLevel}
+                </p>
+                {edu.degree && (
+                  <p className="text-sm text-gray-600 mt-1">{edu.degree}</p>
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Status: {edu.educationStatus}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Portfolio Section */}
       <div>
         <h2 className="text-xl font-semibold mb-2 text-left">Portfolio</h2>
@@ -322,65 +381,6 @@ const WorkerPortfolio = () => {
               )}
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Work Experience Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">
-          Work Experience
-        </h2>
-        <div className="space-y-4">
-          {(worker.experience || []).map((exp, index) => (
-            <div
-              key={exp._id || index}
-              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
-            >
-              <h3 className="font-semibold text-lg">
-                {exp.companyName || exp.company}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {exp.startYear || exp.years} • {exp.position}
-              </p>
-              <p className="mt-1 text-gray-700">
-                {exp.description || exp.responsibilities}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Education Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">Education</h2>
-        <div className="space-y-4">
-          {(worker.education || []).map((edu, index) => {
-            const startDate = edu.startDate
-              ? new Date(edu.startDate).getFullYear()
-              : "";
-            const endDate = edu.endDate
-              ? new Date(edu.endDate).getFullYear()
-              : "Present";
-            const yearRange = startDate ? `${startDate} - ${endDate}` : "";
-
-            return (
-              <div
-                key={edu._id || index}
-                className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
-              >
-                <h3 className="font-semibold text-lg">{edu.schoolName}</h3>
-                <p className="text-sm text-gray-500">
-                  {yearRange} • {edu.educationLevel}
-                </p>
-                {edu.degree && (
-                  <p className="text-sm text-gray-600 mt-1">{edu.degree}</p>
-                )}
-                <p className="text-sm text-gray-500 mt-1">
-                  Status: {edu.educationStatus}
-                </p>
-              </div>
-            );
-          })}
         </div>
       </div>
 
