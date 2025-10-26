@@ -7,7 +7,6 @@ const ReviewSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "WorkContract",
       required: true,
-      unique: true,
     },
 
     // Original fields
@@ -109,6 +108,8 @@ const ReviewSchema = new mongoose.Schema(
 );
 
 // ==================== INDEXES ====================
+// Allow one review per party per contract (client can review once, worker can review once)
+ReviewSchema.index({ contractId: 1, reviewerType: 1 }, { unique: true });
 ReviewSchema.index({ workerId: 1, rating: 1 });
 ReviewSchema.index({ clientId: 1, rating: 1 }); // One review per contract
 ReviewSchema.index({ reviewerId: 1, reviewerType: 1 });
@@ -141,6 +142,7 @@ async function updateAverageRatings(review) {
     const Worker = mongoose.model("Worker");
     const Client = mongoose.model("Client");
     const Review = mongoose.model("Review");
+    const WorkContract = mongoose.model("WorkContract");
 
     // Update worker's average rating
     if (review.workerId) {
@@ -165,11 +167,16 @@ async function updateAverageRatings(review) {
         workerStats.length > 0
           ? Math.round(workerStats[0].averageRating * 100) / 100
           : 0;
+      // Use completed contracts as the source of truth for jobs completed
+      const completedCount = await WorkContract.countDocuments({
+        workerId: review.workerId,
+        contractStatus: "completed",
+        isDeleted: false,
+      });
 
       await Worker.findByIdAndUpdate(review.workerId, {
         averageRating: workerRating,
-        totalJobsCompleted:
-          workerStats.length > 0 ? workerStats[0].totalReviews : 0,
+        totalJobsCompleted: completedCount,
       });
     }
 
@@ -332,3 +339,27 @@ ReviewSchema.statics.getRatingStats = async function (targetId, targetType) {
 };
 
 module.exports = mongoose.model("Review", ReviewSchema);
+
+// Attempt to self-heal indexes at runtime: drop old unique index on contractId if present
+// and ensure the new compound unique index exists. Runs best-effort and silently fails on production.
+try {
+  // Defer until connection is (likely) ready
+  setTimeout(async () => {
+    try {
+      const conn = mongoose.connection;
+      if (!conn || !conn.db) return;
+      const coll = conn.collection("reviews");
+      const indexes = await coll.indexes();
+      const bad = indexes.find(
+        (i) => i.name === "contractId_1" && i.unique === true
+      );
+      if (bad) {
+        try {
+          await coll.dropIndex("contractId_1");
+        } catch (_) {}
+      }
+      // Ensure compound unique index
+      await coll.createIndex({ contractId: 1, reviewerType: 1 }, { unique: true });
+    } catch (_) {}
+  }, 0);
+} catch (_) {}

@@ -12,6 +12,8 @@ export const getAllJobs = (options = {}) => {
     limit = 10,
     category,
     location,
+    clientId,
+    status,
     sortBy = "createdAt",
     order = "desc",
     _t,
@@ -20,6 +22,8 @@ export const getAllJobs = (options = {}) => {
   const params = { page, limit, sortBy, order };
   if (category) params.category = category;
   if (location) params.location = location;
+  if (clientId) params.clientId = clientId;
+  if (status) params.status = status;
   if (_t) params._t = _t;
 
   return API.get("/", {

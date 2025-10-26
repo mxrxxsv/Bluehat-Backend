@@ -1481,7 +1481,32 @@ const checkAuth = async (req, res) => {
   try {
     const { id, userType } = req.user;
 
-    const credential = await Credential.findById(id).select("-password");
+    // Fetch only necessary credential fields
+    // and the user profile in parallel for lower latency
+    const credentialPromise = Credential.findById(id)
+      .select("_id userType isAuthenticated")
+      .lean();
+
+    let userQuery;
+    if (userType === "client") {
+      // Lightweight client projection and lean for speed
+      userQuery = Client.findOne({ credentialId: id })
+        .select("_id firstName lastName address profilePicture isVerified")
+        .lean();
+    } else if (userType === "worker") {
+      // Single worker query (avoid double query) with minimal projection
+      // Populate just the skill category names
+      userQuery = Worker.findOne({ credentialId: id })
+        .select(
+          "_id firstName lastName address profilePicture isVerified " +
+            "portfolio skillsByCategory experience certificates " +
+            "idPictureId idPictureUrl verificationStatus biography education"
+        )
+        .populate("skillsByCategory.skillCategoryId", "categoryName")
+        .lean();
+    }
+
+    const [credential, user] = await Promise.all([credentialPromise, userQuery]);
     if (!credential) {
       logger.warn("Auth check for non-existent credential", {
         id: id,
@@ -1494,16 +1519,6 @@ const checkAuth = async (req, res) => {
         message: "User not found",
         code: "USER_NOT_FOUND",
       });
-    }
-
-    let user;
-    if (userType === "client") {
-      user = await Client.findOne({ credentialId: id });
-    } else if (userType === "worker") {
-      user = await Worker.findOne({ credentialId: id });
-      user = await Worker.findOne({ credentialId: id })
-        .populate("skillsByCategory.skillCategoryId", "categoryName")
-        .lean();
     }
 
     if (!user) {
@@ -1578,7 +1593,7 @@ const checkAuth = async (req, res) => {
         isVerified: user.isVerified,
         address: decryptedAddress,
         image: user.profilePicture?.url || null,
-        education: user.education || [],
+
 
         ...(userType === "worker" && {
           portfolio: user.portfolio || [],

@@ -292,7 +292,39 @@ const inviteWorker = async (req, res) => {
     }
 
     // Check if worker is available for new work
-    if (!worker.canAcceptNewContract()) {
+    let canAccept = worker.canAcceptNewContract();
+
+    // If the calculated availability says no, double-check against contracts to prevent stale state
+    if (!canAccept) {
+      try {
+        const activeContracts = await WorkContract.countDocuments({
+          workerId: worker._id,
+          contractStatus: { $in: ["active", "in_progress"] },
+          isDeleted: false,
+        });
+
+        // If there are no active contracts but worker appears busy, auto-heal the worker state
+        if (activeContracts === 0) {
+          const prevStatus = worker.status;
+          const prevJob = worker.currentJob;
+          worker.becomeAvailable();
+          await worker.save();
+          canAccept = true;
+          logger.warn("Auto-healed worker availability due to stale state", {
+            workerId: worker._id,
+            previousStatus: prevStatus,
+            previousCurrentJob: prevJob,
+          });
+        }
+      } catch (e) {
+        logger.warn("Failed contract state verification during invitation", {
+          workerId: worker._id,
+          error: e.message,
+        });
+      }
+    }
+
+    if (!canAccept) {
       return res.status(409).json({
         success: false,
         message:

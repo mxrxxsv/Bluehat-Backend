@@ -17,6 +17,12 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState({ show: false, message: "" });
 
+  // Derive busy/availability state from worker shape we receive
+  const isBusy =
+    String(worker?.status || "").toLowerCase() === "working" ||
+    String(worker?.status || "").toLowerCase() === "not available" ||
+    String(worker?.availability || "").toLowerCase() === "busy";
+
   // Auto-close feedback modal after 2.5 seconds
   useEffect(() => {
     if (feedback.show) {
@@ -29,6 +35,15 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
 
   const handleSendInvite = async (e) => {
     e.preventDefault();
+
+    if (isBusy) {
+      setFeedback({
+        show: true,
+        message:
+          "This worker is currently busy. Please choose another worker or try again later.",
+      });
+      return;
+    }
 
     if (!inviteMessage.trim() || !proposedRate) {
       setFeedback({
@@ -66,9 +81,13 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
       });
     } catch (error) {
       console.error("Failed to send invitation:", error);
+      const serverMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Something went wrong. Please try again.";
       setFeedback({
         show: true,
-        message: "Something went wrong. Please try again.",
+        message: serverMsg,
       });
     } finally {
       setSending(false);
@@ -157,20 +176,45 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
               {worker.experienceLevel}
             </span>
           )}
-          {worker.availability && (
-            <span className="text-[#55b3f3] font-medium">
-              {worker.availability}
+          {(worker.availability || worker.status) && (
+            <span
+              className={
+                "font-medium px-2 py-0.5 rounded-full " +
+                (isBusy
+                  ? "bg-red-50 text-red-600 border border-red-200"
+                  : "text-[#55b3f3]")
+              }
+              title={isBusy ? "This worker is currently busy" : undefined}
+            >
+              {worker.availability || worker.status}
             </span>
           )}
         </div>
 
         {/* Invite Button */}
         <button
-          onClick={() => setShowInviteModal(true)}
-          className="w-full bg-[#55b3f3] text-white py-2 px-4 rounded-lg hover:bg-sky-500 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          onClick={() => {
+            if (isBusy) {
+              setFeedback({
+                show: true,
+                message:
+                  "This worker is currently busy. Please choose another worker or try again later.",
+              });
+              return;
+            }
+            setShowInviteModal(true);
+          }}
+          disabled={isBusy}
+          className={
+            "w-full py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 " +
+            (isBusy
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              : "bg-[#55b3f3] text-white hover:bg-sky-500 cursor-pointer")
+          }
+          title={isBusy ? "Worker is busy" : "Invite to Job"}
         >
           <Send className="w-4 h-4" />
-          Invite to Job
+          {isBusy ? "Worker Busy" : "Invite to Job"}
         </button>
       </div>
 
