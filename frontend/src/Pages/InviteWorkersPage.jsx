@@ -16,6 +16,7 @@ const InviteWorkersPage = () => {
   const [workers, setWorkers] = useState([]);
   const [filteredWorkers, setFilteredWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [suggestedWorkers, setSuggestedWorkers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     location: "",
@@ -63,19 +64,33 @@ const InviteWorkersPage = () => {
       const jobData = jobResponse.data.data || jobResponse.data;
       setJob(jobData);
 
-      // Load available workers
-      const workerRes = await searchWorkers();
-
-      // Extract workers array from varying backend shapes safely
-      const workersRaw =
-        workerRes?.data?.data?.workers ||
-        workerRes?.data?.workers ||
-        workerRes?.workers ||
-        workerRes?.data ||
-        [];
+      // Load available workers across multiple pages to avoid under-fetching
+      const allWorkers = [];
+      let page = 1;
+      let hasNext = true;
+      const maxPages = 5; // safety cap
+      while (hasNext && page <= maxPages) {
+        const workerRes = await searchWorkers({ page });
+        const pageWorkers = workerRes?.workers || workerRes?.data?.workers || [];
+        if (Array.isArray(pageWorkers) && pageWorkers.length) {
+          allWorkers.push(...pageWorkers);
+        }
+        const pagination = workerRes?.pagination || workerRes?.data?.pagination;
+        hasNext = Boolean(pagination?.hasNextPage) && pageWorkers.length > 0;
+        page += 1;
+      }
 
       // Normalize workers to ensure rating/totalRatings are numeric and text fields are searchable
-      const normalizedWorkers = (Array.isArray(workersRaw) ? workersRaw : []).map((w) => {
+      // De-duplicate by _id then normalize
+      const dedupMap = new Map();
+      for (const w of allWorkers) {
+        const id = w?._id || w?.id;
+        if (!id) continue;
+        if (!dedupMap.has(id)) dedupMap.set(id, w);
+      }
+      const uniqueWorkers = Array.from(dedupMap.values());
+
+      const normalizedWorkers = (Array.isArray(uniqueWorkers) ? uniqueWorkers : []).map((w) => {
         const rating = Number(
           w?.rating ?? w?.averageRating ?? 0
         );
@@ -113,13 +128,10 @@ const InviteWorkersPage = () => {
       });
 
       // Debug a small sample to verify shapes in console
-      if (normalizedWorkers.length) {
-        console.log("[InviteWorkers] sample worker:", {
-          _id: normalizedWorkers[0]._id,
-          name: `${normalizedWorkers[0].firstName} ${normalizedWorkers[0].lastName}`,
-          rating: normalizedWorkers[0].rating,
-          totalRatings: normalizedWorkers[0].totalRatings,
-          skillsText: normalizedWorkers[0].skillsText,
+      if (import.meta?.env?.DEV && normalizedWorkers.length) {
+        // eslint-disable-next-line no-console
+        console.log("[InviteWorkers] fetched workers", {
+          count: normalizedWorkers.length,
         });
       }
 
@@ -128,14 +140,73 @@ const InviteWorkersPage = () => {
         normalizedWorkers
       );
 
-      setWorkers(enrichedWorkers);
-      setFilteredWorkers(enrichedWorkers);
+  setWorkers(enrichedWorkers);
+  setFilteredWorkers(enrichedWorkers);
+      // Compute suggestions based on job requirements
+      const suggestions = getSuggestedWorkers(jobData, enrichedWorkers);
+      setSuggestedWorkers(suggestions);
     } catch (error) {
       console.error("Failed to load data:", error);
       alert("Failed to load data. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper: build normalized labels for a worker's skills
+  const getWorkerSkillLabels = (w) => {
+    if (!Array.isArray(w?.skills)) return [];
+    return w.skills
+      .map((s) =>
+        typeof s === "string"
+          ? s
+          : s?.name || s?.categoryName || s?.title || ""
+      )
+      .filter(Boolean)
+      .map((t) => String(t).toLowerCase());
+  };
+
+  // Heuristic: simple proximity by shared tokens in location strings
+  const isNearby = (jobLoc = "", workerLoc = "") => {
+    const a = String(jobLoc).toLowerCase();
+    const b = String(workerLoc).toLowerCase();
+    if (!a || !b) return 0; // unknown
+    if (a === b) return 2; // exact
+    const tokensA = a.split(/[\s,]+/).filter(Boolean);
+    const tokensB = b.split(/[\s,]+/).filter(Boolean);
+    const overlap = tokensA.some((t) => tokensB.includes(t));
+    return overlap ? 1 : 0;
+  };
+
+  // Suggest top workers by skill match + rating + proximity
+  const getSuggestedWorkers = (jobObj, list) => {
+    if (!jobObj || !Array.isArray(list)) return [];
+    const required = [];
+    const cat = jobObj?.category?.name || jobObj?.categoryName;
+    if (cat) required.push(String(cat).toLowerCase());
+    const desc = String(jobObj?.description || "").toLowerCase();
+    if (desc && required.length === 0) {
+      const words = desc.match(/[a-zA-Z]+/g) || [];
+      required.push(...words.filter((w) => w.length > 3).slice(0, 2));
+    }
+
+    const scored = list.map((w) => {
+      const skills = getWorkerSkillLabels(w);
+      const skillMatches = required.filter((r) =>
+        skills.some((s) => s.includes(r) || r.includes(s))
+      ).length;
+      const rating = Number(w?.rating || 0);
+      const locScore = isNearby(jobObj?.location, w?.location); // 0,1,2
+      const confidence = Math.min(Number(w?.totalRatings || 0) / 10, 1);
+      const score = skillMatches * 3 + rating * 1.5 + locScore * 1 + confidence;
+      return { w, score, skillMatches, locScore };
+    });
+
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .filter((x) => x.skillMatches > 0 || x.locScore > 0)
+      .slice(0, 5)
+      .map((x) => x.w);
   };
 
   // Fetch review statistics per worker (averageRating, totalReviews)
@@ -177,31 +248,30 @@ const InviteWorkersPage = () => {
   }, [searchTerm, filters, workers]);
 
   const applyFilters = () => {
-    let filtered = workers;
+    let filtered = [...workers];
 
     // Search by name or skills
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+    const kw = searchTerm.trim().toLowerCase();
+    if (kw) {
       filtered = filtered.filter((w) => {
         const nameText = w?.nameText ?? `${w?.firstName || ""} ${w?.lastName || ""}`.trim().toLowerCase();
         const skillsText = w?.skillsText ?? (Array.isArray(w?.skills) ? w.skills.map((s) => (typeof s === "string" ? s : s?.name || s?.categoryName || s?.title || "")).join(" ") : "").toLowerCase();
         const bioText = w?.bioText ?? String(w?.bio || "").toLowerCase();
-        return nameText.includes(search) || skillsText.includes(search) || bioText.includes(search);
+        return nameText.includes(kw) || skillsText.includes(kw) || bioText.includes(kw);
       });
     }
 
     // Filter by location
     if (filters.location) {
+      const loc = filters.location.trim().toLowerCase();
       filtered = filtered.filter((w) =>
-        (w?.locationText ?? String(w?.location || "").toLowerCase()).includes(
-          filters.location.toLowerCase()
-        )
+        (w?.locationText ?? String(w?.location || "").toLowerCase()).includes(loc)
       );
     }
 
     // Filter by minimum rating
     if (filters.minRating) {
-      const min = Number(filters.minRating);
+      const min = parseFloat(filters.minRating);
       filtered = filtered.filter((w) => {
         const rating = Number(w?.rating ?? 0);
         const total = Number(w?.totalRatings ?? 0);
@@ -305,6 +375,7 @@ const InviteWorkersPage = () => {
     <div className="min-h-screen">
 
       <div className="max-w-7xl mx-auto px-4 py-8 mt-25">
+       
         {/* Header */}
         <div className="mb-8">
           <button
@@ -385,6 +456,53 @@ const InviteWorkersPage = () => {
 
         </div>
 
+         {/* Suggested Workers (minimal) */}
+        {suggestedWorkers.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-base font-semibold text-gray-700 mb-3 text-left">Suggested for this job</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {suggestedWorkers.slice(0, 3).map((w) => (
+                <button
+                  key={w._id}
+                  onClick={() => {
+                    const el = document.getElementById(`worker-${w._id}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  className="text-left bg-white rounded-xl p-4 shadow hover:shadow-md transition cursor-pointer"
+                  title="Scroll to this worker below"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={
+                        w?.profilePicture?.url ||
+                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                      }
+                      alt={`${w.firstName || ""} ${w.lastName || ""}`.trim()}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-800">
+                        {(w.firstName || "") + " " + (w.lastName || "")}
+                      </div>
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <Star className="w-3 h-3 text-yellow-500" />
+                        {Number(w.rating || 0).toFixed(1)}
+                        <span className="text-gray-400">({Number(w.totalRatings || 0)})</span>
+                        {w.location && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {w.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className="bg-white rounded-xl p-6 shadow-md mb-8">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -403,7 +521,7 @@ const InviteWorkersPage = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               <select
                 value={filters.location}
                 onChange={(e) =>
@@ -430,6 +548,17 @@ const InviteWorkersPage = () => {
                 <option value="4.5">4.5+ Stars</option>
                 <option value="5">5 Stars</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                }}
+                className="text-sm text-blue-500 hover:text-blue-700 hover:underline ml-1"
+              >
+                Clear filters
+              </button>
 
               {/* <select
                 value={filters.experienceLevel}
@@ -487,12 +616,13 @@ const InviteWorkersPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWorkers.map((worker) => (
-              <WorkerInvitationCard
-                key={worker._id}
-                worker={worker}
-                jobId={jobId}
-                onInviteSent={handleInviteSent}
-              />
+              <div key={worker._id} id={`worker-${worker._id}`}>
+                <WorkerInvitationCard
+                  worker={worker}
+                  jobId={jobId}
+                  onInviteSent={handleInviteSent}
+                />
+              </div>
             ))}
           </div>
         )}

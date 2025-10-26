@@ -339,6 +339,10 @@ const getAllWorkers = async (req, res) => {
             fullName: `${worker.firstName} ${worker.lastName}${
               worker.suffixName ? ` ${worker.suffixName}` : ""
             }`,
+            firstName: worker.firstName,
+            lastName: worker.lastName,
+            suffixName: worker.suffixName,
+            sex: worker.sex,
             location: `${worker.address?.city || "N/A"}, ${
               worker.address?.province || "N/A"
             }`,
@@ -346,6 +350,12 @@ const getAllWorkers = async (req, res) => {
             skills: worker.skills || [],
             biography: worker.biography,
             status: worker.status,
+            email: worker.email,
+            isAccountVerified: worker.isAccountVerified,
+            isVerified: worker.isVerified,
+            verificationStatus: worker.verificationStatus,
+            verifiedAt: worker.verifiedAt,
+            createdAt: worker.createdAt,
             rating: worker.averageRating || 0,
             totalRatings: worker.totalRatings || 0,
           };
@@ -618,6 +628,8 @@ const getWorkerById = async (req, res) => {
     try {
       if (worker.firstName) worker.firstName = decryptAES128(worker.firstName);
       if (worker.lastName) worker.lastName = decryptAES128(worker.lastName);
+      if (worker.middleName)
+        worker.middleName = decryptAES128(worker.middleName);
       if (worker.suffixName)
         worker.suffixName = decryptAES128(worker.suffixName);
       if (worker.contactNumber)
@@ -655,9 +667,13 @@ const getWorkerById = async (req, res) => {
     const formattedWorker = {
       _id: worker._id,
       credentialId: worker.credentialId,
-      fullName: `${worker.firstName} ${worker.lastName}${
-        worker.suffixName ? " " + worker.suffixName : ""
-      }`,
+      fullName: `${worker.firstName} ${
+        worker.middleName ? worker.middleName + " " : ""
+      }${worker.lastName}${worker.suffixName ? " " + worker.suffixName : ""}`,
+      firstName: worker.firstName,
+      middleName: worker.middleName,
+      lastName: worker.lastName,
+      suffixName: worker.suffixName,
       contactNumber: worker.contactNumber,
       sex: worker.sex,
       dateOfBirth: worker.dateOfBirth,
@@ -666,6 +682,7 @@ const getWorkerById = async (req, res) => {
       profilePicture: worker.profilePicture,
       biography: worker.biography,
       skills: worker.skills || [],
+      skillsByCategory: worker.skillsByCategory,
       portfolio: worker.portfolio || [],
       experience: worker.experience || [],
       education: worker.education || [],
@@ -675,9 +692,24 @@ const getWorkerById = async (req, res) => {
       currentJob: worker.currentJob,
       rating: worker.averageRating,
       totalRatings: worker.totalRatings,
+      email: worker.email,
+      isAccountVerified: worker.isAccountVerified,
+      isVerified: worker.isVerified,
+      verificationStatus: worker.verificationStatus,
+      hasCompleteDocuments: worker.hasCompleteDocuments,
+      verificationDetails: {
+        status: worker.verificationStatus,
+        submittedAt: worker.idVerificationSubmittedAt,
+        approvedAt: worker.idVerificationApprovedAt,
+        rejectedAt: worker.idVerificationRejectedAt,
+        isVerified: worker.isVerified,
+        verifiedAt: worker.verifiedAt,
+      },
       verificationBadge: worker.isVerified
-        ? "Verified"
-        : "Pending Verification",
+        ? "✅ Verified"
+        : "⏳ Pending Verification",
+      createdAt: worker.createdAt,
+      updatedAt: worker.updatedAt,
     };
 
     const processingTime = Date.now() - startTime;

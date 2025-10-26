@@ -406,6 +406,8 @@ const getAllJobs = async (req, res) => {
         "string.min": "Location must be at least 2 characters",
         "string.max": "Location cannot exceed 200 characters",
       }),
+      // Optional clientId to filter jobs by a specific client (Client _id)
+      clientId: Joi.string().hex().length(24).optional(),
     });
 
     const { error, value } = pageSchema.validate(req.query, {
@@ -432,7 +434,7 @@ const getAllJobs = async (req, res) => {
       });
     }
 
-    const { page, limit, sortBy, order, category, location } =
+    const { page, limit, sortBy, order, category, location, clientId } =
       sanitizeInput(value);
 
     // ✅ Filter: only open and non-deleted jobs
@@ -441,9 +443,10 @@ const getAllJobs = async (req, res) => {
       status: "open",
     };
 
-    // ✅ Add optional filters
+  // ✅ Add optional filters
     if (category) filter.category = category;
     if (location) filter.location = { $regex: location, $options: "i" };
+  if (clientId) filter.clientId = clientId;
 
     const sortOrder = order === "asc" ? 1 : -1;
 
@@ -466,15 +469,21 @@ const getAllJobs = async (req, res) => {
     );
 
     // ✅ Get total count of open jobs from verified clients
-    const totalCount = await Job.countDocuments({
-      ...filter,
-      clientId: {
-        $in: await Client.find({
-          isVerified: true,
-          blocked: { $ne: true },
-        }).distinct("_id"),
-      },
-    });
+    let totalCount = 0;
+    if (clientId) {
+      // If filtering by specific client, just count with filter
+      totalCount = await Job.countDocuments(filter);
+    } else {
+      totalCount = await Job.countDocuments({
+        ...filter,
+        clientId: {
+          $in: await Client.find({
+            isVerified: true,
+            blocked: { $ne: true },
+          }).distinct("_id"),
+        },
+      });
+    }
 
     const processingTime = Date.now() - startTime;
 
@@ -497,6 +506,7 @@ const getAllJobs = async (req, res) => {
               job.clientId.lastName
             )}`,
             profilePicture: job.clientId.profilePicture,
+            isVerified: job.clientId.isVerified || false,
           }
         : null,
     }));
