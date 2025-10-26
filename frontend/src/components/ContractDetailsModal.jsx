@@ -247,8 +247,8 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   const workerJobsCompleted = getContract()?.workerId?.totalJobsCompleted;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm p-0 md:p-4">
-      <div className="bg-white w-full h-[92vh] md:h-auto md:max-w-4xl md:max-h-[90vh] rounded-t-2xl md:rounded-xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm p-4 md:p-4">
+      <div className="bg-white w-full h-[92vh] md:h-auto md:max-w-4xl md:max-h-[90vh] rounded-t-2xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl md:rounded-t-xl">
           <h2 className="text-xl md:text-2xl font-bold text-[#545454]">
@@ -263,7 +263,10 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="p-4 md:p-6 overflow-y-auto h-[calc(92vh-4rem)] md:h-auto">
+        <div
+          className="p-4 md:p-6 flex-1 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
