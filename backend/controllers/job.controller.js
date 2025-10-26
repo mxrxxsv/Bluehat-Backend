@@ -497,7 +497,6 @@ const getAllJobs = async (req, res) => {
               job.clientId.lastName
             )}`,
             profilePicture: job.clientId.profilePicture,
-            isVerified: job.clientId.isVerified || false,
           }
         : null,
     }));
