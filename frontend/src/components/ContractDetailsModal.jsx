@@ -247,23 +247,23 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   const workerJobsCompleted = getContract()?.workerId?.totalJobsCompleted;
 
   return (
-    <div className="fixed inset-0 bg-white/20 backdrop-blur-md  bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm p-0 md:p-4">
+      <div className="bg-white w-full h-[92vh] md:h-auto md:max-w-4xl md:max-h-[90vh] rounded-t-2xl md:rounded-xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
-          <h2 className="text-2xl font-bold text-[#545454]">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl md:rounded-t-xl">
+          <h2 className="text-xl md:text-2xl font-bold text-[#545454]">
             Contract Details
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+            className="p-2 md:p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
           >
             <X size={24} className="text-gray-500" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 md:p-6 overflow-y-auto h-[calc(92vh-4rem)] md:h-auto">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -288,19 +288,19 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
           ) : contractDetails ? (
             <div className="space-y-8">
               {/* Basic Contract Info */}
-              <div className="bg-gray-50 rounded-lg p-6">
+              <div className="bg-gray-50 rounded-lg p-4 md:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="text-left">
-                    <h3 className="text-xl font-semibold text-[#545454] mb-2">
+                    <h3 className="text-lg md:text-xl font-semibold text-[#545454] mb-2">
                       {getContract()?.jobId?.title ||
                         getContract()?.jobId?.description ||
                         "Contract Work"}
                     </h3>
-                    <p className="text-gray-600 mb-3">
+                    <p className="text-gray-600 mb-3 text-sm md:text-base">
                       {getContract()?.jobId?.description ||
                         "No description available"}
                     </p>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                    <div className="flex items-start gap-3 md:gap-4 text-sm text-gray-600 mb-3 flex-col md:flex-row">
                       <div className="flex items-center gap-1">
                         <span className="font-medium">
                           ₱ {getContract()?.agreedRate}
@@ -324,8 +324,8 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                 </div>
 
                 {/* Contract Timeline */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                  <div className="bg-white p-4 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-6">
+                  <div className="bg-white p-3 md:p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar size={16} className="text-blue-500" />
                       <span className="font-medium text-gray-700">Created</span>
@@ -336,7 +336,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                   </div>
 
                   {getContract()?.startDate && (
-                    <div className="bg-white p-4 rounded-lg border">
+                    <div className="bg-white p-3 md:p-4 rounded-lg border">
                       <div className="flex items-center gap-2 mb-2">
                         <Clock size={16} className="text-yellow-500" />
                         <span className="font-medium text-gray-700">
@@ -350,7 +350,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                   )}
 
                   {getContract()?.completedAt && (
-                    <div className="bg-white p-4 rounded-lg border">
+                    <div className="bg-white p-3 md:p-4 rounded-lg border">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle size={16} className="text-green-500" />
                         <span className="font-medium text-gray-700">
@@ -369,19 +369,19 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Client Info */}
                 {getContract()?.clientId && (
-                  <div className="bg-white border rounded-lg p-6">
+                  <div className="bg-white border rounded-lg p-4 md:p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <img
                         src={getContract().clientId.profilePictureUrl || client}
                         alt="Client"
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
                       />
                       <div>
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
                           <User size={16} className="text-sky-500" />
                           Client Information
                         </h4>
-                        <p className="text-lg font-medium text-gray-800">
+                        <p className="text-base md:text-lg font-medium text-gray-800">
                           {getContract().clientId.firstName}{" "}
                           {getContract().clientId.lastName}
                         </p>
@@ -409,19 +409,19 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
 
                 {/* Worker Info */}
                 {getContract()?.workerId && (
-                  <div className="bg-white border rounded-lg p-6">
+                  <div className="bg-white border rounded-lg p-4 md:p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <img
                         src={getContract().workerId.profilePictureUrl || worker}
                         alt="Worker"
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
                       />
                       <div>
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
                           <Award size={16} className="text-sky-500" />
                           Worker Information
                         </h4>
-                        <p className="text-lg font-medium text-gray-800">
+                        <p className="text-base md:text-lg font-medium text-gray-800">
                           {getContract().workerId.firstName}{" "}
                           {getContract().workerId.lastName}
                         </p>
@@ -476,7 +476,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
 
               {/* Job Category */}
               {getContract()?.jobId?.category && (
-                <div className="bg-white rounded-lg p-6">
+                <div className="bg-white rounded-lg p-4 md:p-6">
                   <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <Briefcase size={16} className="text-sky-500" />
                     Job Category
@@ -492,17 +492,17 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
 
               {/* Reviews Section */}
               {getReviews().length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-6">
+                <div className="bg-gray-50 rounded-lg p-4 md:p-6">
                   <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <MessageSquare size={16} className="text-sky-500" />
                     Reviews & Feedback ({getReviews().length})
                   </h4>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {getReviews().map((review, index) => (
                       <div
                         key={index}
-                        className="bg-white rounded-lg p-4 border-l-4 border-blue-500"
+                        className="bg-white rounded-lg p-3 md:p-4 border-l-4 border-blue-500"
                       >
                         <div className="flex items-start gap-3">
                           <img
@@ -513,16 +513,16 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                                 : worker)
                             }
                             alt="Reviewer"
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
                           />
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <div>
-                                <p className="font-medium text-gray-900">
+                                <p className="font-medium text-gray-900 text-sm md:text-base">
                                   {review.reviewerId?.firstName}{" "}
                                   {review.reviewerId?.lastName}
                                 </p>
-                                <p className="text-sm text-gray-600 capitalize">
+                                <p className="text-xs md:text-sm text-gray-600 capitalize">
                                   {review.reviewerType}
                                 </p>
                               </div>
@@ -530,7 +530,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                                 {[...Array(5)].map((_, i) => (
                                   <Star
                                     key={i}
-                                    size={16}
+                                    size={14}
                                     className={
                                       i < review.rating
                                         ? "text-yellow-400 fill-current"
@@ -538,12 +538,12 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                                     }
                                   />
                                 ))}
-                                <span className="ml-1 text-sm text-gray-600">
+                                <span className="ml-1 text-xs md:text-sm text-gray-600">
                                   ({review.rating}/5)
                                 </span>
                               </div>
                             </div>
-                            <p className="text-gray-700">{review.feedback}</p>
+                            <p className="text-gray-700 text-sm md:text-base">{review.feedback}</p>
                             <p className="text-xs text-gray-500 mt-2">
                               {formatDate(review.reviewDate)}
                             </p>
@@ -556,7 +556,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
               )}
 
               {/* Contract ID for Reference */}
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4 text-center">
                 <p className="text-sm text-gray-600">
                   Contract ID:{" "}
                   <span className="font-mono font-medium">
