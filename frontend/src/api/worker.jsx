@@ -5,7 +5,7 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Get all workers (matches backend getAllWorkers)
+// Get all workers with filtering
 export const getWorkers = async (filters = {}) => {
   try {
     const response = await API.get("/", { params: filters });

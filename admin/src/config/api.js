@@ -33,6 +33,7 @@ const API_CONFIG = {
     verification: "/id-verification",
     skills: "/skills",
     jobs: "/jobs",
+    jobManagement: "/job-management",
   },
 
   // Get full API URL for specific service

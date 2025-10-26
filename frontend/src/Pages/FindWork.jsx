@@ -25,7 +25,9 @@ const currentUser = {
 const FindWork = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // For input field
   const [location, setLocation] = useState("");
+  const [locationInput, setLocationInput] = useState(""); // For input field
   const [jobPosts, setJobPosts] = useState([]);
   const [user, setUser] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -40,7 +42,6 @@ const FindWork = () => {
   // Cache of client ratings: { [clientId]: { averageRating, totalReviews } }
   const [clientRatings, setClientRatings] = useState({});
 
-
   const [newJob, setNewJob] = useState({
     description: "",
     location: "",
@@ -52,12 +53,15 @@ const FindWork = () => {
   // New: filter category for searching jobs
   const [filterCategory, setFilterCategory] = useState("");
 
+  // Sorting states
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [order, setOrder] = useState("desc");
+
   // NEW: Draft and confirm modal state
   const [draft, setDraft] = useState(null);
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
 
   const [showIdSetup, setShowIdSetup] = useState(false);
-
 
   // NEW: Reset form helper
   const resetForm = () => {
@@ -68,7 +72,10 @@ const FindWork = () => {
   // NEW: Handle modal close with draft check
   const handleCloseModal = () => {
     const hasInput =
-      newJob.description || newJob.location || newJob.priceOffer || selectedCategory;
+      newJob.description ||
+      newJob.location ||
+      newJob.priceOffer ||
+      selectedCategory;
 
     if (hasInput) {
       setShowDraftConfirm(true);
@@ -114,8 +121,11 @@ const FindWork = () => {
   const fetchJobs = async (useCache = true) => {
     try {
       setLoading(true);
-      const options = { page: 1, limit: 20, status: "open" };
+      const options = { page: 1 };
       if (filterCategory) options.category = filterCategory;
+      if (location) options.location = location;
+      if (sortBy) options.sortBy = sortBy;
+      if (order) options.order = order;
       if (!useCache) options._t = Date.now();
       const response = await getAllJobs(options);
       const jobsArray = Array.isArray(response.data?.data?.jobs)
@@ -138,8 +148,13 @@ const FindWork = () => {
         // Fetch small pages (limit=1) just to get the statistics
         const fetchStats = async (clientId) => {
           try {
-            const { getClientReviewsById } = await import("../api/feedback.jsx");
-            const res = await getClientReviewsById(clientId, { page: 1, limit: 1 });
+            const { getClientReviewsById } = await import(
+              "../api/feedback.jsx"
+            );
+            const res = await getClientReviewsById(clientId, {
+              page: 1,
+              limit: 1,
+            });
             const stats = res?.data?.statistics;
             if (stats) {
               setClientRatings((prev) => ({
@@ -208,12 +223,24 @@ const FindWork = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  // Refetch when category filter changes
+  // Handle Enter key press for search and location
+  const handleSearchKeyPress = (e) => {
+    if (e.key === "Enter") {
+      setSearch(searchInput);
+    }
+  };
+
+  const handleLocationKeyPress = (e) => {
+    if (e.key === "Enter") {
+      setLocation(locationInput);
+    }
+  };
+
+  // Refetch when filters or sorting changes
   useEffect(() => {
-    // Avoid firing on first render if you prefer; here we refetch immediately
     fetchJobs(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterCategory]);
+  }, [filterCategory, location, sortBy, order]);
 
   // Handle posting a new job
   const handlePostJob = async (e) => {
@@ -259,13 +286,25 @@ const FindWork = () => {
         setUser(userData);
 
         if (userData?.userType === "worker") {
-
-          const biography = typeof userData.biography === "string" ? userData.biography.trim() : "";
-          const portfolios = Array.isArray(userData.portfolio) ? userData.portfolio : [];
-          const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
-          const skills = Array.isArray(userData.skillsByCategory) ? userData.skillsByCategory : [];
-          const experiences = Array.isArray(userData.experience) ? userData.experience : [];
-          const education = Array.isArray(userData.education) ? userData.education : [];
+          const biography =
+            typeof userData.biography === "string"
+              ? userData.biography.trim()
+              : "";
+          const portfolios = Array.isArray(userData.portfolio)
+            ? userData.portfolio
+            : [];
+          const certificates = Array.isArray(userData.certificates)
+            ? userData.certificates
+            : [];
+          const skills = Array.isArray(userData.skillsByCategory)
+            ? userData.skillsByCategory
+            : [];
+          const experiences = Array.isArray(userData.experience)
+            ? userData.experience
+            : [];
+          const education = Array.isArray(userData.education)
+            ? userData.education
+            : [];
 
           const shouldShowModal =
             portfolios.length === 0 ||
@@ -280,7 +319,6 @@ const FindWork = () => {
           if (!userData.idPictureId && !userData.selfiePictureId) {
             setShowIdSetup(true);
           }
-
         } else {
           setShowPortfolioSetup(false);
         }
@@ -293,17 +331,12 @@ const FindWork = () => {
     fetchUser();
   }, []);
 
-
-  // Filter jobs
+  // Filter jobs (only client-side search filtering, category & location are backend-filtered)
   const filteredJobs = Array.isArray(jobPosts)
     ? jobPosts.filter((job) => {
-      const desc = job.description || "";
-      const loc = job.location || "";
-      return (
-        desc.toLowerCase().includes(search.toLowerCase()) &&
-        (location ? loc.toLowerCase().includes(location.toLowerCase()) : true)
-      );
-    })
+        const desc = job.description || "";
+        return desc.toLowerCase().includes(search.toLowerCase());
+      })
     : [];
 
   if (loading) {
@@ -357,19 +390,23 @@ const FindWork = () => {
       <VerificationNotice user={user} />
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <Search className="relative left-2 top-11.5 md:left-12 md:top-2.5 text-gray-400 w-5 h-5 z-10" />
+        <div className="relative w-full md:w-1/2">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+          <input
+            type="text"
+            placeholder="Search job descriptions (Press Enter)..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            className="w-full px-4 py-2 shadow rounded-[18px] bg-white pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+        </div>
         <input
           type="text"
-          placeholder="Search job titles or description"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-1/2 px-4 py-2 shadow rounded-[18px] bg-white pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-        <input
-          type="text"
-          placeholder="Filter by location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Filter by location (Press Enter)"
+          value={locationInput}
+          onChange={(e) => setLocationInput(e.target.value)}
+          onKeyPress={handleLocationKeyPress}
           className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
         <select
@@ -384,6 +421,47 @@ const FindWork = () => {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Sorting Controls */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6 items-start md:items-center">
+        <span className="text-sm text-gray-600 font-medium">Sort by:</span>
+        <div className="flex gap-3 flex-wrap">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            <option value="createdAt">Date Posted</option>
+            <option value="price">Price</option>
+            <option value="updatedAt">Last Updated</option>
+          </select>
+          <select
+            value={order}
+            onChange={(e) => setOrder(e.target.value)}
+            className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
+          </select>
+        </div>
+        {(filterCategory ||
+          location ||
+          sortBy !== "createdAt" ||
+          order !== "desc") && (
+          <button
+            onClick={() => {
+              setFilterCategory("");
+              setLocation("");
+              setSearch("");
+              setSortBy("createdAt");
+              setOrder("desc");
+            }}
+            className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
+          >
+            Clear all filters
+          </button>
+        )}
       </div>
 
       {/* Post Box */}
@@ -406,7 +484,6 @@ const FindWork = () => {
         </div>
       )}
 
-
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
@@ -425,7 +502,6 @@ const FindWork = () => {
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
-
                       <img
                         src={user?.image || currentUser.avatar}
                         alt="Avatar"
@@ -443,7 +519,8 @@ const FindWork = () => {
                   </div>
                   <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                     <Briefcase size={20} className="text-blue-400" />
-                    {newJob.description || "Job description will appear here..."}
+                    {newJob.description ||
+                      "Job description will appear here..."}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {selectedCategory ? (
@@ -538,7 +615,8 @@ const FindWork = () => {
           <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
             <h3 className="text-lg font-semibold mb-4">Save draft</h3>
             <p className="text-gray-600 mb-6">
-              You have unsaved input. Do you want to save it as a draft or discard it?
+              You have unsaved input. Do you want to save it as a draft or
+              discard it?
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -578,7 +656,6 @@ const FindWork = () => {
         <div className="space-y-4 pb-4">
           {filteredJobs.map((job) => {
             const clientId = job.clientId;
-            const rating = clientRatings[clientId];
             return (
               <div
                 key={job.id || job._id}
@@ -604,7 +681,10 @@ const FindWork = () => {
                         title="View client profile"
                       >
                         <img
-                          src={job.client?.profilePicture?.url || currentUser.avatar}
+                          src={
+                            job.client?.profilePicture?.url ||
+                            currentUser.avatar
+                          }
                           alt="Client Avatar"
                           className="w-8 h-8 rounded-full object-cover cursor-pointer"
                         />
@@ -627,7 +707,9 @@ const FindWork = () => {
                     <span className="flex items-center justify-center w-5 h-5">
                       <Briefcase size={20} className="text-blue-400" />
                     </span>
-                    <span className="line-clamp-1 md:text-base">{job.description}</span>
+                    <span className="line-clamp-1 md:text-base">
+                      {job.description}
+                    </span>
                   </p>
 
                   <div className="flex flex-wrap gap-2 mt-3">
@@ -638,7 +720,9 @@ const FindWork = () => {
                   <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
                     <span className="flex items-center gap-1">
                       <MapPin size={16} />
-                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location}</span>
+                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                        {job.location}
+                      </span>
                     </span>
                     <span className="font-bold text-green-400">
                       ₱{job.price?.toLocaleString() || 0}
@@ -652,13 +736,20 @@ const FindWork = () => {
       ) : (
         <div className="text-center mt-10">
           <p className="text-gray-500 mb-4">No job posts found.</p>
-          {search || location ? (
+          {search ||
+          location ||
+          filterCategory ||
+          sortBy !== "createdAt" ||
+          order !== "desc" ? (
             <p className="text-sm text-gray-400">
               Try adjusting your search filters or{" "}
               <button
                 onClick={() => {
                   setSearch("");
                   setLocation("");
+                  setFilterCategory("");
+                  setSortBy("createdAt");
+                  setOrder("desc");
                 }}
                 className="text-blue-500 hover:underline"
               >
@@ -668,7 +759,6 @@ const FindWork = () => {
           ) : null}
         </div>
       )}
-
     </div>
   );
 };

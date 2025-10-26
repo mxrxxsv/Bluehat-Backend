@@ -5,33 +5,21 @@ const API = axios.create({
   withCredentials: true, // Cookies are sent automatically
 });
 
-// ❌ REMOVED: No need for localStorage token - cookies handle authentication
-// API.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("token");
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
-
+// ✅ Get all jobs with optional category and location filters
 export const getAllJobs = (options = {}) => {
   const {
     page = 1,
     limit = 10,
     category,
     location,
-    search,
-    status,
-    clientId,
+    sortBy = "createdAt",
+    order = "desc",
     _t,
   } = options;
 
-  const params = { page, limit };
+  const params = { page, limit, sortBy, order };
   if (category) params.category = category;
   if (location) params.location = location;
-  if (search) params.search = search;
-  if (status) params.status = status;
-  if (clientId) params.clientId = clientId;
   if (_t) params._t = _t;
 
   return API.get("/", {

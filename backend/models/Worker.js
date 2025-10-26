@@ -248,12 +248,6 @@ const WorkerSchema = new mongoose.Schema(
       required: false,
       default: "",
     },
-    averageRating: {
-      type: Number,
-      default: 0,
-      min: [0, "Average rating cannot be negative"],
-      max: [5, "Average rating cannot exceed 5"],
-    },
     totalJobsCompleted: {
       type: Number,
       default: 0,
@@ -381,7 +375,6 @@ WorkerSchema.index({ isVerified: 1 });
 WorkerSchema.index({ verifiedAt: 1 });
 WorkerSchema.index({ blocked: 1 });
 WorkerSchema.index({ status: 1 });
-WorkerSchema.index({ rating: 1 });
 WorkerSchema.index({ idVerificationSubmittedAt: 1 });
 WorkerSchema.index({ "address.city": 1, "address.province": 1 });
 

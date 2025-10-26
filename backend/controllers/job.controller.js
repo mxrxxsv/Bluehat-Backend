@@ -15,7 +15,7 @@ const logger = require("../utils/logger");
 // ==================== JOI SCHEMAS ====================
 const querySchema = Joi.object({
   page: Joi.number().integer().min(1).max(1000).default(1),
-  limit: Joi.number().integer().min(1).max(100).default(10),
+  limit: Joi.number().integer().min(1).max(50).default(10),
   category: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
     .optional()
@@ -112,24 +112,6 @@ const paramIdSchema = Joi.object({
       "string.pattern.base": "Invalid ID format",
       "any.required": "ID is required",
     }),
-});
-
-const categoryParamSchema = Joi.object({
-  categoryId: Joi.string()
-    .pattern(/^[0-9a-fA-F]{24}$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Invalid category ID format",
-      "any.required": "Category ID is required",
-    }),
-});
-
-const locationParamSchema = Joi.object({
-  location: Joi.string().trim().min(2).max(200).required().messages({
-    "string.min": "Location must be at least 2 characters",
-    "string.max": "Location cannot exceed 200 characters",
-    "any.required": "Location is required",
-  }),
 });
 
 // ==================== HELPER FUNCTIONS ====================
@@ -401,13 +383,32 @@ const handleJobError = (
 
 // ==================== CONTROLLERS ====================
 
-// ✅ FIXED: Get all jobs (public, only verified/not deleted) with pagination & filtering
+// ✅ Get all jobs for general users (only open and non-deleted jobs)
 const getAllJobs = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Validate query parameters
-    const { error, value } = querySchema.validate(req.query, {
+    // ✅ Validation with category and location support
+    const pageSchema = Joi.object({
+      page: Joi.number().integer().min(1).default(1),
+      limit: Joi.number().integer().min(1).max(100).default(10),
+      sortBy: Joi.string()
+        .valid("createdAt", "price", "updatedAt")
+        .default("createdAt"),
+      order: Joi.string().valid("asc", "desc").default("desc"),
+      category: Joi.string()
+        .pattern(/^[0-9a-fA-F]{24}$/)
+        .optional()
+        .messages({
+          "string.pattern.base": "Invalid category ID format",
+        }),
+      location: Joi.string().trim().min(2).max(200).optional().messages({
+        "string.min": "Location must be at least 2 characters",
+        "string.max": "Location cannot exceed 200 characters",
+      }),
+    });
+
+    const { error, value } = pageSchema.validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
     });
@@ -431,98 +432,40 @@ const getAllJobs = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize all inputs
-    const sanitizedQuery = sanitizeInput(value);
-    const {
-      page,
-      limit,
-      category,
-      location,
-      search,
-      status,
-      sortBy,
-      order,
-      clientId,
-    } = sanitizedQuery; // ✅ include clientId
+    const { page, limit, sortBy, order, category, location } =
+      sanitizeInput(value);
 
-    // Build filter - only show non-deleted jobs from verified clients
+    // ✅ Filter: only open and non-deleted jobs
     const filter = {
       isDeleted: false,
+      status: "open",
     };
 
+    // ✅ Add optional filters
     if (category) filter.category = category;
     if (location) filter.location = { $regex: location, $options: "i" };
-    if (status) filter.status = status;
-    if (search) filter.description = { $regex: search, $options: "i" };
-    if (clientId) {
-      try {
-        filter.clientId = new mongoose.Types.ObjectId(clientId);
-      } catch (e) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid clientId",
-        });
-      }
-    }
 
     const sortOrder = order === "asc" ? 1 : -1;
 
+    // ✅ Get jobs with verified, non-blocked clients only
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
         match: { isVerified: true, blocked: { $ne: true } },
-        select:
-          "firstName lastName profilePicture credentialId isVerified blocked",
-        populate: {
-          path: "credentialId",
-          select: "email",
-        },
+        select: "firstName lastName profilePicture isVerified blocked",
       })
       .populate("category", "categoryName")
-      .populate("hiredWorker", "firstName lastName profilePicture")
       .sort({ [sortBy]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean();
 
-    // ✅ Only keep verified and non-blocked clients
+    // ✅ Filter out jobs with unverified or blocked clients
     const verifiedJobs = jobs.filter(
       (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
     );
 
-    if (!verifiedJobs || verifiedJobs.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No jobs found",
-        code: "NO_JOBS_FOUND",
-        data: {
-          jobs: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalItems: 0,
-            itemsPerPage: limit,
-            hasNextPage: false,
-            hasPrevPage: page > 1,
-          },
-          filters: {
-            category,
-            location,
-            search,
-            status,
-            sortBy,
-            order,
-            clientId,
-          },
-        },
-        meta: {
-          processingTime: `${Date.now() - startTime}ms`,
-          timestamp: new Date().toISOString(),
-        },
-      });
-    }
-
-    // ✅ Get total count
+    // ✅ Get total count of open jobs from verified clients
     const totalCount = await Job.countDocuments({
       ...filter,
       clientId: {
@@ -535,7 +478,7 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    // ✅ Keep both clientId and client info
+    // ✅ Format response
     const optimizedJobs = verifiedJobs.map((job) => ({
       id: job._id,
       description: job.description,
@@ -547,21 +490,14 @@ const getAllJobs = async (req, res) => {
       category: job.category
         ? { id: job.category._id, name: job.category.categoryName }
         : null,
-      clientId: job.clientId?._id,
       client: job.clientId
         ? {
+            id: job.clientId._id,
             name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(
               job.clientId.lastName
             )}`,
             profilePicture: job.clientId.profilePicture,
             isVerified: job.clientId.isVerified || false,
-          }
-        : null,
-      hiredWorker: job.hiredWorker
-        ? {
-            id: job.hiredWorker._id,
-            name: `${job.hiredWorker.firstName} ${job.hiredWorker.lastName}`,
-            profilePicture: job.hiredWorker.profilePicture,
           }
         : null,
     }));
@@ -571,7 +507,7 @@ const getAllJobs = async (req, res) => {
       totalCount,
       page,
       limit,
-      filters: { category, location, search, status, clientId },
+      filters: { category, location },
       ip: req.ip,
       userAgent: req.get("User-Agent"),
       processingTime: `${processingTime}ms`,
@@ -599,13 +535,8 @@ const getAllJobs = async (req, res) => {
           hasPrevPage: page > 1,
         },
         filters: {
-          category,
-          location,
-          search,
-          status,
-          sortBy,
-          order,
-          clientId,
+          category: category || null,
+          location: location || null,
         },
       },
       meta: {
@@ -626,398 +557,6 @@ const getAllJobs = async (req, res) => {
     });
 
     return handleJobError(err, res, "Get all jobs", req);
-  }
-};
-
-// Get jobs by category
-const getJobsByCategory = async (req, res) => {
-  const startTime = Date.now();
-
-  try {
-    // ✅ Validate parameters
-    const { error: paramError, value: paramValue } =
-      categoryParamSchema.validate(req.params, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-    if (paramError) {
-      logger.warn("Get jobs by category param validation failed", {
-        errors: paramError.details,
-        params: req.params,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category ID",
-        code: "INVALID_PARAM",
-        errors: paramError.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
-      });
-    }
-
-    // ✅ Validate query parameters
-    const { error: queryError, value: queryValue } = querySchema.validate(
-      req.query,
-      {
-        abortEarly: false,
-        stripUnknown: true,
-      }
-    );
-
-    if (queryError) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        code: "VALIDATION_ERROR",
-        errors: queryError.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
-      });
-    }
-
-    const { categoryId } = sanitizeInput(paramValue);
-    const sanitizedQuery = sanitizeInput(queryValue);
-    const { page, limit, location, status, sortBy, order } = sanitizedQuery;
-
-    // ✅ Verify category exists
-    const category = await SkillCategory.findById(categoryId);
-    if (!category) {
-      logger.warn("Jobs requested for non-existent category", {
-        categoryId,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-        code: "CATEGORY_NOT_FOUND",
-      });
-    }
-
-    // Build filter
-    const filter = {
-      category: categoryId,
-      isDeleted: false,
-    };
-
-    // Add location filter if provided
-    if (location) {
-      filter.location = { $regex: location, $options: "i" };
-    }
-
-    // Add status filter if provided
-    if (status) {
-      filter.status = status;
-    }
-
-    const sortOrder = order === "asc" ? 1 : -1;
-
-    const jobs = await Job.find(filter)
-      .populate({
-        path: "clientId",
-        match: { isVerified: true, blocked: { $ne: true } },
-        select:
-          "firstName lastName profilePicture credentialId isVerified blocked",
-        populate: {
-          path: "credentialId",
-          select: "email",
-        },
-      })
-      .populate("category", "categoryName")
-      .populate("hiredWorker", "firstName lastName")
-      .sort({ [sortBy]: sortOrder })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(); // ✅ Performance optimization
-
-    // Filter out jobs from unverified or blocked clients
-    const verifiedJobs = jobs.filter(
-      (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
-    );
-
-    const totalCount = await Job.countDocuments({
-      ...filter,
-      clientId: {
-        $in: await Client.find({
-          isVerified: true,
-          blocked: { $ne: true },
-        }).distinct("_id"),
-      },
-    });
-
-    const processingTime = Date.now() - startTime;
-
-    // ✅ FIXED: Use verifiedJobs instead of jobs
-    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
-
-    logger.info("Jobs by category retrieved successfully", {
-      categoryId,
-      categoryName: category.categoryName,
-      totalJobs: verifiedJobs.length,
-      totalCount,
-      page,
-      limit,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    res.status(200).json({
-      success: true,
-      message: `Jobs in ${category.categoryName} category retrieved successfully`,
-      code: "JOBS_BY_CATEGORY_RETRIEVED",
-      data: {
-        category: {
-          id: category._id,
-          name: category.categoryName,
-        },
-        jobs: optimizedJobs,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          itemsPerPage: limit,
-          hasNextPage: page < Math.ceil(totalCount / limit),
-          hasPrevPage: page > 1,
-        },
-        filters: {
-          location,
-          status,
-          sortBy,
-          order,
-        },
-      },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    const processingTime = Date.now() - startTime;
-
-    logger.error("Get jobs by category failed", {
-      error: err.message,
-      stack: err.stack,
-      categoryId: req.params?.categoryId,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    return handleJobError(err, res, "Get jobs by category", req);
-  }
-};
-
-// Get jobs by location
-const getJobsByLocation = async (req, res) => {
-  const startTime = Date.now();
-
-  try {
-    // ✅ Validate parameters
-    const { error: paramError, value: paramValue } =
-      locationParamSchema.validate(req.params, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-    if (paramError) {
-      logger.warn("Get jobs by location param validation failed", {
-        errors: paramError.details,
-        params: req.params,
-        ip: req.ip,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(400).json({
-        success: false,
-        message: "Invalid location parameter",
-        code: "INVALID_PARAM",
-        errors: paramError.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
-      });
-    }
-
-    // ✅ Validate query parameters
-    const { error: queryError, value: queryValue } = querySchema.validate(
-      req.query,
-      {
-        abortEarly: false,
-        stripUnknown: true,
-      }
-    );
-
-    if (queryError) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        code: "VALIDATION_ERROR",
-        errors: queryError.details.map((detail) => ({
-          field: detail.path.join("."),
-          message: detail.message,
-        })),
-      });
-    }
-
-    const { location } = sanitizeInput(paramValue);
-    const sanitizedQuery = sanitizeInput(queryValue);
-    const { page, limit, category, status, sortBy, order } = sanitizedQuery;
-
-    // Build filter
-    const filter = {
-      location: { $regex: location, $options: "i" },
-      isDeleted: false,
-    };
-
-    // Add category filter if provided
-    if (category) {
-      filter.category = category;
-    }
-
-    // Add status filter if provided
-    if (status) {
-      filter.status = status;
-    }
-
-    const sortOrder = order === "asc" ? 1 : -1;
-
-    const jobs = await Job.find(filter)
-      .populate({
-        path: "clientId",
-        match: { isVerified: true, blocked: { $ne: true } },
-        select:
-          "firstName lastName profilePicture credentialId isVerified blocked",
-        populate: {
-          path: "credentialId",
-          select: "email",
-        },
-      })
-      .populate("category", "categoryName")
-      .populate("hiredWorker", "firstName lastName")
-      .sort({ [sortBy]: sortOrder })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(); // ✅ Performance optimization
-
-    // Filter out jobs from unverified or blocked clients
-    const verifiedJobs = jobs.filter(
-      (job) => job.clientId && job.clientId.isVerified && !job.clientId.blocked
-    );
-
-    const totalCount = await Job.countDocuments({
-      ...filter,
-      clientId: {
-        $in: await Client.find({
-          isVerified: true,
-          blocked: { $ne: true },
-        }).distinct("_id"),
-      },
-    });
-
-    // ✅ Get location statistics
-    const locationStats = await Job.aggregate([
-      {
-        $match: {
-          location: { $regex: location, $options: "i" },
-          isDeleted: false,
-        },
-      },
-      {
-        $lookup: {
-          from: "clients",
-          localField: "clientId",
-          foreignField: "_id",
-          as: "client",
-        },
-      },
-      {
-        $match: {
-          "client.isVerified": true,
-          "client.blocked": { $ne: true },
-        },
-      },
-      {
-        $group: {
-          _id: "$location",
-          count: { $sum: 1 },
-          avgPrice: { $avg: "$price" },
-          maxPrice: { $max: "$price" },
-          minPrice: { $min: "$price" },
-        },
-      },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-    ]);
-
-    const processingTime = Date.now() - startTime;
-
-    // ✅ FIXED: Use verifiedJobs instead of jobs
-    const optimizedJobs = verifiedJobs.map(optimizeJobForResponse);
-
-    logger.info("Jobs by location retrieved successfully", {
-      location,
-      totalJobs: verifiedJobs.length,
-      totalCount,
-      page,
-      limit,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    res.status(200).json({
-      success: true,
-      message: `Jobs in ${location} retrieved successfully`,
-      code: "JOBS_BY_LOCATION_RETRIEVED",
-      data: {
-        location: location,
-        jobs: optimizedJobs,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          itemsPerPage: limit,
-          hasNextPage: page < Math.ceil(totalCount / limit),
-          hasPrevPage: page > 1,
-        },
-        filters: {
-          category,
-          status,
-          sortBy,
-          order,
-        },
-        locationStats,
-      },
-      meta: {
-        processingTime: `${processingTime}ms`,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    const processingTime = Date.now() - startTime;
-
-    logger.error("Get jobs by location failed", {
-      error: err.message,
-      stack: err.stack,
-      location: req.params?.location,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-      processingTime: `${processingTime}ms`,
-      timestamp: new Date().toISOString(),
-    });
-
-    return handleJobError(err, res, "Get jobs by location", req);
   }
 };
 
@@ -1751,8 +1290,6 @@ const deleteJob = async (req, res) => {
 
 module.exports = {
   getAllJobs,
-  getJobsByCategory,
-  getJobsByLocation,
   getJobById,
   postJob,
   updateJob,

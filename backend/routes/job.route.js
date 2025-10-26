@@ -11,8 +11,6 @@ const logger = require("../utils/logger");
 // Controller imports - MATCHING YOUR ACTUAL CONTROLLER
 const {
   getAllJobs,
-  getJobsByCategory,
-  getJobsByLocation,
   getJobById,
   postJob,
   updateJob,
@@ -172,27 +170,9 @@ router.get("/health", (req, res) => {
  * @route   GET /jobs
  * @desc    Get all jobs with pagination and filtering
  * @access  Public
- * @query   page, limit, category, location, search, status, sortBy, order
+ * @query   page, limit, category, location, sortBy, order
  */
 router.get("/", getAllJobs);
-
-/**
- * @route   GET /jobs/category/:categoryId
- * @desc    Get jobs by specific category with pagination
- * @access  Public
- * @params  categoryId - ObjectId of the skill category
- * @query   page, limit, location, status, sortBy, order
- */
-router.get("/category/:categoryId", getJobsByCategory);
-
-/**
- * @route   GET /jobs/location/:location
- * @desc    Get jobs by location with pagination and statistics
- * @access  Public
- * @params  location - Location string (case-insensitive)
- * @query   page, limit, category, status, sortBy, order
- */
-router.get("/location/:location", getJobsByLocation);
 
 /**
  * @route   GET /jobs/:id
@@ -248,9 +228,7 @@ router.use("*", (req, res) => {
     path: req.originalUrl,
     method: req.method,
     availableEndpoints: [
-      "GET /jobs - Get all jobs with filtering",
-      "GET /jobs/category/:categoryId - Get jobs by category",
-      "GET /jobs/location/:location - Get jobs by location",
+      "GET /jobs - Get all jobs with filtering (category, location)",
       "GET /jobs/:id - Get specific job details",
       "POST /jobs - Create new job (Auth required)",
       "PUT /jobs/:id - Update job (Auth required)",

@@ -32,6 +32,9 @@ const applicationRoute = require("./routes/jobApplication.route");
 const invitationRoute = require("./routes/workerInvitation.route");
 const contractRoute = require("./routes/workContract.route");
 
+// Admin routes
+const jobManagementRoute = require("./routes/jobManagement.route");
+
 const allowedOrigins = [
   process.env.NODE_ENV === "production"
     ? process.env.PRODUCTION_FRONTEND_URL
@@ -104,6 +107,9 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/applications", applicationRoute);
 app.use("/invitations", invitationRoute);
 app.use("/contracts", contractRoute);
+
+// Admin management routes
+app.use("/job-management", jobManagementRoute);
 
 // 7) 404 handler
 app.use((req, res) => {

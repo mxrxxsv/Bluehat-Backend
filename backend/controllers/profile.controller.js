@@ -103,11 +103,14 @@ const addEducationSchema = Joi.object({
       "any.required": "Education level is required",
     }),
   degree: Joi.string().trim().max(100).allow("", null).optional(),
-  startDate: Joi.string().required().messages({
-    "string.empty": "Start date is required",
+  startDate: Joi.date().iso().required().messages({
+    "date.base": "Start date must be a valid date",
     "any.required": "Start date is required",
   }),
-  endDate: Joi.string().allow("", null).optional(),
+  endDate: Joi.date().iso().required().messages({
+    "date.base": "End date must be a valid date",
+    "any.required": "End date (or expected) is required",
+  }),
   educationStatus: Joi.string()
     .valid("Graduated", "Undergraduate", "Currently Studying")
     .required()
@@ -132,8 +135,14 @@ const updateEducationSchema = Joi.object({
     )
     .required(),
   degree: Joi.string().trim().max(100).allow("", null).optional(),
-  startDate: Joi.string().required(),
-  endDate: Joi.string().allow("", null).optional(),
+  startDate: Joi.date().iso().required().messages({
+    "date.base": "Start date must be a valid date",
+    "any.required": "Start date is required",
+  }),
+  endDate: Joi.date().iso().required().messages({
+    "date.base": "End date must be a valid date",
+    "any.required": "End date (or expected) is required",
+  }),
   educationStatus: Joi.string()
     .valid("Graduated", "Undergraduate", "Currently Studying")
     .required(),
@@ -147,6 +156,10 @@ const paramIdSchema = Joi.object({
 const sanitizeInput = (data) => {
   if (typeof data === "string") {
     return xss(data.trim());
+  }
+  // Handle Date objects - return them as-is
+  if (data instanceof Date) {
+    return data;
   }
   if (typeof data === "object" && data !== null) {
     const sanitized = {};
@@ -1718,7 +1731,7 @@ const getProfile = async (req, res) => {
         ? { path: "skillsByCategory.skillCategoryId", select: "categoryName" }
         : "";
 
-    let profile = await Model.findOne({ credentialId: req.user._id })
+    let profile = await Model.findOne({ credentialId: req.user.id })
       .populate(populateOptions)
       .lean();
 
@@ -1741,7 +1754,7 @@ const getProfile = async (req, res) => {
       profile.contactNumber = decryptAES128(profile.contactNumber);
     } catch (decryptError) {
       logger.warn("Failed to decrypt profile data", {
-        userId: req.user._id,
+        userId: req.user.id,
         profileId: profile._id,
         error: decryptError.message,
       });
@@ -1754,7 +1767,7 @@ const getProfile = async (req, res) => {
     const processingTime = Date.now() - startTime;
 
     logger.info("Profile retrieved successfully", {
-      userId: req.user._id,
+      userId: req.user.id,
       userType: req.user.userType,
       profileId: profile._id,
       ip: req.ip,
