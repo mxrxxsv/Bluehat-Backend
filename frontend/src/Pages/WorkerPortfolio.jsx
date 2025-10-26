@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Briefcase } from "lucide-react";
+
+const PLACEHOLDER =
+  "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 import { getWorkerById } from "../api/worker";
 import { getWorkerReviewsById } from "../api/feedback";
 import { getJobById } from "../api/jobs";
@@ -204,12 +207,9 @@ const WorkerPortfolio = () => {
 
       <div className="flex items-start gap-6">
         <img
-          src={
-            worker.profilePicture?.url ||
-            "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-          }
+          src={worker.profilePicture?.url || PLACEHOLDER}
           alt={worker.fullName || "Worker"}
-          onError={(e) => (e.target.src = "/default-profile.png")}
+          onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
           className="w-24 h-24 rounded-full object-cover border"
         />
 
@@ -514,19 +514,17 @@ const WorkerPortfolio = () => {
                   </div>
                 )}
 
-                <div className="p-4 shadow-md rounded-[10px]">
+                <div className="p-4 rounded-[10px]">
                   <div className="flex flex-row gap-2">
                     <img
-                      src={avatar}
+                      src={avatar || PLACEHOLDER}
                       alt={clientName}
                       className="w-8 h-8 rounded-full object-cover border"
-                      onError={(e) =>
-                        (e.currentTarget.src = "/default-profile.png")
-                      }
+                      onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                     />
                     <p className="font-semibold mt-1">{clientName}</p>
                   </div>
-                  <p className="text-sm text-yellow-500">{renderStars(rate)}</p>
+                  <p className="text-sm text-yellow-500 mt-2">{renderStars(rate)}</p>
                   {text && <p className="mt-1 text-gray-700">{text}</p>}
                 </div>
               </div>

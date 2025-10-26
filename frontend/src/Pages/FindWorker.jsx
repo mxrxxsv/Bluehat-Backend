@@ -45,19 +45,31 @@ const FindWorker = () => {
     const fetchWorkers = async () => {
       try {
         setLoading(true);
+        const baseQuery = { page: 1 };
+        if (selectedCategory) baseQuery.category = selectedCategory;
+        if (location) baseQuery.location = location;
+        if (status) baseQuery.status = status;
+        if (minRating) baseQuery.minRating = minRating;
 
-        const query = { page: 1 };
-        if (selectedCategory) query.category = selectedCategory;
-        if (location) query.location = location;
-        if (status) query.status = status;
-        if (minRating) query.minRating = minRating;
+        const all = [];
+        let page = 1;
+        let hasNext = true;
+        const maxPages = 5; // safety cap
+        while (hasNext && page <= maxPages) {
+          const data = await getWorkers({ ...baseQuery, page });
+          const pageWorkers = data?.workers || [];
+          if (pageWorkers.length) all.push(...pageWorkers);
+          const pagination = data?.pagination;
+          hasNext = Boolean(pagination?.hasNextPage) && pageWorkers.length > 0;
+          page += 1;
+        }
 
-        const data = await getWorkers(query);
-        const baseWorkers = data.workers || [];
-
-        // Backend now provides rating and totalRatings from Review collection
-        setWorkers(baseWorkers);
-        console.log("Fetched workers:", baseWorkers);
+        // Backend provides rating and totalRatings from Review collection
+        setWorkers(all);
+        if (import.meta?.env?.DEV) {
+          // eslint-disable-next-line no-console
+          console.log("[FindWorker] fetched workers", { count: all.length });
+        }
       } catch {
         console.error("Error fetching workers");
       } finally {
@@ -103,6 +115,68 @@ const FindWorker = () => {
   const isMouseOut = (e) => {
     e.currentTarget.style.backgroundColor = "white";
   };
+
+  // Loading skeleton (match FindWork style)
+  if (loading) {
+    return (
+      <div className="h-screen overflow-hidden">
+        <div className="max-w-5xl mx-auto mt-30 h-full flex">
+          <div className="flex gap-4 w-full">
+            {/* LEFT PANEL SKELETON */}
+            <div className="w-50 border-r border-gray-200 pr-4 hidden md:block">
+              <div className="h-5 w-40 bg-gray-200 rounded mb-4 animate-pulse" />
+              <div className="flex flex-col gap-2">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="h-9 bg-gray-200 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT PANEL SKELETON */}
+            <div className="flex-1 mx-4 mt-1">
+              {/* Search and Filters skeleton */}
+              <div className="flex flex-col gap-4">
+                {/* Search Bar */}
+                <div className="h-10 bg-gray-200 rounded-[20px] w-full animate-pulse" />
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row flex-wrap gap-4">
+                  <div className="w-full md:w-60 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
+                  <div className="w-full md:w-40 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
+                  <div className="w-full md:w-40 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
+                </div>
+              </div>
+
+              {/* Worker card skeletons */}
+              <div className="flex flex-col overflow-y-auto py-4 pr-2 mt-4 max-h-[calc(100vh-340px)] md:max-h-[calc(100vh-220px)]">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="w-full py-4">
+                    <div className="relative bg-white rounded-2xl shadow-md p-4 flex items-center w-full pb-15 md:pb-4">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="w-20 h-20 md:w-30 md:h-30 rounded-full bg-gray-200 animate-pulse" />
+                        <div className="flex-1">
+                          <div className="h-5 bg-gray-200 rounded w-1/3 mb-2 animate-pulse" />
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" />
+                          <div className="h-4 bg-gray-200 rounded w-2/3 mb-2 animate-pulse" />
+                          <div className="flex gap-2 mt-3">
+                            <div className="h-6 bg-gray-200 rounded-full w-20 animate-pulse" />
+                            <div className="h-6 bg-gray-200 rounded-full w-16 animate-pulse" />
+                            <div className="h-6 bg-gray-200 rounded-full w-14 animate-pulse" />
+                          </div>
+                          <div className="h-4 bg-gray-200 rounded w-1/4 mt-3 animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-4 md:top-4 h-5 w-16 bg-gray-200 rounded animate-pulse" />
+                      <div className="absolute bottom-1 md:bottom-4 right-2 h-6 w-28 bg-gray-200 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen overflow-hidden">
@@ -191,11 +265,7 @@ const FindWorker = () => {
             </div>
 
             {/* Worker Cards */}
-            {loading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-              </div>
-            ) : filteredWorkers.length === 0 ? (
+            {filteredWorkers.length === 0 ? (
               <div className="text-center py-20 text-gray-500">
                 No workers found matching your criteria
               </div>

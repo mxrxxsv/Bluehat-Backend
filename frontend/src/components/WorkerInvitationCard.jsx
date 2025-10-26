@@ -115,16 +115,24 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
         {/* Skills */}
         {worker.skills?.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Skills:</h4>
             <div className="flex flex-wrap gap-1">
-              {worker.skills.slice(0, 4).map((skill, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                >
-                  {skill}
-                </span>
-              ))}
+              {worker.skills.slice(0, 4).map((skill, index) => {
+                const label =
+                  typeof skill === "string"
+                    ? skill
+                    : skill?.name || skill?.categoryName || skill?.title || "";
+                const key =
+                  (typeof skill === "object" && (skill._id || skill.id || skill.skillCategoryId)) ||
+                  `${label}-${index}`;
+                return (
+                  <span
+                    key={key}
+                    className="px-2 py-1 bg-[#55b3f3] text-white text-xs rounded-full"
+                  >
+                    {label}
+                  </span>
+                );
+              })}
               {worker.skills.length > 4 && (
                 <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                   +{worker.skills.length - 4} more

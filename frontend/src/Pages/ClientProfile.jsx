@@ -4,12 +4,16 @@ import { getAllJobs, getJobById } from "../api/jobs";
 import { getClientReviewsById } from "../api/feedback";
 import { MapPin, Star, Briefcase } from "lucide-react";
 
+const PLACEHOLDER =
+  "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+
 const Avatar = ({ url, size = 64, alt = "Client" }) => (
   <img
-    src={url || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+    src={url || PLACEHOLDER}
     alt={alt}
     className="rounded-full object-cover"
     style={{ width: size, height: size }}
+    onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
   />
 );
 
@@ -31,6 +35,12 @@ const Stars = ({ value = 0 }) => {
       <span className="ml-1 text-sm text-gray-600">{value ? value.toFixed(1) : "0.0"}</span>
     </div>
   );
+};
+
+// Text-based star renderer to match Worker reviews UI
+const renderStars = (rating) => {
+  const r = Math.max(0, Math.min(5, Number(rating) || 0));
+  return "⭐️".repeat(r) + "☆".repeat(5 - r);
 };
 
 export default function ClientProfile() {
@@ -67,8 +77,10 @@ export default function ClientProfile() {
       try {
         setLoading(true);
         // Fetch client's jobs (first page is enough for identity info & list)
-  const jobsRes = await getAllJobs({ page: 1, limit: 10, clientId: id, _t: Date.now() });
-        let jobsArr = jobsRes?.data?.data?.jobs || [];
+        const jobsRes = await getAllJobs({ page: 1, limit: 10, clientId: id, _t: Date.now() });
+        // Backend getAllJobs ignores clientId; filter client-side to only include this client's jobs
+        const allJobs = jobsRes?.data?.data?.jobs || [];
+        let jobsArr = allJobs.filter((j) => String(j?.client?.id || "") === String(id));
         setJobs(jobsArr);
 
         // Fetch client reviews with stats (1st page)
@@ -81,25 +93,12 @@ export default function ClientProfile() {
           client: d.client,
         });
 
-        // If there are no open jobs, try fetching any job by this client to get identity
-        if ((!jobsArr || jobsArr.length === 0)) {
-          try {
-            const anyJobsRes = await getAllJobs({ page: 1, limit: 1, clientId: id, _t: Date.now() });
-            const anyJobs = anyJobsRes?.data?.data?.jobs || [];
-            if (anyJobs.length > 0) {
-              jobsArr = anyJobs; // do not override jobs list (we show open jobs), only use for identity if needed
-            }
-          } catch (e) {
-            // non-blocking
-          }
-        }
-
-  // Build client info strictly from job payload
-  const firstJob = jobsArr && jobsArr[0];
-  const rawPic = firstJob?.client?.profilePicture;
-  const clientPic = rawPic?.url || (typeof rawPic === "string" ? rawPic : null);
-  const clientName = firstJob?.client?.name || "Client";
-  setClientInfo({ name: clientName, avatar: clientPic });
+        // Build client info strictly from this client's job payload (fallback to reviews stats only for ratings)
+        const firstJob = jobsArr && jobsArr[0];
+        const rawPic = firstJob?.client?.profilePicture;
+        const clientPic = rawPic?.url || (typeof rawPic === "string" ? rawPic : null);
+        const clientName = firstJob?.client?.name || "Client";
+        setClientInfo({ name: clientName, avatar: clientPic });
       } catch (e) {
         console.error("Failed to load client profile:", e);
       } finally {
@@ -199,7 +198,7 @@ export default function ClientProfile() {
         <div className="flex items-center text-left gap-4">
           <Avatar url={clientInfo?.avatar} size={72} alt={clientInfo?.name} />
           <div>
-            <div className="text-xl font-semibold text-[#252525]">{jobs?.[0]?.client?.name || "Client"}</div>
+            <div className="text-xl font-semibold text-[#252525]">{clientInfo?.name || "Client"}</div>
             <div className="flex items-center gap-3 mt-1">
               <Stars value={avg} />
               <span className="text-sm text-gray-600">{total} review{total === 1 ? "" : "s"}</span>
@@ -289,10 +288,11 @@ export default function ClientProfile() {
           {reviews.map((rev) => {
             const reviewer = rev.reviewerId || {};
             const reviewerName = `${reviewer.firstName || ""} ${reviewer.lastName || ""}`.trim() || "Reviewer";
-            const reviewerPic = reviewer.profilePicture?.url || reviewer.profilePicture || null;
+            const reviewerPic = reviewer.profilePicture?.url || reviewer.profilePicture || PLACEHOLDER;
             const baseJob = rev.jobId || rev.job || null;
             const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id || baseJob?.id;
             const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
+            
             return (
               <div key={rev._id} className="p-3 rounded-xl border border-gray-100">
                 {/* Job post header - FindWork-style block above each review */}
@@ -308,9 +308,10 @@ export default function ClientProfile() {
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-2">
                             <img
-                              src={job.client?.profilePicture?.url || clientInfo?.avatar || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                              src={job.client?.profilePicture?.url || clientInfo?.avatar || PLACEHOLDER}
                               alt="Client Avatar"
                               className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                             />
                             <span className="text-sm font-medium text-[#252525] opacity-75">
                               {job.client?.name || jobs?.[0]?.client?.name || "Client"}
@@ -355,34 +356,22 @@ export default function ClientProfile() {
                     </div>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                {/* Reviewer block styled like Worker reviews */}
+                <div className="p-4 rounded-[10px]">
+                  <div className="flex flex-row gap-2">
                     <img
-                      src={
-                        reviewerPic ||
-                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                      }
+                      src={reviewerPic}
                       alt={reviewerName}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-8 h-8 rounded-full object-cover border"
+                      onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                     />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-800">{reviewerName}</span>
-                      <span className="text-xs text-gray-500">Rated {rev.rating}/5</span>
-                    </div>
+                    <p className="font-semibold mt-1">{reviewerName}</p>
                   </div>
-                  {rev.reviewDate && (
-                    <div className="text-xs text-gray-400">
-                      {new Date(rev.reviewDate).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </div>
+                  <p className="text-sm text-yellow-500 text-left mt-2">{renderStars(Number(rev.rating) || 0)}</p>
+                  {rev.feedback && (
+                    <p className="mt-1 text-gray-700 text-left">{rev.feedback}</p>
                   )}
                 </div>
-                {rev.feedback && (
-                  <div className="text-sm text-gray-700 mt-2">{rev.feedback}</div>
-                )}
               </div>
             );
           })}

@@ -6,9 +6,8 @@ import {
   Search,
   X,
   CheckCircle,
-  RefreshCw,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
@@ -25,13 +24,17 @@ const currentUser = {
 const FindWork = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState(""); // For input field
+  const [searchInput, setSearchInput] = useState("");
   const [location, setLocation] = useState("");
-  const [locationInput, setLocationInput] = useState(""); // For input field
+  const [locationInput, setLocationInput] = useState(""); 
   const [jobPosts, setJobPosts] = useState([]);
   const [user, setUser] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -39,8 +42,7 @@ const FindWork = () => {
 
   const [loading, setLoading] = useState(true);
 
-  // Cache of client ratings: { [clientId]: { averageRating, totalReviews } }
-  const [clientRatings, setClientRatings] = useState({});
+  // Note: removed ratings prefetch to reduce API calls
 
   const [newJob, setNewJob] = useState({
     description: "",
@@ -117,11 +119,19 @@ const FindWork = () => {
 
   // ================== YOUR EXISTING LOGIC ==================
 
-  // EXTRACTED: Fetch jobs function for reuse
-  const fetchJobs = async (useCache = true) => {
+  // Fetch jobs with pagination and minimal calls
+  const fetchJobs = async ({ useCache = true, pageOverride = null } = {}) => {
     try {
-      setLoading(true);
-      const options = { page: 1 };
+      const effectivePage = pageOverride ?? page;
+      const isFirstPage = effectivePage === 1;
+
+      if (isFirstPage) {
+        setLoading(true);
+      } else {
+        setIsFetchingMore(true);
+      }
+
+      const options = { page: effectivePage, limit };
       if (filterCategory) options.category = filterCategory;
       if (location) options.location = location;
       if (sortBy) options.sortBy = sortBy;
@@ -131,61 +141,32 @@ const FindWork = () => {
       const jobsArray = Array.isArray(response.data?.data?.jobs)
         ? response.data.data.jobs
         : [];
-      console.log("Fetched jobs:", jobsArray);
-      setJobPosts(jobsArray);
-      setLastRefreshTime(new Date());
+      setHasMore(jobsArray.length === limit);
 
-      // Prefetch rating stats for distinct clientIds
-      const uniqueClientIds = Array.from(
-        new Set(
-          jobsArray
-            .map((j) => j.clientId)
-            .filter((id) => !!id && typeof id === "string")
-        )
-      );
-      const toFetch = uniqueClientIds.filter((id) => !clientRatings[id]);
-      if (toFetch.length > 0) {
-        // Fetch small pages (limit=1) just to get the statistics
-        const fetchStats = async (clientId) => {
-          try {
-            const { getClientReviewsById } = await import(
-              "../api/feedback.jsx"
-            );
-            const res = await getClientReviewsById(clientId, {
-              page: 1,
-              limit: 1,
-            });
-            const stats = res?.data?.statistics;
-            if (stats) {
-              setClientRatings((prev) => ({
-                ...prev,
-                [clientId]: {
-                  averageRating: stats.averageRating || 0,
-                  totalReviews: stats.totalReviews || 0,
-                },
-              }));
-            }
-          } catch (e) {
-            console.warn("Failed to fetch client stats for", clientId, e);
-          }
-        };
-        // Run in sequence to avoid flooding
-        for (const id of toFetch) {
-          // eslint-disable-next-line no-await-in-loop
-          await fetchStats(id);
-        }
+      if (isFirstPage) {
+        setJobPosts(jobsArray);
+      } else {
+        setJobPosts((prev) => {
+          const seen = new Set(prev.map((j) => String(j.id || j._id || "")));
+          const toAdd = jobsArray.filter(
+            (j) => !seen.has(String(j.id || j._id || ""))
+          );
+          return [...prev, ...toAdd];
+        });
       }
+      setLastRefreshTime(new Date());
     } catch (err) {
       console.error("Error fetching jobs:", err);
     } finally {
       setLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await fetchJobs(false);
+      await fetchJobs({ useCache: false, pageOverride: 1 });
     } finally {
       setIsRefreshing(false);
     }
@@ -212,15 +193,10 @@ const FindWork = () => {
     fetchCategories();
   }, []);
 
-  // Initial fetch + tab visibility refresh
+  // Initial fetch (page 1 only)
   useEffect(() => {
-    fetchJobs(true);
-    const handleVisibilityChange = () => {
-      if (!document.hidden) fetchJobs(false);
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    fetchJobs({ useCache: true, pageOverride: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle Enter key press for search and location
@@ -236,11 +212,20 @@ const FindWork = () => {
     }
   };
 
-  // Refetch when filters or sorting changes
+  // Refetch when filters or sorting changes (reset to page 1)
   useEffect(() => {
-    fetchJobs(false);
+    setPage(1);
+    fetchJobs({ useCache: false, pageOverride: 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCategory, location, sortBy, order]);
+
+  // Load more when page increases (>1)
+  useEffect(() => {
+    if (page > 1) {
+      fetchJobs({ useCache: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   // Handle posting a new job
   const handlePostJob = async (e) => {
@@ -279,9 +264,8 @@ const FindWork = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await checkAuth();
-        const userData = res.data?.data;
-        console.log("Fetched user data:", userData);
+  const res = await checkAuth();
+  const userData = res.data?.data;
 
         setUser(userData);
 
@@ -339,7 +323,7 @@ const FindWork = () => {
       })
     : [];
 
-  if (loading) {
+  if (loading && (page === 1 || jobPosts.length === 0)) {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
@@ -655,13 +639,62 @@ const FindWork = () => {
       {filteredJobs.length > 0 ? (
         <div className="space-y-4 pb-4">
           {filteredJobs.map((job) => {
-            const clientId = job.clientId;
+            const toIdString = (val) => {
+              if (!val) return "";
+              if (typeof val === "string") return val;
+              if (typeof val === "object") return val._id || val.id || "";
+              try { return String(val); } catch { return ""; }
+            };
+            // Robustly derive the Client model id for profile route
+            const clientProfileId =
+              toIdString(job?.client?.id) ||
+              toIdString(job?.client?._id) ||
+              toIdString(job?.clientId);
             return (
               <div
                 key={job.id || job._id}
                 className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
                 onClick={() => {
-                  if (user?.userType === "client") {
+                  const viewerIsClient = user?.userType === "client";
+
+                  const idToStr = (val) => {
+                    if (!val) return "";
+                    if (typeof val === "string") return val;
+                    if (typeof val === "object") return val._id || val.id || String(val || "");
+                    try {
+                      return String(val);
+                    } catch {
+                      return "";
+                    }
+                  };
+
+                  const viewerCandidates = [
+                    user?.profileId, 
+                    user?.credentialId?._id, 
+                    user?.credentialId, 
+                    user?._id, 
+                    user?.id, 
+                  ]
+                    .map(idToStr)
+                    .filter((s) => typeof s === "string" && s.length);
+
+                  const ownerCandidates = [
+                    job?.client?.credentialId?._id,
+                    job?.client?.credentialId,
+                    job?.client?.id,
+                    job?.client?._id,
+                    job?.credentialId,
+                  ]
+                    .map(idToStr)
+                    .filter((s) => typeof s === "string" && s.length);
+
+                  const anyMatch = viewerCandidates.some((v) =>
+                    ownerCandidates.includes(v)
+                  );
+
+                  const isOwner = Boolean(viewerIsClient && anyMatch);
+
+                  if (isOwner) {
                     navigate(`/invite-workers/${job.id || job._id}`);
                   } else {
                     navigate(`/job/${job.id || job._id}`);
@@ -675,7 +708,7 @@ const FindWork = () => {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (clientId) navigate(`/client/${clientId}`);
+                          if (clientProfileId) navigate(`/client/${clientProfileId}`);
                         }}
                         className="focus:outline-none"
                         title="View client profile"
@@ -732,6 +765,18 @@ const FindWork = () => {
               </div>
             );
           })}
+          {hasMore && (
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={isFetchingMore}
+                className="px-4 py-2 bg-white shadow rounded-md hover:shadow-md disabled:opacity-60"
+              >
+                {isFetchingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center mt-10">

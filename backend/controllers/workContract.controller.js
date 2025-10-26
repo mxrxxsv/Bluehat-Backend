@@ -1273,6 +1273,22 @@ const getWorkerReviews = async (req, res) => {
       .limit(limit)
       .lean();
 
+    // Decrypt reviewer names (reviewer is a Client when reviewing a worker)
+    const decryptedReviews = reviews.map((rev) => {
+      const r = { ...rev };
+      if (r.reviewerId) {
+        try {
+          if (r.reviewerId.firstName)
+            r.reviewerId.firstName = decryptAES128(r.reviewerId.firstName);
+        } catch {}
+        try {
+          if (r.reviewerId.lastName)
+            r.reviewerId.lastName = decryptAES128(r.reviewerId.lastName);
+        } catch {}
+      }
+      return r;
+    });
+
     const totalCount = await Review.countDocuments(filter);
 
     // Get rating statistics
@@ -1280,12 +1296,18 @@ const getWorkerReviews = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    // Decrypt worker name summary
+    let workerFirst = worker.firstName;
+    let workerLast = worker.lastName;
+    try { if (workerFirst) workerFirst = decryptAES128(workerFirst); } catch {}
+    try { if (workerLast) workerLast = decryptAES128(workerLast); } catch {}
+
     res.status(200).json({
       success: true,
       message: "Worker reviews retrieved successfully",
       code: "WORKER_REVIEWS_RETRIEVED",
       data: {
-        reviews,
+        reviews: decryptedReviews,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -1297,8 +1319,8 @@ const getWorkerReviews = async (req, res) => {
         statistics: ratingStats,
         worker: {
           id: worker._id,
-          firstName: worker.firstName,
-          lastName: worker.lastName,
+          firstName: workerFirst,
+          lastName: workerLast,
           averageRating: worker.averageRating,
           totalJobsCompleted: worker.totalJobsCompleted,
         },
@@ -1386,6 +1408,22 @@ const getClientReviews = async (req, res) => {
       .limit(limit)
       .lean();
 
+    // Decrypt reviewer names (reviewer is a Worker when reviewing a client)
+    const decryptedReviews = reviews.map((rev) => {
+      const r = { ...rev };
+      if (r.reviewerId) {
+        try {
+          if (r.reviewerId.firstName)
+            r.reviewerId.firstName = decryptAES128(r.reviewerId.firstName);
+        } catch {}
+        try {
+          if (r.reviewerId.lastName)
+            r.reviewerId.lastName = decryptAES128(r.reviewerId.lastName);
+        } catch {}
+      }
+      return r;
+    });
+
     const totalCount = await Review.countDocuments(filter);
 
     // Get rating statistics
@@ -1393,12 +1431,18 @@ const getClientReviews = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
+    // Decrypt client name summary
+    let clientFirst = client.firstName;
+    let clientLast = client.lastName;
+    try { if (clientFirst) clientFirst = decryptAES128(clientFirst); } catch {}
+    try { if (clientLast) clientLast = decryptAES128(clientLast); } catch {}
+
     res.status(200).json({
       success: true,
       message: "Client reviews retrieved successfully",
       code: "CLIENT_REVIEWS_RETRIEVED",
       data: {
-        reviews,
+        reviews: decryptedReviews,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -1410,8 +1454,8 @@ const getClientReviews = async (req, res) => {
         statistics: ratingStats,
         client: {
           id: client._id,
-          firstName: client.firstName,
-          lastName: client.lastName,
+          firstName: clientFirst,
+          lastName: clientLast,
           averageRating: client.averageRating,
           totalJobsPosted: client.totalJobsPosted,
         },
