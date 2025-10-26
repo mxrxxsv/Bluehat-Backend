@@ -109,9 +109,9 @@ const ReviewSchema = new mongoose.Schema(
 
 // ==================== INDEXES ====================
 // Allow one review per party per contract (client can review once, worker can review once)
-ReviewSchema.index({ contractId: 1, reviewerType: 1 }, { unique: true });
+ReviewSchema.index({ contractId: 1, reviewerType: 1 }, { unique: true, name: "contractId_1_reviewerType_1" });
 ReviewSchema.index({ workerId: 1, rating: 1 });
-ReviewSchema.index({ clientId: 1, rating: 1 }); // One review per contract
+ReviewSchema.index({ clientId: 1, rating: 1 });
 ReviewSchema.index({ reviewerId: 1, reviewerType: 1 });
 ReviewSchema.index({ revieweeId: 1, revieweeType: 1 });
 ReviewSchema.index({ reviewDate: -1 });

@@ -224,6 +224,67 @@ const getClientContracts = async (req, res) => {
       .limit(limit)
       .lean();
 
+    // Get reviews for all contracts in this batch
+    const contractIds = contracts.map((c) => c._id);
+    const rawReviews = await Review.find({
+      contractId: { $in: contractIds },
+      isDeleted: false,
+    })
+      .populate({
+        path: "reviewerId",
+        select: "firstName lastName profilePicture",
+        refPath: "reviewerModel",
+      })
+      .populate({
+        path: "revieweeId",
+        select: "firstName lastName profilePicture",
+        refPath: "revieweeModel",
+      })
+      .lean();
+
+    // Map of contractId -> array of reviews
+    const reviewMap = {};
+    for (const r of rawReviews) {
+      const key = String(r.contractId);
+      if (!reviewMap[key]) reviewMap[key] = [];
+
+      // Decrypt reviewer/reviewee names and add profile URLs if present
+      if (r.reviewerId) {
+        r.reviewerId.firstName = safeDecrypt(
+          r.reviewerId.firstName,
+          "reviewer firstName"
+        );
+        r.reviewerId.lastName = safeDecrypt(
+          r.reviewerId.lastName,
+          "reviewer lastName"
+        );
+        if (r.reviewerId.profilePicture) {
+          r.reviewerId.profilePictureUrl =
+            r.reviewerId.profilePicture.url || null;
+          r.reviewerId.profilePicturePublicId =
+            r.reviewerId.profilePicture.public_id || null;
+        }
+      }
+      if (r.revieweeId) {
+        r.revieweeId.firstName = safeDecrypt(
+          r.revieweeId.firstName,
+          "reviewee firstName"
+        );
+        r.revieweeId.lastName = safeDecrypt(
+          r.revieweeId.lastName,
+          "reviewee lastName"
+        );
+        if (r.revieweeId.profilePicture) {
+          r.revieweeId.profilePictureUrl =
+            r.revieweeId.profilePicture.url || null;
+          r.revieweeId.profilePicturePublicId =
+            r.revieweeId.profilePicture.public_id || null;
+        }
+      }
+
+      reviewMap[key].push(r);
+    }
+
     const totalCount = await WorkContract.countDocuments(filter);
 
     // Get contract statistics
@@ -264,7 +325,10 @@ const getClientContracts = async (req, res) => {
         contracts: contracts.map((contract) => {
           const { createdIP, ...safeContract } = contract;
           return safeContract;
-        }),
+        }).map((contract) => ({
+          ...contract,
+          reviews: reviewMap[contract._id.toString()] || [],
+        })),
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
@@ -346,7 +410,7 @@ const getWorkerContracts = async (req, res) => {
 
     // Get reviews for all contracts in this batch
     const contractIds = contracts.map((contract) => contract._id);
-    const reviews = await Review.find({
+    const rawReviews = await Review.find({
       contractId: { $in: contractIds },
       isDeleted: false,
     })
@@ -362,10 +426,47 @@ const getWorkerContracts = async (req, res) => {
       })
       .lean();
 
-    // Create a map of reviews by contract ID
+    // Create a map of reviews by contract ID -> array
     const reviewMap = {};
-    reviews.forEach((review) => {
-      reviewMap[review.contractId.toString()] = review;
+    rawReviews.forEach((r) => {
+      const key = r.contractId.toString();
+      if (!reviewMap[key]) reviewMap[key] = [];
+
+      // Decrypt names and add profile URLs
+      if (r.reviewerId) {
+        r.reviewerId.firstName = safeDecrypt(
+          r.reviewerId.firstName,
+          "reviewer firstName"
+        );
+        r.reviewerId.lastName = safeDecrypt(
+          r.reviewerId.lastName,
+          "reviewer lastName"
+        );
+        if (r.reviewerId.profilePicture) {
+          r.reviewerId.profilePictureUrl =
+            r.reviewerId.profilePicture.url || null;
+          r.reviewerId.profilePicturePublicId =
+            r.reviewerId.profilePicture.public_id || null;
+        }
+      }
+      if (r.revieweeId) {
+        r.revieweeId.firstName = safeDecrypt(
+          r.revieweeId.firstName,
+          "reviewee firstName"
+        );
+        r.revieweeId.lastName = safeDecrypt(
+          r.revieweeId.lastName,
+          "reviewee lastName"
+        );
+        if (r.revieweeId.profilePicture) {
+          r.revieweeId.profilePictureUrl =
+            r.revieweeId.profilePicture.url || null;
+          r.revieweeId.profilePicturePublicId =
+            r.revieweeId.profilePicture.public_id || null;
+        }
+      }
+
+      reviewMap[key].push(r);
     });
 
     const totalCount = await WorkContract.countDocuments(filter);
@@ -431,54 +532,14 @@ const getWorkerContracts = async (req, res) => {
             }
           }
 
-          // Get review for this contract
-          const contractReview = reviewMap[safeContract._id.toString()];
-
-          // Decrypt review names if review exists
-          if (contractReview) {
-            if (contractReview.reviewerId) {
-              contractReview.reviewerId.firstName = safeDecrypt(
-                contractReview.reviewerId.firstName,
-                "reviewer firstName"
-              );
-              contractReview.reviewerId.lastName = safeDecrypt(
-                contractReview.reviewerId.lastName,
-                "reviewer lastName"
-              );
-
-              // Add reviewer profile picture info
-              if (contractReview.reviewerId.profilePicture) {
-                contractReview.reviewerId.profilePictureUrl =
-                  contractReview.reviewerId.profilePicture.url || null;
-                contractReview.reviewerId.profilePicturePublicId =
-                  contractReview.reviewerId.profilePicture.public_id || null;
-              }
-            }
-
-            if (contractReview.revieweeId) {
-              contractReview.revieweeId.firstName = safeDecrypt(
-                contractReview.revieweeId.firstName,
-                "reviewee firstName"
-              );
-              contractReview.revieweeId.lastName = safeDecrypt(
-                contractReview.revieweeId.lastName,
-                "reviewee lastName"
-              );
-
-              // Add reviewee profile picture info
-              if (contractReview.revieweeId.profilePicture) {
-                contractReview.revieweeId.profilePictureUrl =
-                  contractReview.revieweeId.profilePicture.url || null;
-                contractReview.revieweeId.profilePicturePublicId =
-                  contractReview.revieweeId.profilePicture.public_id || null;
-              }
-            }
-          }
-
+          // Attach all reviews for this contract (array)
+          const reviewsForContract = reviewMap[safeContract._id.toString()] || [];
           return {
             ...safeContract,
-            review: contractReview || null,
-            hasReview: !!contractReview,
+            reviews: reviewsForContract,
+            // Backward compatibility fields
+            review: reviewsForContract[0] || null,
+            hasReview: reviewsForContract.length > 0,
           };
         }),
         pagination: {
