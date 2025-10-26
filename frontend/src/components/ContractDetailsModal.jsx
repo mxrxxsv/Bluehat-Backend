@@ -30,14 +30,63 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   };
 
   const getReviews = () => {
-    const reviews = contractDetails?.review || contractDetails?.reviews || [];
-    // Handle both single review object and array of reviews
-    if (Array.isArray(reviews)) {
-      return reviews;
-    } else if (reviews && typeof reviews === "object") {
-      return [reviews]; // Convert single review to array
+    const raw = contractDetails?.review || contractDetails?.reviews || [];
+    // Normalize to array
+    const arr = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === "object"
+      ? [raw]
+      : [];
+
+    const c = getContract();
+
+    // Synthesize legacy feedbacks if reviews array doesn't include them
+    const hasClientReview = arr.some(
+      (r) => (r?.reviewerType || "").toLowerCase() === "client"
+    );
+    const hasWorkerReview = arr.some(
+      (r) => (r?.reviewerType || "").toLowerCase() === "worker"
+    );
+
+    const synthesized = [...arr];
+
+    // Legacy client feedback -> client reviewed worker
+    if (!hasClientReview && c?.clientFeedback) {
+      synthesized.push({
+        reviewerType: "client",
+        revieweeType: "worker",
+        rating: c?.clientRating ?? null,
+        feedback: c?.clientFeedback,
+        reviewDate: c?.completedAt || c?.actualEndDate || c?.updatedAt || c?.createdAt,
+        reviewerId: c?.clientId
+          ? {
+              firstName: c.clientId.firstName,
+              lastName: c.clientId.lastName,
+              profilePictureUrl: c.clientId.profilePictureUrl,
+            }
+          : null,
+      });
     }
-    return [];
+
+    // Legacy worker feedback -> worker reviewed client
+    if (!hasWorkerReview && c?.workerFeedback) {
+      synthesized.push({
+        reviewerType: "worker",
+        revieweeType: "client",
+        rating: c?.workerRating ?? null,
+        feedback: c?.workerFeedback,
+        reviewDate: c?.completedAt || c?.actualEndDate || c?.updatedAt || c?.createdAt,
+        reviewerId: c?.workerId
+          ? {
+              firstName: c.workerId.firstName,
+              lastName: c.workerId.lastName,
+              profilePictureUrl: c.workerId.profilePictureUrl,
+            }
+          : null,
+      });
+    }
+
+    return synthesized;
   };
 
   const fetchContractDetails = useCallback(async () => {

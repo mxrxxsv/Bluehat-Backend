@@ -674,7 +674,7 @@ const ProfilePage = () => {
         <>
           {/* Credential Section */}
 
-          <div className="bg-white shadow-md rounded-[20px] p-8 mb-8">
+          <div className="bg-white shadow-md rounded-[20px] p-8 mb-4">
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setIsEditMode((prev) => !prev)}
@@ -684,8 +684,66 @@ const ProfilePage = () => {
               </button>
             </div>
 
+                {/* ================= SKILLS ================= */}
+
+            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
+              Skills
+              {isEditMode && (
+                <button
+                  onClick={() => setIsAddSkillOpen(true)}
+                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                >
+                  + Add
+                </button>
+              )}
+            </h3>
+            {currentUser.skillsByCategory &&
+            currentUser.skillsByCategory.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {currentUser.skillsByCategory.map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
+                  >
+                    <span>
+                      {skill.skillCategoryId?.categoryName ||
+                        "Unnamed Skill Category"}
+                    </span>
+                    {isEditMode && (
+                      <button
+                        onClick={() =>
+                          confirmDelete(() =>
+                            handleDeleteSkillCategory(skill.skillCategoryId._id)
+                          )
+                        }
+                        className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No skills added yet.</p>
+            )}
+
+            {/* AddSkill Modal */}
+            {isAddSkillOpen && (
+              <AddSkill
+                onClose={() => setIsAddSkillOpen(false)}
+                onAdd={(newSkills) =>
+                  setCurrentUser((prev) => ({
+                    ...prev,
+                    skills: [...(prev.skills || []), ...newSkills],
+                  }))
+                }
+                onRefresh={fetchSkills}
+              />
+            )}
+
             {/* ================= EXPERIENCE ================= */}
-            <div className="mb-8">
+            <div className="mb-8 mt-4">
               <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
                 Work Experience
                 {isEditMode && (
@@ -719,7 +777,7 @@ const ProfilePage = () => {
                         </p>
                       </div>
 
-                      {/* ✅ Delete button at bottom */}
+                      {/* Delete button at bottom */}
                       {isEditMode && (
                         <div className="mt-3 flex justify-end">
                           <button
@@ -832,64 +890,6 @@ const ProfilePage = () => {
                   }))
                 }
                 onRefresh={fetchEducation}
-              />
-            )}
-
-            {/* ================= SKILLS ================= */}
-
-            <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
-              Skills
-              {isEditMode && (
-                <button
-                  onClick={() => setIsAddSkillOpen(true)}
-                  className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                >
-                  + Add
-                </button>
-              )}
-            </h3>
-            {currentUser.skillsByCategory &&
-            currentUser.skillsByCategory.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {currentUser.skillsByCategory.map((skill, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 bg-[#55b3f3] text-white text-sm rounded-full shadow-sm px-3 py-1"
-                  >
-                    <span>
-                      {skill.skillCategoryId?.categoryName ||
-                        "Unnamed Skill Category"}
-                    </span>
-                    {isEditMode && (
-                      <button
-                        onClick={() =>
-                          confirmDelete(() =>
-                            handleDeleteSkillCategory(skill.skillCategoryId._id)
-                          )
-                        }
-                        className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No skills added yet.</p>
-            )}
-
-            {/* AddSkill Modal */}
-            {isAddSkillOpen && (
-              <AddSkill
-                onClose={() => setIsAddSkillOpen(false)}
-                onAdd={(newSkills) =>
-                  setCurrentUser((prev) => ({
-                    ...prev,
-                    skills: [...(prev.skills || []), ...newSkills],
-                  }))
-                }
-                onRefresh={fetchSkills}
               />
             )}
 
