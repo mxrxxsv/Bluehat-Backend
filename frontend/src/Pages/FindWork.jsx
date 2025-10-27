@@ -368,7 +368,7 @@ const FindWork = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
       <VerificationNotice user={user} />
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
