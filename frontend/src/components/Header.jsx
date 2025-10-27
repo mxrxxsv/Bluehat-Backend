@@ -13,6 +13,9 @@ const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+  const navMenuRef = useRef(null); // mobile nav container
+  const burgerButtonRef = useRef(null); // hamburger button
+  const isOpenRef = useRef(false); // mirror latest isOpen for outside-click
   const location = useLocation();
   const currentPath = location.pathname;
   const [authLoading, setAuthLoading] = useState(true);
@@ -35,22 +38,44 @@ const Header = () => {
       ) {
         setShowNotifications(false);
       }
+
+      // Close mobile hamburger menu when clicking outside of menu and burger
+      if (isOpenRef.current) {
+        const clickedInsideNav = navMenuRef.current?.contains(event.target);
+        const clickedBurger = burgerButtonRef.current?.contains(event.target);
+        if (!clickedInsideNav && !clickedBurger) {
+          setIsOpen(false);
+        }
+      }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         setShowDropdown(false);
         setShowNotifications(false);
+        setIsOpen(false);
       }
     };
 
-    // Keep "mousedown" for immediate outside detection
-    document.addEventListener("click", handleClickOutside);
+    const handleKeydown = (e) => {
+      if (e.key === "Escape") {
+        setShowDropdown(false);
+        setShowNotifications(false);
+        setIsOpen(false);
+      }
+    };
+
+  // Use mousedown/touchstart for immediate outside detection
+  document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("keydown", handleKeydown);
 
     return () => {
-      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("keydown", handleKeydown);
     };
 
   }, []);
@@ -94,6 +119,11 @@ const Header = () => {
   ];
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // Keep ref synced with latest isOpen for event listeners
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const isActive = (path) => currentPath === path;
 
@@ -338,6 +368,7 @@ const Header = () => {
                 aria-controls="navbar-sticky"
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen(!isOpen)}
+                ref={burgerButtonRef}
               >
                 <span className="sr-only">Open main menu</span>
                 <svg
@@ -363,6 +394,7 @@ const Header = () => {
               className={`pb-4 justify-between w-full md:flex md:w-auto md:order-1 ${isOpen ? "block" : "hidden"
                 } bg-white`}
               id="navbar-sticky"
+              ref={navMenuRef}
             >
               <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left relative">
                 {/* Mobile Profile Avatar beside first link */}
