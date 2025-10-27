@@ -191,11 +191,10 @@ const FindWorker = () => {
               {categories.map((category) => (
                 <button
                   key={category._id}
-                  className={`px-4 py-2 text-sm rounded-lg border cursor-pointer text-left ${
-                    selectedCategory === category._id
-                      ? "bg-blue-400 text-white border-blue-400"
-                      : "bg-gray-100 text-gray-700 hover:bg-blue-50 border-gray-300"
-                  }`}
+                  className={`px-4 py-2 text-sm rounded-lg border cursor-pointer text-left ${selectedCategory === category._id
+                    ? "bg-blue-400 text-white border-blue-400"
+                    : "bg-gray-100 text-gray-700 hover:bg-blue-50 border-gray-300"
+                    }`}
                   onClick={() =>
                     setSelectedCategory(
                       selectedCategory === category._id ? "" : category._id
@@ -276,20 +275,20 @@ const FindWorker = () => {
                   const avgRating = Number.isFinite(worker.rating)
                     ? Number(worker.rating).toFixed(1)
                     : Array.isArray(worker.reviews) && worker.reviews.length
-                    ? (
+                      ? (
                         worker.reviews.reduce(
                           (sum, r) => sum + (Number(r.rating) || 0),
                           0
                         ) / worker.reviews.length
                       ).toFixed(1)
-                    : "0";
+                      : "0";
 
                   // Show review count from backend if available; fallback to reviews length
                   const reviewCount = Number.isFinite(worker.totalRatings)
                     ? worker.totalRatings
                     : Array.isArray(worker.reviews)
-                    ? worker.reviews.length
-                    : 0;
+                      ? worker.reviews.length
+                      : 0;
 
                   return (
                     <Link
@@ -298,61 +297,70 @@ const FindWorker = () => {
                       className="w-full py-4"
                     >
                       <div
-                        className="relative bg-white rounded-2xl shadow-md p-4 flex items-center w-full pb-15 md:pb-4"
+                        className="relative bg-white rounded-2xl shadow-md p-4 pt-6 pr-20 pb-14 md:pt-4 md:pr-4 md:pb-4 flex flex-col md:flex-row md:items-center w-full"
                         onMouseOver={isMouseOver}
                         onMouseOut={isMouseOut}
                       >
                         <div className="flex flex-col justify-between h-full mr-4" />
-                        <div className="flex items-start gap-4 flex-1 text-[#252525]">
-                          <img
-                            src={
-                              worker.profilePicture.url ||
-                              "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                            }
-                            alt={worker.fullName}
-                            className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
-                          />
-                          <div className="flex flex-col justify-between h-full">
-                            <h2 className="text-[14px] md:text-xl font-semibold text-left">
-                              {worker.fullName}
-                            </h2>
+                        <div className="flex-1 text-[#252525]">
+                          <div className="flex items-start gap-4">
+                            <img
+                              src={
+                                worker?.profilePicture?.url ||
+                                "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                              }
+                              alt={worker.fullName}
+                              className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
+                            />
+                            <div className="flex flex-col justify-between h-full flex-1">
+                              <h2 className="text-[14px] md:text-xl font-semibold text-left">
+                                {worker.fullName}
+                              </h2>
 
-                            {/* ✅ Status section */}
-                            {/* <p
-                            className={`text-xs font-medium mt-0.5 text-left ${worker.status === "available"
-                              ? "text-green-600"
-                              : worker.status === "working"
-                                ? "text-red-500"
-                                : "text-gray-500"
-                              }`}
-                          >
-                            ● {worker.status || "Offline"}
-                          </p> */}
+                              <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-4 md:line-clamp-3">
+                                {worker.biography ||
+                                  "4th Year BSIT Student from Cabiao, Nueva Ecija."}
+                              </p>
 
-                            <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
-                              {worker.biography ||
-                                "4th Year BSIT Student from Cabiao, Nueva Ecija."}
-                            </p>
-                            <p className="text-[12px] md:text-base text-gray-500 text-left flex items-center gap-1 mt-3">
-                              <MapPin className="w-4 h-4 text-gray-500" />
-                              {worker.location}
-                            </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {worker.skills.slice(0, 3).map((skill, index) => (
-                                <span
-                                  key={skill.skillCategoryId || index}
-                                  className="text-[#f4f6f6] text-[12px] md:text-sm  font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
-                                >
-                                  {skill.categoryName}
-                                </span>
-                              ))}
-
-                              {worker.skills.length > 3 && (
-                                <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
-                                  +{worker.skills.length - 3} more
-                                </span>
-                              )}
+                              {/* Desktop/tablet: location and skills in the right column */}
+                              <p className="hidden md:flex text-[12px] md:text-base text-gray-500 text-left items-center gap-1 mt-3">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                                {worker.location}
+                              </p>
+                              <div className="hidden md:flex flex-wrap gap-2 mt-3">
+                                {(worker.skills || []).map((skill, index) => (
+                                  <span
+                                    key={skill.skillCategoryId || index}
+                                    className="text-[#f4f6f6] text-[12px] md:text-sm  font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+                                  >
+                                    {skill.categoryName}
+                                  </span>
+                                ))}
+    
+                              </div>
                             </div>
+                          </div>
+                          {/* Location below image and bio (mobile aligns with profile picture) */}
+                          <p className="block md:hidden text-[12px] text-gray-500 flex items-center gap-1 mt-3">
+                            <MapPin className="w-4 h-4 text-gray-500" />
+                            {worker.location}
+                          </p>
+                          {/* Skills below image and bio */}
+                          <div className="block md:hidden flex flex-wrap gap-2 mt-3">
+                            {(worker.skills || []).slice(0, 3).map((skill, index) => (
+                              <span
+                                key={skill.skillCategoryId || index}
+                                className="text-[#f4f6f6] text-[12px] md:text-sm font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+                              >
+                                {skill.categoryName}
+                              </span>
+                            ))}
+
+                            {/* {(worker.skills?.length || 0) > 3 && (
+                              <span className="text-gray-500 text-[12px] px-3 py-1  md:text-sm italic">
+                                +{worker.skills.length - 3} more
+                              </span>
+                            )} */}
                           </div>
                         </div>
 
@@ -373,57 +381,42 @@ const FindWorker = () => {
                           </p>
                         </div>
 
-                        {/* <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleBookmarkClick(worker.id);
-                        }}
-                        className="flex items-center text-[14px] md:text-sm gap-1 absolute bottom-2 md:bottom-4 right-1.5 bg-[#55b3f3] text-white p-1 px-2 md:px-4 md:py-2 rounded-[8px] hover:bg-blue-400 shadow-md cursor-pointer"
-                      >
-                        {isBookmark[worker.id] ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-                        Save
-                      </button> */}
-
                         <p
                           className={`
-                                    absolute bottom-1 md:bottom-4 right-2
+                                    absolute bottom-3 md:bottom-4 right-2
                                     inline-flex items-center gap-2
                                     text-xs md:text-[12px] font-semibold
                                     px-2 py-1.5 rounded-full 
                                     shadow-md
                                     transition-colors duration-200
-                                    ${
-                                      worker.status === "available"
-                                        ? "bg-green-100 text-green-800"
-                                        : ""
-                                    }
-                                    ${
-                                      worker.status === "working"
-                                        ? "bg-red-100 text-red-700"
-                                        : ""
-                                    }
-                                    ${
-                                      !worker.status ||
-                                      worker.status === "not available"
-                                        ? "bg-gray-200 text-gray-600"
-                                        : ""
-                                    }
+                                    ${worker.status === "available"
+                              ? "bg-green-100 text-green-800"
+                              : ""
+                            }
+                                    ${worker.status === "working"
+                              ? "bg-red-100 text-red-700"
+                              : ""
+                            }
+                                    ${!worker.status ||
+                              worker.status === "not available"
+                              ? "bg-gray-200 text-gray-600"
+                              : ""
+                            }
                                   `}
                         >
                           <span
                             className={`h-2 w-2 rounded-full 
                           ${worker.status === "available" ? "bg-green-500" : ""}
                           ${worker.status === "working" ? "bg-red-500" : ""}
-                          ${
-                            !worker.status || worker.status === "not available"
-                              ? "bg-gray-400"
-                              : ""
-                          }
+                          ${!worker.status || worker.status === "not available"
+                                ? "bg-gray-400"
+                                : ""
+                              }
                         `}
                           ></span>
                           {worker.status
                             ? worker.status.charAt(0).toUpperCase() +
-                              worker.status.slice(1)
+                            worker.status.slice(1)
                             : "not available"}
                         </p>
                       </div>
