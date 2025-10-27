@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, MapPin, SlidersHorizontal, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getWorkers } from "../api/worker";
 import axios from "axios";
@@ -20,6 +20,11 @@ const FindWorker = () => {
   const [searchInput, setSearchInput] = useState(""); // For input field
 
   const [categories, setCategories] = useState([]);
+
+  // UI state for filters (match FindWork)
+  const [showDesktopFilters, setShowDesktopFilters] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const desktopFilterContainerRef = useRef(null);
 
   // Fetch categories from backend
   useEffect(() => {
@@ -80,16 +85,38 @@ const FindWorker = () => {
     fetchWorkers();
   }, [selectedCategory, location, status, minRating]);
 
+  // Close desktop filters dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!showDesktopFilters) return;
+    const handleClickOutside = (e) => {
+      if (
+        desktopFilterContainerRef.current &&
+        !desktopFilterContainerRef.current.contains(e.target)
+      ) {
+        setShowDesktopFilters(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setShowDesktopFilters(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showDesktopFilters]);
+
   // Handle Enter key press for search and location
-  const handleSearchKeyPress = (e) => {
+  const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
-      setSearch(searchInput);
+      setSearch(searchInput.trim());
     }
   };
 
-  const handleLocationKeyPress = (e) => {
+  const handleLocationKeyDown = (e) => {
     if (e.key === "Enter") {
-      setLocation(locationInput);
+      setLocation(locationInput.trim());
     }
   };
 
@@ -119,158 +146,272 @@ const FindWorker = () => {
   // Loading skeleton (match FindWork style)
   if (loading) {
     return (
-      <div className="h-screen overflow-hidden">
-        <div className="max-w-5xl mx-auto mt-30 h-full flex">
-          <div className="flex gap-4 w-full">
-            {/* LEFT PANEL SKELETON */}
-            <div className="w-50 border-r border-gray-200 pr-4 hidden md:block">
-              <div className="h-5 w-40 bg-gray-200 rounded mb-4 animate-pulse" />
-              <div className="flex flex-col gap-2">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="h-9 bg-gray-200 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            </div>
-
-            {/* RIGHT PANEL SKELETON */}
-            <div className="flex-1 mx-4 mt-1">
-              {/* Search and Filters skeleton */}
-              <div className="flex flex-col gap-4">
-                {/* Search Bar */}
-                <div className="h-10 bg-gray-200 rounded-[20px] w-full animate-pulse" />
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row flex-wrap gap-4">
-                  <div className="w-full md:w-60 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
-                  <div className="w-full md:w-40 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
-                  <div className="w-full md:w-40 h-10 bg-gray-200 rounded-[12px] animate-pulse" />
-                </div>
-              </div>
-
-              {/* Worker card skeletons */}
-              <div className="flex flex-col overflow-y-auto py-4 pr-2 mt-4 max-h-[calc(100vh-340px)] md:max-h-[calc(100vh-220px)]">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-full py-4">
-                    <div className="relative bg-white rounded-2xl shadow-md p-4 flex items-center w-full pb-15 md:pb-4">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="w-20 h-20 md:w-30 md:h-30 rounded-full bg-gray-200 animate-pulse" />
-                        <div className="flex-1">
-                          <div className="h-5 bg-gray-200 rounded w-1/3 mb-2 animate-pulse" />
-                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" />
-                          <div className="h-4 bg-gray-200 rounded w-2/3 mb-2 animate-pulse" />
-                          <div className="flex gap-2 mt-3">
-                            <div className="h-6 bg-gray-200 rounded-full w-20 animate-pulse" />
-                            <div className="h-6 bg-gray-200 rounded-full w-16 animate-pulse" />
-                            <div className="h-6 bg-gray-200 rounded-full w-14 animate-pulse" />
-                          </div>
-                          <div className="h-4 bg-gray-200 rounded w-1/4 mt-3 animate-pulse" />
-                        </div>
-                      </div>
-                      <div className="absolute top-2 right-4 md:top-4 h-5 w-16 bg-gray-200 rounded animate-pulse" />
-                      <div className="absolute bottom-1 md:bottom-4 right-2 h-6 w-28 bg-gray-200 rounded-full animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+        <div className="space-y-4 pb-4 animate-pulse">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="w-full md:flex-1 h-10 bg-gray-200 rounded-[18px]" />
           </div>
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-gray-200 rounded w-1/4" />
+              </div>
+              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2" />
+              <div className="flex gap-2 mt-3">
+                <div className="h-6 bg-gray-200 rounded-full w-24" />
+                <div className="h-6 bg-gray-200 rounded-full w-20" />
+              </div>
+              <div className="flex justify-between items-center mt-4">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-gray-200 rounded w-1/6" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen overflow-hidden">
-      <div className="max-w-5xl mx-auto mt-30 h-full flex">
-        <div className="flex gap-4">
-          {/* LEFT PANEL - Category Filter */}
-          <div className="w-50 border-r border-gray-200 pr-4 hidden md:block">
-            <h3 className="text-lg font-bold mb-4 text-[#252525]">
-              Filter by Category
-            </h3>
-            <div className="flex flex-col gap-2">
-              {categories.map((category) => (
-                <button
-                  key={category._id}
-                  className={`px-4 py-2 text-sm rounded-lg border cursor-pointer text-left ${selectedCategory === category._id
-                    ? "bg-blue-400 text-white border-blue-400"
-                    : "bg-gray-100 text-gray-700 hover:bg-blue-50 border-gray-300"
-                    }`}
-                  onClick={() =>
-                    setSelectedCategory(
-                      selectedCategory === category._id ? "" : category._id
-                    )
-                  }
-                >
-                  {category.categoryName}
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
 
-          {/* RIGHT PANEL - Search and Results */}
-          <div className="flex-1 mx-4 mt-1">
-            {/* Search and Filters */}
-            <div className="flex flex-col gap-4">
-              {/* Search Bar */}
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div ref={desktopFilterContainerRef} className="relative w-full md:flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+          <input
+            type="text"
+            placeholder="Search by name, skill, or location..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+          <button
+            type="button"
+            onClick={() => setSearch(searchInput.trim())}
+            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-[#55b3f3] text-white text-sm hover:bg-blue-400 shadow-md cursor-pointer"
+            aria-label="Search"
+          >
+            Search
+          </button>
+
+          {/* Mobile filters trigger next to Search (inline) */}
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(true)}
+            className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+            aria-label="Filters"
+            aria-expanded={showMobileFilters}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </button>
+
+          {/* Desktop filters trigger inside search row */}
+          <button
+            type="button"
+            onClick={() => setShowDesktopFilters((s) => !s)}
+            className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+            aria-label="Filters"
+            aria-expanded={showDesktopFilters}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </button>
+
+          {/* Desktop filters dropdown popover */}
+          {showDesktopFilters && (
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+              {/* Location */}
+              <div className="flex items-stretch gap-2 mb-3">
                 <input
                   type="text"
-                  placeholder="Search by name, skill, or location (Press Enter)"
-                  className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-[20px] w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyPress={handleSearchKeyPress}
-                />
-              </div>
-
-              {/* Other Filters */}
-              <div className="flex flex-col md:flex-row flex-wrap gap-4">
-                {/* Location */}
-                <input
-                  type="text"
-                  placeholder="Location (Press Enter to search)"
-                  className="w-full md:w-auto h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm"
+                  placeholder="Filter by location"
                   value={locationInput}
                   onChange={(e) => setLocationInput(e.target.value)}
-                  onKeyPress={handleLocationKeyPress}
+                  onKeyDown={handleLocationKeyDown}
+                  className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
-
-                {/* Status */}
-                <select
-                  className="w-full md:w-auto h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                <button
+                  type="button"
+                  onClick={() => setLocation(locationInput.trim())}
+                  className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
                 >
-                  <option value="">All Status</option>
-                  <option value="available">Available</option>
-                  <option value="working">Working</option>
-                  <option value="not available">Not Available</option>
-                </select>
-
-                {/* Min Rating */}
-                <select
-                  className="w-full md:w-auto h-10 px-4 py-2 border border-gray-300 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm cursor-pointer"
-                  value={minRating}
-                  onChange={(e) => setMinRating(e.target.value)}
-                >
-                  <option value="">All Ratings</option>
-                  <option value="4">4 Stars</option>
-                  <option value="3">3 Stars</option>
-                  <option value="2">2 Stars</option>
-                  <option value="1">1 Star</option>
-                </select>
+                  Apply
+                </button>
               </div>
+              {/* Category */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+              {/* Status */}
+              <select
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="">All status</option>
+                <option value="available">Available</option>
+                <option value="working">Working</option>
+                <option value="not available">Not available</option>
+              </select>
+              {/* Min Rating */}
+              <select
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                value={minRating}
+                onChange={(e) => setMinRating(e.target.value)}
+              >
+                <option value="">All ratings</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+              {(selectedCategory || location || status || minRating) && (
+                <button
+                  onClick={() => {
+                    setSelectedCategory("");
+                    setStatus("");
+                    setMinRating("");
+                    setLocation("");
+                    setSearch("");
+                    setSearchInput("");
+                    setLocationInput("");
+                  }}
+                  className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Worker Cards */}
-            {filteredWorkers.length === 0 ? (
-              <div className="text-center py-20 text-gray-500">
-                No workers found matching your criteria
-              </div>
-            ) : (
-              <div className="flex flex-col overflow-y-auto py-4 pr-2 mt-4 max-h-[calc(100vh-340px)] md:max-h-[calc(100vh-220px)]">
-                {filteredWorkers.map((worker) => {
+      {/* Mobile filters modal */}
+      {showMobileFilters && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowMobileFilters(false)}
+            aria-hidden="true"
+          />
+          {/* Bottom sheet panel */}
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">Filters</h3>
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Close filters"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Location */}
+            <div className="flex items-stretch gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Filter by location"
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onKeyDown={handleLocationKeyDown}
+                className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              <button
+                type="button"
+                onClick={() => setLocation(locationInput.trim())}
+                className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+              >
+                Apply
+              </button>
+            </div>
+            {/* Category */}
+            <div className="mb-3">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Status */}
+            <div className="mb-3">
+              <select
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="">All status</option>
+                <option value="available">Available</option>
+                <option value="working">Working</option>
+                <option value="not available">Not available</option>
+              </select>
+            </div>
+            {/* Min Rating */}
+            <div className="mb-3">
+              <select
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={minRating}
+                onChange={(e) => setMinRating(e.target.value)}
+              >
+                <option value="">All ratings</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+            </div>
+            {(selectedCategory || location || status || minRating) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory("");
+                  setStatus("");
+                  setMinRating("");
+                  setLocation("");
+                  setSearch("");
+                  setSearchInput("");
+                  setLocationInput("");
+                }}
+                className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Worker Cards */}
+      {filteredWorkers.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          No workers found matching your criteria
+        </div>
+      ) : (
+  <div className="custom-scrollbar flex flex-col overflow-y-auto pr-2 h-[calc(100vh-230px)] md:h-[calc(100vh-220px)]">
+          {filteredWorkers.map((worker) => {
                   // Prefer backend-provided average rating; fallback to computing from reviews if present
                   const avgRating = Number.isFinite(worker.rating)
                     ? Number(worker.rating).toFixed(1)
@@ -297,7 +438,7 @@ const FindWorker = () => {
                       className="w-full py-4"
                     >
                       <div
-                        className="relative bg-white rounded-2xl shadow-md p-4 pt-6 pr-20 pb-14 md:pt-4 md:pr-4 md:pb-4 flex flex-col md:flex-row md:items-center w-full"
+                        className="relative bg-white rounded-2xl shadow-md p-4 pr-20 pb-14 md:pt-4 md:pr-4 md:pb-4 flex flex-col md:flex-row md:items-center w-full"
                         onMouseOver={isMouseOver}
                         onMouseOut={isMouseOut}
                       >
@@ -317,7 +458,7 @@ const FindWorker = () => {
                                 {worker.fullName}
                               </h2>
 
-                              <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-4 md:line-clamp-3">
+                              <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
                                 {worker.biography ||
                                   "4th Year BSIT Student from Cabiao, Nueva Ecija."}
                               </p>
@@ -425,9 +566,6 @@ const FindWorker = () => {
                 })}
               </div>
             )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

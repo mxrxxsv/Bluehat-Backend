@@ -1,16 +1,57 @@
 @import "tailwindcss";
 
 * {
-    font-family: "Libre Franklin", sans-serif;
+  font-family: "Libre Franklin", sans-serif;
+}
+
+body,
+html {
+  background-color: #f4f6f6;
+  overflow: auto;
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+nav {
+  background-color: #f4f6f6;
+}
+
+
+.custom-scrollbar {
+  /* Firefox */
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+/* Chromium/WebKit browsers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background-color: white;
+
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: white;
+  border: 3px solid #f3f4f6;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: white
+}
+
+@media (prefers-color-scheme: dark) {
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: white;
+    border: 3px solid #f3f4f6;
+    border-radius: 9999px;
   }
-  
-  body, html{
-    background-color: #f4f6f6;
-    overflow: auto;
-    height: 100%;
-    scroll-behavior: smooth;
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: white;
   }
-  
-  nav{
-    background-color: #f4f6f6;
-  }
+}
