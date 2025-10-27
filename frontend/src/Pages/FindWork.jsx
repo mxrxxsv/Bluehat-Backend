@@ -383,7 +383,7 @@ const FindWork = () => {
 
   if (loading && (page === 1 || jobPosts.length === 0)) {
     return (
-      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
           {/* Search Bar Skeleton */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -688,59 +688,77 @@ const FindWork = () => {
               <X size={20} />
             </button>
 
-            {/* Job Preview */}
-            {(newJob.description || newJob.location || selectedCategory) && (
-              <div className="mt-6 pt-4">
-                <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={user?.image || currentUser.avatar}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
-                        {user?.fullName || "Client Name"}
+            {/* Job Preview (skeleton when empty, live preview when filled) */}
+            <div className="mt-6 pt-4">
+              <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
+                {newJob.description || newJob.location || selectedCategory || newJob.priceOffer ? (
+                  <>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={user?.image || currentUser.avatar}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="text-sm font-medium text-[#252525] opacity-75">
+                          {user?.fullName || "Client Name"}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {/* <Clock size={16} /> Just now */}
                       </span>
                     </div>
-
-                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                      {/* <Clock size={16} /> Just now */}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <Briefcase size={20} className="text-blue-400" />
-                    {newJob.description ||
-                      "Job description will appear here..."}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedCategory ? (
-                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                        {
-                          categories.find((c) => c._id === selectedCategory)
-                            ?.categoryName
-                        }
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <Briefcase size={20} className="text-blue-400" />
                       </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">
-                        No category selected
+                      <span className="line-clamp-1 md:text-base">
+                        {newJob.description || "Job description will appear here..."}
                       </span>
-                    )}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedCategory ? (
+                        <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                          {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No category selected</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} />
+                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                          {newJob.location || "Location"}
+                        </span>
+                      </span>
+                      <span className="font-bold text-green-400">
+                        {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="animate-pulse">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-200" />
+                        <div className="h-4 bg-gray-200 rounded w-24" />
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded w-16" />
+                    </div>
+                    <div className="mt-2 h-5 bg-gray-200 rounded w-3/4" />
+                    <div className="flex gap-2 mt-3">
+                      <div className="h-6 bg-gray-200 rounded-full w-24" />
+                      <div className="h-6 bg-gray-200 rounded-full w-20" />
+                    </div>
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="h-4 bg-gray-200 rounded w-1/3" />
+                      <div className="h-4 bg-gray-200 rounded w-1/6" />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={16} /> {newJob.location || "Location"}
-                    </span>
-                    <span className="font-bold text-green-400">
-                      {newJob.priceOffer
-                        ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}`
-                        : "₱0"}
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Job Creation Form */}
             <form onSubmit={handlePostJob} className="space-y-3">

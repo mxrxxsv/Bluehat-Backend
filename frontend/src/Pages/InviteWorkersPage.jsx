@@ -661,7 +661,7 @@ const InviteWorkersPage = () => {
               onClick={() => setShowMobileFilters(false)}
               aria-hidden="true"
             />
-            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-gray-800">Filters</h3>
                 <button
@@ -673,60 +673,74 @@ const InviteWorkersPage = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="flex items-stretch gap-2 mb-3">
-                <input
-                  type="text"
-                  placeholder="Filter by location"
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  onKeyDown={handleLocationKeyDown}
-                  className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
-                  className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
-              <div className="mb-3">
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="4.5">4.5+ Stars</option>
-                  <option value="5">5 Stars</option>
-                </select>
-              </div>
-              <div className="mb-3">
-                <select
-                  value={filters.experienceLevel}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                >
-                  <option value="">Any Experience</option>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                  <option value="Expert">Expert</option>
-                </select>
-              </div>
-              <div className="mb-3">
-                <select
-                  value={filters.availability}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                >
-                  <option value="">Any Availability</option>
-                  <option value="Available">Available</option>
-                  <option value="Busy">Busy</option>
-                  <option value="Part-time">Part-time</option>
-                </select>
-              </div>
+              {loading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-10 bg-gray-100 rounded-md" />
+                    <div className="w-20 h-10 bg-gray-100 rounded-md" />
+                  </div>
+                  <div className="h-10 bg-gray-100 rounded-md" />
+                  <div className="h-10 bg-gray-100 rounded-md" />
+                  <div className="h-10 bg-gray-100 rounded-md" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-stretch gap-2 mb-3">
+                    <input
+                      type="text"
+                      placeholder="Filter by location"
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      onKeyDown={handleLocationKeyDown}
+                      className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
+                      className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <div className="mb-3">
+                    <select
+                      value={filters.minRating}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
+                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    >
+                      <option value="">Any Rating</option>
+                      <option value="4">4+ Stars</option>
+                      <option value="4.5">4.5+ Stars</option>
+                      <option value="5">5 Stars</option>
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <select
+                      value={filters.experienceLevel}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
+                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    >
+                      <option value="">Any Experience</option>
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                      <option value="Expert">Expert</option>
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <select
+                      value={filters.availability}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
+                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    >
+                      <option value="">Any Availability</option>
+                      <option value="Available">Available</option>
+                      <option value="Busy">Busy</option>
+                      <option value="Part-time">Part-time</option>
+                    </select>
+                  </div>
+                </>
+              )}
               {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
                 <button
                   onClick={() => {

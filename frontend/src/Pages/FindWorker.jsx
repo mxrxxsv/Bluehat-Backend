@@ -20,6 +20,7 @@ const FindWorker = () => {
   const [searchInput, setSearchInput] = useState(""); // For input field
 
   const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   // UI state for filters (match FindWork)
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
@@ -30,6 +31,7 @@ const FindWorker = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        setCategoriesLoading(true);
         const mode = import.meta.env.VITE_APP_MODE;
         const baseURL =
           mode === "production"
@@ -40,6 +42,8 @@ const FindWorker = () => {
         setCategories(Array.isArray(cats) ? cats : []);
       } catch (err) {
         console.error("Error fetching categories:", err);
+      } finally {
+        setCategoriesLoading(false);
       }
     };
     fetchCategories();
@@ -146,7 +150,7 @@ const FindWorker = () => {
   // Loading skeleton (match FindWork style)
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="w-full md:flex-1 h-10 bg-gray-200 rounded-[18px]" />
@@ -246,18 +250,22 @@ const FindWorker = () => {
                 </button>
               </div>
               {/* Category */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-              </select>
+              {categoriesLoading ? (
+                <div className="w-full h-10 bg-gray-100 rounded-md animate-pulse mb-3" />
+              ) : (
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              )}
               {/* Status */}
               <select
                 className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
@@ -312,7 +320,7 @@ const FindWorker = () => {
             aria-hidden="true"
           />
           {/* Bottom sheet panel */}
-          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-800">Filters</h3>
               <button
@@ -344,18 +352,22 @@ const FindWorker = () => {
             </div>
             {/* Category */}
             <div className="mb-3">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-              </select>
+              {categoriesLoading ? (
+                <div className="w-full h-10 bg-gray-100 rounded-md animate-pulse" />
+              ) : (
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             {/* Status */}
             <div className="mb-3">
