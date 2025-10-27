@@ -248,7 +248,7 @@ const WorkerPortfolio = () => {
       <div>
         <h2 className="text-xl font-semibold mb-2 text-left">Skills</h2>
         <div className="flex flex-wrap gap-2 mt-3">
-          {(worker.skills || []).slice(0, 3).map((skill, index) => (
+          {(worker.skills || []).map((skill, index) => (
             <span
               key={skill.skillCategoryId || index}
               className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
@@ -257,11 +257,7 @@ const WorkerPortfolio = () => {
             </span>
           ))}
 
-          {worker.skillsByCategory && worker.skillsByCategory.length > 3 && (
-            <span className="text-[#252525] text-[12.5px] font-medium px-3 py-1 rounded-full text-xs bg-gray-200 shadow-sm">
-              +{worker.skillsByCategory.length - 3} more
-            </span>
-          )}
+          {/* Removed '+N more' badge on this page as requested */}
         </div>
       </div>
 

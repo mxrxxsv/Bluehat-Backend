@@ -12,10 +12,10 @@ const API_CONFIG = {
   production: {
     baseURL:
       import.meta.env.VITE_API_BASE_URL ||
-      "https://fixit-capstone.onrender.com",
+      "https://fixit-capstone-backend.onrender.com",
     websocketURL:
       import.meta.env.VITE_API_BASE_URL ||
-      "https://fixit-capstone.onrender.com",
+      "https://fixit-capstone-backend.onrender.com",
   },
 
   // Get current environment URLs
