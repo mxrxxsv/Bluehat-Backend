@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
+const mode = import.meta.env.VITE_APP_MODE;
+
+const baseURL =
+    mode === "production"
+      ? import.meta.env.VITE_API_PROD_URL
+      : import.meta.env.VITE_API_DEV_URL;
+
 const Setup2FA = () => {
   const [searchParams] = useSearchParams();
   const [qrCode, setQrCode] = useState("");
@@ -31,7 +38,7 @@ const Setup2FA = () => {
     try {
       // ✅ FIXED: Use the correct endpoint
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/ver/get-qr`,
+        `${baseURL}/ver/get-qr`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -74,7 +81,7 @@ const Setup2FA = () => {
       setError("");
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/ver/verify`,
+        `${baseURL}/ver/verify`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

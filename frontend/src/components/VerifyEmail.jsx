@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
+const mode = import.meta.env.VITE_APP_MODE;
+
+const baseURL =
+    mode === "production"
+      ? import.meta.env.VITE_API_PROD_URL
+      : import.meta.env.VITE_API_DEV_URL;
+
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -22,7 +29,7 @@ const VerifyEmail = () => {
   const verifyEmailToken = async (token) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/ver/verify-email?token=${token}`,
+        `${baseURL}/ver/verify-email?token=${token}`,
         {
           method: "GET",
           credentials: "include",
