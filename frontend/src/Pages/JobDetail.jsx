@@ -138,11 +138,11 @@ const JobDetails = () => {
                 className="w-8 h-8 rounded-full object-cover cursor-pointer"
                 onClick={goToClientProfile}
               />
-              <span className="text-sm md:text-base font-medium text-[#252525] opacity-75">
+              <span className="text-sm md:text-base font-bold text-[#252525] opacity-75 ">
                 {job.client?.name || "Client Name"}
               </span>
             </div>
-            <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+            <span className="flex items-center gap-1 font-bold text-sm text-[#252525] opacity-80">
               {new Date(job.createdAt).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",

@@ -11,7 +11,8 @@ const Header = () => {
   const [menuLabel, setMenuLabel] = useState("Applications");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null); // desktop profile dropdown container
+  const profileDropdownMobileRef = useRef(null); // mobile profile dropdown container
   const notificationRef = useRef(null);
   const navMenuRef = useRef(null); // mobile nav container
   const burgerButtonRef = useRef(null); // hamburger button
@@ -28,7 +29,11 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const clickedInDesktopProfile = profileDropdownRef.current?.contains(event.target);
+      const clickedInMobileProfile = profileDropdownMobileRef.current?.contains(event.target);
+      const clickedInAnyProfile = clickedInDesktopProfile || clickedInMobileProfile;
+
+      if (!clickedInAnyProfile) {
         setShowDropdown(false);
       }
 
@@ -65,15 +70,13 @@ const Header = () => {
       }
     };
 
-  // Use mousedown/touchstart for immediate outside detection
-  document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+    // Use click for outside detection so inner links still receive the click
+    document.addEventListener("click", handleClickOutside);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("keydown", handleKeydown);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("keydown", handleKeydown);
     };
@@ -249,7 +252,7 @@ const Header = () => {
                       {/* {user?.fname || user?.email} */}
                     </span>
 
-                    <div className="relative z-[1050]" ref={dropdownRef}>
+                    <div className="relative z-[1050]" ref={profileDropdownRef}>
                       {/* <img
                         src={profile}
                         alt="Profile"
@@ -399,7 +402,7 @@ const Header = () => {
               <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left relative">
                 {/* Mobile Profile Avatar beside first link */}
                 {!showAuthButtons && (
-                  <div className="absolute right-4 top-3 md:hidden" ref={dropdownRef}>
+                  <div className="absolute right-4 top-3 md:hidden" ref={profileDropdownMobileRef}>
                     <img
                       src={
                         user?.image ||
@@ -471,7 +474,7 @@ const Header = () => {
                     Advertisement
                   </Link>
                 </li>
-                
+
                 {user && (
                   <>
                     <li className="md:hidden">
@@ -479,8 +482,8 @@ const Header = () => {
                         onClick={() => setIsOpen(false)}
                         to="/applications"
                         className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
-                            ? "text-sky-500"
-                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                          ? "text-sky-500"
+                          : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                           }`}
                       >
                         {user?.userType === "worker"
@@ -493,8 +496,8 @@ const Header = () => {
                         onClick={() => setIsOpen(false)}
                         to="/contracts"
                         className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
-                            ? "text-sky-500"
-                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                          ? "text-sky-500"
+                          : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
                           }`}
                       >
                         My Contracts

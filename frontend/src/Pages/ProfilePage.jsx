@@ -295,7 +295,7 @@ const ProfilePage = () => {
     }
   };
 
-  // 🟡 Edit button
+  // Edit button
   const handleEditJob = (job) => {
     if (isJobLocked(job)) return;
     setSelectedJob(job);
@@ -310,7 +310,7 @@ const ProfilePage = () => {
     setIsEditModalOpen(true);
   };
 
-  // 🟢 Save updated job
+  // Save updated job
   const handleUpdateJob = async () => {
     try {
       if (!selectedJob?.id) return;
@@ -410,12 +410,12 @@ const ProfilePage = () => {
           onClick={() => setIsModalOpen(true)}
         />
         <div className="text-center md:text-left">
-          <h2 className="text-2xl font-bold text-gray-800">{fullName}</h2>
+          <h2 className="text-2xl font-bold text-[#252525]">{fullName}</h2>
           <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1">
             <MapPin size={16} /> {formatAddress(address)}
           </p>
           <span className="text-xs px-2 py-1 rounded-full bg-[#5eb6f3] text-white mt-2 inline-block">
-            {userType === "client" ? "Client" : "Freelancer"}
+            {userType === "client" ? "Client" : "Worker"}
           </span>
 
           {userType === "worker" && (
@@ -455,10 +455,10 @@ const ProfilePage = () => {
                 >
                   <div className="rounded-xl p-4 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                      <span className="text-sm font-bold text-[#252525] opacity-75">
                         {post.client?.name || "Client Name"}
                       </span>
-                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                      <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
                         {new Date(post.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",

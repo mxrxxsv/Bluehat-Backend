@@ -44,7 +44,7 @@ const renderStars = (rating) => {
 };
 
 export default function ClientProfile() {
-  const { id } = useParams(); // clientId (Client model _id)
+  const { id } = useParams(); 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
@@ -52,7 +52,7 @@ export default function ClientProfile() {
   const [stats, setStats] = useState(null);
   const [clientInfo, setClientInfo] = useState(null);
   const [page, setPage] = useState(1);
-  const [jobMap, setJobMap] = useState({}); // cache of enriched jobs by id
+  const [jobMap, setJobMap] = useState({}); 
 
   // Status color mapping similar to profile job post styling
   const getStatusStyle = (status) => {
@@ -232,12 +232,12 @@ export default function ClientProfile() {
                       className="w-8 h-8 rounded-full object-cover"
                     />
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
+                      <span className="text-sm font-bold text-[#252525] opacity-75">
                         {job.client?.name || "Client Name"}
                       </span>
                     </div>
                   </div>
-                  <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                  <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
                     {new Date(job.createdAt).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
@@ -313,11 +313,11 @@ export default function ClientProfile() {
                               className="w-8 h-8 rounded-full object-cover"
                               onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                             />
-                            <span className="text-sm font-medium text-[#252525] opacity-75">
+                            <span className="text-sm font-bold text-[#252525] opacity-75">
                               {job.client?.name || jobs?.[0]?.client?.name || "Client"}
                             </span>
                           </div>
-                          <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                          <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
                             {rev.reviewDate ? new Date(rev.reviewDate).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "short",

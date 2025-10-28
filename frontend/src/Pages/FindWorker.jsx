@@ -189,7 +189,7 @@ const FindWorker = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
           <input
             type="text"
-            placeholder="Search by name, skill, or location..."
+            placeholder="Search by skill, or location..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -543,7 +543,7 @@ const FindWorker = () => {
                                     shadow-md
                                     transition-colors duration-200
                                     ${worker.status === "available"
-                              ? "bg-green-100 text-green-800"
+                              ? "bg-green-100 text-green-600"
                               : ""
                             }
                                     ${worker.status === "working"
