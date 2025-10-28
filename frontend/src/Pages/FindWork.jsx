@@ -447,7 +447,7 @@ const FindWork = () => {
           <button
             type="button"
             onClick={() => setSearch(searchInput.trim())}
-            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-sky-500 text-white text-sm hover:bg-sky-700 shadow-md cursor-pointer"
+            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-sky-500 text-white text-sm hover:bg-sky-700 shadow-md cursor-pointer"
             aria-label="Search"
           >
             Search
