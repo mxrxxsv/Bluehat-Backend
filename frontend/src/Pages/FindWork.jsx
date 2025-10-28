@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MapPin,
   Briefcase,
@@ -6,6 +6,7 @@ import {
   Search,
   X,
   CheckCircle,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { checkAuth } from "../api/auth";
@@ -35,12 +36,18 @@ const FindWork = () => {
   const [limit] = useState(10);
   const [hasMore, setHasMore] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  // Dynamic inner scroll height for job list
+  const listRef = useRef(null);
+  const [listHeight, setListHeight] = useState(480);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showDesktopFilters, setShowDesktopFilters] = useState(false);
+  const desktopFilterContainerRef = useRef(null);
 
   // Note: removed ratings prefetch to reduce API calls
 
@@ -196,16 +203,16 @@ const FindWork = () => {
   // Initial fetch (page 1 only)
   // Removed duplicate initial fetch to avoid double API calls on mount.
 
-  // Handle Enter key press for search and location
+  // Handle Enter key press for search and location (use onKeyDown; onKeyPress is deprecated)
   const handleSearchKeyPress = (e) => {
     if (e.key === "Enter") {
-      setSearch(searchInput);
+      setSearch(searchInput.trim());
     }
   };
 
   const handleLocationKeyPress = (e) => {
     if (e.key === "Enter") {
-      setLocation(locationInput);
+      setLocation(locationInput.trim());
     }
   };
 
@@ -223,6 +230,23 @@ const FindWork = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  // Compute dynamic height so only the job list scrolls
+  useEffect(() => {
+    const computeListHeight = () => {
+      if (!listRef.current) return;
+      const rect = listRef.current.getBoundingClientRect();
+      const viewportH = window.innerHeight || document.documentElement.clientHeight;
+      // 12-16px bottom padding safety
+      const h = Math.max(viewportH - rect.top - 16, 200);
+      setListHeight(h);
+    };
+    const rafCompute = () => requestAnimationFrame(computeListHeight);
+    // Initial and after layout changes
+    rafCompute();
+    window.addEventListener("resize", computeListHeight);
+    return () => window.removeEventListener("resize", computeListHeight);
+  }, [loading, showMobileFilters, showDesktopFilters, user, page, filterCategory, location, sortBy, order]);
 
   // Handle posting a new job
   const handlePostJob = async (e) => {
@@ -313,17 +337,53 @@ const FindWork = () => {
     fetchUser();
   }, []);
 
-  // Filter jobs (only client-side search filtering, category & location are backend-filtered)
+  // Close desktop filters dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!showDesktopFilters) return;
+
+    const handleOutside = (e) => {
+      const el = desktopFilterContainerRef.current;
+      if (el && !el.contains(e.target)) {
+        setShowDesktopFilters(false);
+      }
+    };
+
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setShowDesktopFilters(false);
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside, { passive: true });
+    document.addEventListener("keydown", handleEsc);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showDesktopFilters]);
+
+  // Filter jobs (client-side search across description, location, and category label)
   const filteredJobs = Array.isArray(jobPosts)
     ? jobPosts.filter((job) => {
-        const desc = job.description || "";
-        return desc.toLowerCase().includes(search.toLowerCase());
+        const q = (search || "").trim().toLowerCase();
+        if (!q) return true;
+        const desc = (job.description || "").toLowerCase();
+        const loc = (job.location || "").toLowerCase();
+        const cat = (
+          job.category?.name || job.category?.categoryName || ""
+        ).toLowerCase();
+        return (
+          desc.includes(q) ||
+          loc.includes(q) ||
+          cat.includes(q)
+        );
       })
     : [];
 
   if (loading && (page === 1 || jobPosts.length === 0)) {
     return (
-      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-20 md:mt-35">
+      <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
           {/* Search Bar Skeleton */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -369,82 +429,232 @@ const FindWork = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
+
       <VerificationNotice user={user} />
+
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative w-full md:w-1/2">
+        <div ref={desktopFilterContainerRef} className="relative w-full md:flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
           <input
             type="text"
-            placeholder="Search job descriptions (Press Enter)..."
+            placeholder="Search job descriptions..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onKeyPress={handleSearchKeyPress}
-            className="w-full px-4 py-2 shadow rounded-[18px] bg-white pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            onKeyDown={handleSearchKeyPress}
+            className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
+          <button
+            type="button"
+            onClick={() => setSearch(searchInput.trim())}
+            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-sky-500 text-white text-sm hover:bg-sky-700 shadow-md cursor-pointer"
+            aria-label="Search"
+          >
+            Search
+          </button>
+
+          {/* Mobile filters trigger next to Search (inline) */}
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(true)}
+            className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+            aria-label="Filters"
+            aria-expanded={showMobileFilters}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </button>
+
+          {/* Desktop filters trigger inside search row */}
+          <button
+            type="button"
+            onClick={() => setShowDesktopFilters((s) => !s)}
+            className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+            aria-label="Filters"
+            aria-expanded={showDesktopFilters}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </button>
+
+          {/* Desktop filters dropdown popover */}
+          {showDesktopFilters && (
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+              {/* Location */}
+              <div className="flex items-stretch gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Filter by location"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={handleLocationKeyPress}
+                  className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLocation(locationInput.trim())}
+                  className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+              {/* Category */}
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+              {/* Sorting */}
+              <div className="flex gap-3 flex-wrap mb-3">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
+                >
+                  <option value="createdAt">Date Posted</option>
+                  <option value="price">Price</option>
+                  <option value="updatedAt">Last Updated</option>
+                </select>
+                <select
+                  value={order}
+                  onChange={(e) => setOrder(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+              {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
+                <button
+                  onClick={() => {
+                    setFilterCategory("");
+                    setLocation("");
+                    setSearch("");
+                    setSortBy("createdAt");
+                    setOrder("desc");
+                  }}
+                  className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <input
-          type="text"
-          placeholder="Filter by location (Press Enter)"
-          value={locationInput}
-          onChange={(e) => setLocationInput(e.target.value)}
-          onKeyPress={handleLocationKeyPress}
-          className="w-full md:w-1/4 px-4 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="w-full md:w-1/4 px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-        >
-          <option value="">All categories</option>
-          {categories.map((cat) => (
-            <option key={cat._id} value={cat._id}>
-              {cat.categoryName}
-            </option>
-          ))}
-        </select>
+
+        {/* Mobile: inline filter button moved next to Search above */}
+
+        {/* Desktop: toggle handled inside search bar; no inline button here */}
       </div>
 
-      {/* Sorting Controls */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6 items-start md:items-center">
-        <span className="text-sm text-gray-600 font-medium">Sort by:</span>
-        <div className="flex gap-3 flex-wrap">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="createdAt">Date Posted</option>
-            <option value="price">Price</option>
-            <option value="updatedAt">Last Updated</option>
-          </select>
-          <select
-            value={order}
-            onChange={(e) => setOrder(e.target.value)}
-            className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          >
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-          </select>
+      {/* Mobile filters modal */}
+      {showMobileFilters && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowMobileFilters(false)}
+            aria-hidden="true"
+          />
+          {/* Bottom sheet panel */}
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">Filters</h3>
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Close filters"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Location */}
+            <div className="flex items-stretch gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Filter by location"
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onKeyDown={handleLocationKeyPress}
+                className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              <button
+                type="button"
+                onClick={() => setLocation(locationInput.trim())}
+                className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+              >
+                Apply
+              </button>
+            </div>
+            {/* Category */}
+            <div className="mb-3">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Sorting */}
+            <div className="flex gap-3 flex-wrap mb-3">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
+              >
+                <option value="createdAt">Date Posted</option>
+                <option value="price">Price</option>
+                <option value="updatedAt">Last Updated</option>
+              </select>
+              <select
+                value={order}
+                onChange={(e) => setOrder(e.target.value)}
+                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
+            {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
+              <button
+                onClick={() => {
+                  setFilterCategory("");
+                  setLocation("");
+                  setSearch("");
+                  setSortBy("createdAt");
+                  setOrder("desc");
+                }}
+                className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
+            {/* <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(false)}
+                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400"
+              >
+                Done
+              </button>
+            </div> */}
+          </div>
         </div>
-        {(filterCategory ||
-          location ||
-          sortBy !== "createdAt" ||
-          order !== "desc") && (
-          <button
-            onClick={() => {
-              setFilterCategory("");
-              setLocation("");
-              setSearch("");
-              setSortBy("createdAt");
-              setOrder("desc");
-            }}
-            className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
-          >
-            Clear all filters
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Post Box */}
       {user?.userType === "client" && (
@@ -478,59 +688,77 @@ const FindWork = () => {
               <X size={20} />
             </button>
 
-            {/* Job Preview */}
-            {(newJob.description || newJob.location || selectedCategory) && (
-              <div className="mt-6 pt-4">
-                <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={user?.image || currentUser.avatar}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-
-                      <span className="text-sm font-medium text-[#252525] opacity-75">
-                        {user?.fullName || "Client Name"}
+            {/* Job Preview (skeleton when empty, live preview when filled) */}
+            <div className="mt-6 pt-4">
+              <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
+                {newJob.description || newJob.location || selectedCategory || newJob.priceOffer ? (
+                  <>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={user?.image || currentUser.avatar}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="text-sm font-medium text-[#252525] opacity-75">
+                          {user?.fullName || "Client Name"}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {/* <Clock size={16} /> Just now */}
                       </span>
                     </div>
-
-                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                      {/* <Clock size={16} /> Just now */}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <Briefcase size={20} className="text-blue-400" />
-                    {newJob.description ||
-                      "Job description will appear here..."}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedCategory ? (
-                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
-                        {
-                          categories.find((c) => c._id === selectedCategory)
-                            ?.categoryName
-                        }
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <Briefcase size={20} className="text-blue-400" />
                       </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">
-                        No category selected
+                      <span className="line-clamp-1 md:text-base">
+                        {newJob.description || "Job description will appear here..."}
                       </span>
-                    )}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedCategory ? (
+                        <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                          {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No category selected</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} />
+                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                          {newJob.location || "Location"}
+                        </span>
+                      </span>
+                      <span className="font-bold text-green-400">
+                        {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="animate-pulse">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-200" />
+                        <div className="h-4 bg-gray-200 rounded w-24" />
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded w-16" />
+                    </div>
+                    <div className="mt-2 h-5 bg-gray-200 rounded w-3/4" />
+                    <div className="flex gap-2 mt-3">
+                      <div className="h-6 bg-gray-200 rounded-full w-24" />
+                      <div className="h-6 bg-gray-200 rounded-full w-20" />
+                    </div>
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="h-4 bg-gray-200 rounded w-1/3" />
+                      <div className="h-4 bg-gray-200 rounded w-1/6" />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={16} /> {newJob.location || "Location"}
-                    </span>
-                    <span className="font-bold text-green-400">
-                      {newJob.priceOffer
-                        ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}`
-                        : "₱0"}
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Job Creation Form */}
             <form onSubmit={handlePostJob} className="space-y-3">
@@ -633,10 +861,11 @@ const FindWork = () => {
         </div>
       )}
 
-      {/* Job Posts Display */}
+      {/* Job Posts Display (inner scroll like FindWorker) */}
       {filteredJobs.length > 0 ? (
-        <div className="space-y-4 pb-4">
-          {filteredJobs.map((job) => {
+        <div ref={listRef} style={{ height: listHeight }} className="custom-scrollbar flex flex-col overflow-y-auto pr-2">
+          <div className="space-y-4 pb-4">
+            {filteredJobs.map((job) => {
             const toIdString = (val) => {
               if (!val) return "";
               if (typeof val === "string") return val;
@@ -763,7 +992,7 @@ const FindWork = () => {
               </div>
             );
           })}
-          {hasMore && (
+            {hasMore && (
             <div className="text-center mt-4">
               <button
                 type="button"
@@ -774,7 +1003,8 @@ const FindWork = () => {
                 {isFetchingMore ? "Loading…" : "Load more"}
               </button>
             </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center mt-10">

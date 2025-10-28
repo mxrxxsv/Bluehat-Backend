@@ -58,7 +58,7 @@ const AdsPage = () => {
         </h1>
       </div>
 
-      <div className="h-180 mt-55 md:h-120 md:mt-60 overflow-auto">
+      <div className="h-180 mt-25 md:h-120 md:mt-40 overflow-auto">
         {ads.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center">
             <div>
