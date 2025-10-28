@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
+import { Clock, MapPin, Briefcase, X, Tag, Pencil } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import {
   uploadProfilePicture,
@@ -400,31 +400,51 @@ const ProfilePage = () => {
     <div className="max-w-6xl mx-auto p-6 mt-[100px]">
       {/* Profile Header */}
       <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow rounded-[20px] p-6 mb-10">
-        <img
-          src={
-            image ||
-            "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-          }
-          alt="Profile"
-          className="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition"
-          onClick={() => setIsModalOpen(true)}
-        />
+        <div className="relative w-24 h-24 shrink-0">
+          <img
+            src={
+              image ||
+              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            }
+            alt="Profile"
+            className="w-full h-full rounded-full object-cover cursor-pointer hover:opacity-80 transition"
+            onClick={() => setIsModalOpen(true)}
+          />
+          <button
+            type="button"
+            aria-label="Edit profile photo"
+            className="absolute top-0 right-0 z-10 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Pencil size={14} className="text-gray-400" />
+          </button>
+        </div>
         <div className="text-center md:text-left">
           <h2 className="text-2xl font-bold text-[#252525]">{fullName}</h2>
           <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1">
             <MapPin size={16} /> {formatAddress(address)}
           </p>
-          <span className="text-xs px-2 py-1 rounded-full bg-[#5eb6f3] text-white mt-2 inline-block">
+          <span className="text-xs px-2 py-1 rounded-md bg-[#55B2F3]/90 text-white mt-2 inline-block">
             {userType === "client" ? "Client" : "Worker"}
           </span>
 
           {userType === "worker" && (
-            <p
-              className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer"
-              onClick={() => setIsBioModalOpen(true)}
-            >
-              {biography || "No biography provided."}
-            </p>
+            <div className="relative mt-4">
+              <p
+                className="text-gray-700 text-sm leading-relaxed text-left cursor-pointer"
+                onClick={() => setIsBioModalOpen(true)}
+              >
+                {biography || "No biography provided."}
+              </p>
+              <button
+                type="button"
+                aria-label="Edit biography"
+                className="absolute top-[-1px] right-[-1px] md:top-[-8px] md:right-[-10px] z-10 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
+                onClick={() => setIsBioModalOpen(true)}
+              >
+                <Pencil size={14} className="text-gray-400" />
+              </button>
+            </div>
           )}
         </div>
       </div>
