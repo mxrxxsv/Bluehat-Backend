@@ -91,7 +91,7 @@ const IDSetup = ({ onClose }) => {
 
 
   return (
-    <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6">
 
         {/* Close Button */}

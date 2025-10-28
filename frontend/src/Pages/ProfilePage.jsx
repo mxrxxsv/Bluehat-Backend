@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Clock, MapPin, Briefcase, X, Tag } from "lucide-react";
+import { Clock, MapPin, Briefcase, X, Tag, Pencil } from "lucide-react";
 import { checkAuth } from "../api/auth";
 import {
   uploadProfilePicture,
@@ -354,14 +354,14 @@ const ProfilePage = () => {
     }
   };
 
-  // 🟠 Open delete confirm
+  // Open delete confirm
   const handleConfirmDelete = (job) => {
     if (isJobLocked(job)) return;
     setJobToDelete(job);
     setIsDeleteConfirmOpen(true);
   };
 
-  // 🔴 Delete job
+  // Delete job
   const handleDeleteJob = async () => {
     if (!jobToDelete?.id) return;
     try {
@@ -400,31 +400,51 @@ const ProfilePage = () => {
     <div className="max-w-6xl mx-auto p-6 mt-[100px]">
       {/* Profile Header */}
       <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow rounded-[20px] p-6 mb-10">
-        <img
-          src={
-            image ||
-            "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-          }
-          alt="Profile"
-          className="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition"
-          onClick={() => setIsModalOpen(true)}
-        />
+        <div className="relative w-24 h-24 shrink-0">
+          <img
+            src={
+              image ||
+              "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+            }
+            alt="Profile"
+            className="w-full h-full rounded-full object-cover cursor-pointer hover:opacity-80 transition"
+            onClick={() => setIsModalOpen(true)}
+          />
+          <button
+            type="button"
+            aria-label="Edit profile photo"
+            className="absolute top-0 right-0 z-10 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Pencil size={14} className="text-gray-400" />
+          </button>
+        </div>
         <div className="text-center md:text-left">
           <h2 className="text-2xl font-bold text-[#252525]">{fullName}</h2>
           <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-1">
             <MapPin size={16} /> {formatAddress(address)}
           </p>
-          <span className="text-xs px-2 py-1 rounded-full bg-[#5eb6f3] text-white mt-2 inline-block">
+          <span className="text-xs px-2 py-1 rounded-md bg-[#55B2F3]/90 text-white mt-2 inline-block">
             {userType === "client" ? "Client" : "Worker"}
           </span>
 
           {userType === "worker" && (
-            <p
-              className="text-gray-700 text-sm mt-4 leading-relaxed cursor-pointer"
-              onClick={() => setIsBioModalOpen(true)}
-            >
-              {biography || "No biography provided."}
-            </p>
+            <div className="relative mt-4">
+              <p
+                className="text-gray-700 text-sm leading-relaxed text-left cursor-pointer"
+                onClick={() => setIsBioModalOpen(true)}
+              >
+                {biography || "No biography provided."}
+              </p>
+              <button
+                type="button"
+                aria-label="Edit biography"
+                className="absolute top-[-1px] right-[-1px] md:top-[-8px] md:right-[-10px] z-10 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
+                onClick={() => setIsBioModalOpen(true)}
+              >
+                <Pencil size={14} className="text-gray-400" />
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -451,14 +471,14 @@ const ProfilePage = () => {
               {userPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
+                  className="rounded-[20px] p-4 bg-white shadow-sm transition-all"
                 >
                   <div className="rounded-xl p-4 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-[#252525] opacity-75">
+                      <span className="text-md font-bold text-[#252525]">
                         {post.client?.name || "Client Name"}
                       </span>
-                      <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
+                      <span className="flex items-center gap-1 text-sm font-medium text-[#252525] opacity-80">
                         {new Date(post.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
@@ -468,12 +488,12 @@ const ProfilePage = () => {
                     </div>
 
                     <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                      <Briefcase size={20} className="text-blue-400" />
+                      <Briefcase size={20} className="text-[#55B2F3]" />
                       {post.description}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mt-3 items-center">
-                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                         {post.category?.name || "Uncategorized"}
                       </span>
                     </div>

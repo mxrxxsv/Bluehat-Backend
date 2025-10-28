@@ -164,7 +164,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#f4f6f6] flex justify-center items-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-md flex justify-center items-center z-50 p-4">
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl relative">
         <button
           onClick={onClose}

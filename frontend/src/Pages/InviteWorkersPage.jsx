@@ -347,19 +347,13 @@ const InviteWorkersPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 py-8 mt-24 space-y-8 mt-35">
+        <div className="max-w-7xl mx-auto px-4 py-8 mt-25 space-y-8">
 
-          {/* Search & Filter Skeleton */}
-          <div className="bg-white rounded-[20px] p-6 shadow-md animate-pulse">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="h-10 w-full bg-gray-200 rounded-lg"></div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
-                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
-              </div>
-            </div>
+          {/* Search & Filter Skeleton (FindWork-like) */}
+          <div className="relative w-full animate-pulse">
+            <div className="w-full h-11 bg-gray-200 rounded-[18px]" />
+            <div className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 h-8 w-24 bg-gray-200 rounded-[14px]" />
+            <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 h-8 w-20 bg-gray-200 rounded-[14px]" />
           </div>
 
           {/* Header Skeleton */}
@@ -414,7 +408,7 @@ const InviteWorkersPage = () => {
       <div className="max-w-7xl mx-auto px-4 py-8 mt-25">
 
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-2">
           <button
             onClick={() => navigate("/find-work")}
             className="flex items-center gap-2 text-[#55b3f3] hover:text-sky-500 mb-4 cursor-pointer"
@@ -423,118 +417,107 @@ const InviteWorkersPage = () => {
             Back
           </button>
 
-          {/* Search and Filters (FindWork-like) */}
-          <div className="p-6 rounded-[20px] bg-white shadow-md mb-8">
-            <div ref={desktopFilterContainerRef} className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-              <input
-                type="text"
-                placeholder="Search by name, skills, or bio..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <button
-                type="button"
-                onClick={() => setSearchTerm(searchInput.trim())}
-                className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-[#55b3f3] text-white text-sm hover:bg-blue-400 shadow-md cursor-pointer"
-                aria-label="Search"
-              >
-                Search
-              </button>
+          {/* Search and Filters (FindWork-like, no card background) */}
+          <div ref={desktopFilterContainerRef} className="relative w-full mb-8">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+            <input
+              type="text"
+              placeholder="Search by name, skills, or bio..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+            {/* Mobile filters trigger inline */}
+            <button
+              type="button"
+              onClick={() => setShowMobileFilters(true)}
+              className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+              aria-label="Filters"
+              aria-expanded={showMobileFilters}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+            </button>
 
-              {/* Mobile filters trigger inline */}
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(true)}
-                className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
-                aria-label="Filters"
-                aria-expanded={showMobileFilters}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Filters
-              </button>
+            {/* Desktop filters trigger */}
+            <button
+              type="button"
+              onClick={() => setShowDesktopFilters((s) => !s)}
+              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+              aria-label="Filters"
+              aria-expanded={showDesktopFilters}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+            </button>
 
-              {/* Desktop filters trigger */}
-              <button
-                type="button"
-                onClick={() => setShowDesktopFilters((s) => !s)}
-                className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
-                aria-label="Filters"
-                aria-expanded={showDesktopFilters}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Filters
-              </button>
-
-              {/* Desktop filters dropdown */}
-              {showDesktopFilters && (
-                <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
-                  <div className="flex items-stretch gap-2 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Filter by location"
-                      value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
-                      onKeyDown={handleLocationKeyDown}
-                      className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
-                      className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  <select
-                    value={filters.minRating}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
-                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+            {/* Desktop filters dropdown */}
+            {showDesktopFilters && (
+              <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+                <div className="flex items-stretch gap-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Filter by location"
+                    value={locationInput}
+                    onChange={(e) => setLocationInput(e.target.value)}
+                    onKeyDown={handleLocationKeyDown}
+                    className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
+                    className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
                   >
-                    <option value="">Any Rating</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="4.5">4.5+ Stars</option>
-                    <option value="5">5 Stars</option>
-                  </select>
-                  <select
-                    value={filters.experienceLevel}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                  >
-                    <option value="">Any Experience</option>
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                    <option value="Expert">Expert</option>
-                  </select>
-                  <select
-                    value={filters.availability}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                  >
-                    <option value="">Any Availability</option>
-                    <option value="Available">Available</option>
-                    <option value="Busy">Busy</option>
-                    <option value="Part-time">Part-time</option>
-                  </select>
-                  {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
-                    <button
-                      onClick={() => {
-                        setSearchTerm("");
-                        setSearchInput("");
-                        setLocationInput("");
-                        setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
-                      }}
-                      className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
-                    >
-                      Clear all filters
-                    </button>
-                  )}
+                    Apply
+                  </button>
                 </div>
-              )}
-            </div>
+                <select
+                  value={filters.minRating}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                >
+                  <option value="">Any Rating</option>
+                  <option value="4">4+ Stars</option>
+                  <option value="4.5">4.5+ Stars</option>
+                  <option value="5">5 Stars</option>
+                </select>
+                <select
+                  value={filters.experienceLevel}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                >
+                  <option value="">Any Experience</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="Expert">Expert</option>
+                </select>
+                <select
+                  value={filters.availability}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                >
+                  <option value="">Any Availability</option>
+                  <option value="Available">Available</option>
+                  <option value="Busy">Busy</option>
+                  <option value="Part-time">Part-time</option>
+                </select>
+                {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSearchInput("");
+                      setLocationInput("");
+                      setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                    }}
+                    className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Mobile filters modal */}
@@ -644,7 +627,7 @@ const InviteWorkersPage = () => {
 
           {job && (
             <div className="space-y-4 pb-4">
-              <div className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
+              <div className="rounded-[20px] p-4 bg-white shadow-sm transition-all block">
                 <div className="rounded-xl p-4 bg-white transition-all">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
@@ -667,14 +650,14 @@ const InviteWorkersPage = () => {
 
                       <span
                         onClick={goToClientProfile}
-                        className="text-sm font-bold text-[#252525] opacity-75 cursor-pointer hover:underline"
+                        className="text-md font-bold text-[#252525] cursor-pointer"
                         title="View client profile"
                       >
                         {job.client?.name || "Client Name"}
                       </span>
                     </div>
 
-                    <span className="flex items-center gap-1 font-bold text-sm text-[#252525] opacity-80">
+                    <span className="flex items-center gap-1 font-medium text-sm text-[#252525] opacity-80">
                       {/* <Clock size={16} /> */}
                       {new Date(job.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
@@ -686,13 +669,13 @@ const InviteWorkersPage = () => {
                   </div>
                   <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                     <span className="flex items-center justify-center w-5 h-5">
-                      <Briefcase size={20} className="text-blue-400" />
+                      <Briefcase size={20} className="text-[#55B2F3]" />
                     </span>
                     <span className="line-clamp-1 md:text-base">{job.description}</span>
                   </p>
 
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                    <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                       {job.category?.name || "Uncategorized"}
                     </span>
                   </div>
@@ -763,7 +746,7 @@ const InviteWorkersPage = () => {
 
 
         {/* Results Count */}
-        <div className="mb-6">
+        <div className="mb-4">
           <p className="text-gray-600">
             Showing {filteredWorkers.length} of {workers.length} workers
           </p>

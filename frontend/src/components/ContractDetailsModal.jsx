@@ -485,7 +485,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                     Job Category
                   </h4>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <p className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                    <p className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                       {getContract().jobId.category.categoryName ||
                         getContract().jobId.category}
                     </p>
@@ -505,9 +505,9 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                     {getReviews().map((review, index) => (
                       <div
                         key={index}
-                        className="bg-white rounded-lg p-3 md:p-4 border-l-4 border-blue-500"
+                        className="bg-white rounded-lg p-3 md:p-4 border-l-4 border-[#55b3f3]"
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-3 text-left">
                           <img
                             src={
                               review.reviewerId?.profilePictureUrl ||

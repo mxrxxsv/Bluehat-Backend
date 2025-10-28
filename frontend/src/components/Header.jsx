@@ -292,7 +292,7 @@ const Header = () => {
           <></>
         ) : (
           <>
-            <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+            <div className="flex md:order-2 space-x-1 md:space-x-0 rtl:space-x-reverse">
               {showAuthButtons ? (
                 <>
                   <div className="w-20 pt-1 md:pt-0 md:w-43 flex flex-row gap-1 md:gap-1">
@@ -436,7 +436,7 @@ const Header = () => {
                         />
                       </div>
                       {showDropdown && (
-                        <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                           <ul className="py-2 text-sm text-gray-700">
                             <li>
                               <button
@@ -446,7 +446,7 @@ const Header = () => {
                                 }}
                                 className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
                               >
-                                Profile
+                                My Profile
                               </button>
                             </li>
                             {/* <li>
@@ -467,15 +467,16 @@ const Header = () => {
                                 My Contracts
                               </Link>
                             </li> */}
-                            <li>
+                            <div className="my-2 border-t border-gray-200" />
+                            <li className="px-2 pb-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleLogout(e);
                                 }}
-                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 cursor-pointer"
+                                className="w-full text-white bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md cursor-pointer"
                               >
-                                Logout
+                                Log out
                               </button>
                             </li>
                           </ul>
@@ -488,7 +489,7 @@ const Header = () => {
 
               {/* Mobile Messages & Notifications */}
               {!showAuthButtons && (
-                <div className="flex md:hidden items-center gap-1">
+                <div className="flex md:hidden items-center gap-2">
                   <Link to="/chat" onClick={() => setUnreadCount(0)} className="relative">
                     <Mail className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer" />
                     {unreadCount > 0 && (
@@ -588,28 +589,32 @@ const Header = () => {
 
               <button
                 type="button"
-                className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+                className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden"
                 aria-controls="navbar-sticky"
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen(!isOpen)}
                 ref={burgerButtonRef}
               >
-                <span className="sr-only">Open main menu</span>
-                <svg
-                  className="w-5 h-5"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 17 14"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M1 1h15M1 7h15M1 13h15"
-                  />
-                </svg>
+                <span className="sr-only">{isOpen ? "Close main menu" : "Open main menu"}</span>
+                {isOpen ? (
+                  <X className="w-5 h-5" aria-hidden="true" />
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 17 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M1 1h15M1 7h15M1 13h15"
+                    />
+                  </svg>
+                )}
               </button>
 
 
@@ -620,115 +625,112 @@ const Header = () => {
               id="navbar-sticky"
               ref={navMenuRef}
             >
-              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row bg-[#f4f6f6] text-left relative">
-                {/* Mobile Profile Avatar beside first link */}
+              <ul className="flex flex-col p-4 md:p-0 mt-4 font-regular border border-gray-100 rounded-[20px] md:space-x-8 rtl:space-x-reverse md:flex-row text-left relative">
+                {/* Mobile Profile item aligned within the list (no dropdown) */}
                 {!showAuthButtons && (
-                  <div className="absolute right-4 top-3 md:hidden" ref={profileDropdownMobileRef}>
-                    <img
-                      src={
-                        user?.image ||
-                        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-                      }
-                      alt="Avatar"
-                      className="w-9 h-9 rounded-full object-cover cursor-pointer"
-                      onClick={() => {
-                        // Close bell notifications when opening profile modal (mobile)
-                        setShowNotifications(false);
-                        setShowDropdown(!showDropdown);
+                  <li className="md:hidden list-none p-2 mb-2 rounded-[20px] bg-white" ref={profileDropdownMobileRef}>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 w-full py-2 px-3 rounded-sm hover:bg-gray-100"
+                      onClick={(e) => {
+                        // Navigate directly to profile
+                        goToProfile(e);
                       }}
-                    />
-
-                    {showDropdown && (
-                      <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                        <ul className="py-2 text-sm text-gray-700">
-                          <li>
-                            <button
-                              onClick={(e) => goToProfile(e)}
-                              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                            >
-                              Profile
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              onClick={handleLogout}
-                              className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                            >
-                              Logout
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                    >
+                      <img
+                        src={
+                          user?.image ||
+                          "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
+                        }
+                        alt="Avatar"
+                        className="w-9 h-9 rounded-full object-cover"
+                      />
+                      <span className="text-neutral-900 font-bold">My Profile</span>
+                    </button>
+                  </li>
                 )}
 
-                <li>
-                  <Link
-                    onClick={() => setIsOpen(false)}
-                    to="/find-work"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
-                      ? "text-sky-500"
-                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                      }`}
-                  >
-                    Find Work
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    onClick={() => setIsOpen(false)}
-                    to="/find-workers"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
-                      ? "text-sky-500"
-                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                      }`}
-                  >
-                    Find Worker
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    onClick={() => setIsOpen(false)}
-                    to="/ads"
-                    className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
-                      ? "text-sky-500"
-                      : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                      }`}
-                  >
-                    Advertisement
-                  </Link>
-                </li>
+                <div className="bg-white md:bg-[#f4f6f6] p-2 md:p-0 rounded-[20px] md:rounded-none flex flex-col md:flex-row md:space-x-6 rtl:space-x-reverse">
 
-                {user && (
-                  <>
-                    <li>
-                      <Link
-                        onClick={() => setIsOpen(false)}
-                        to="/applications"
-                        className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
-                          ? "text-sky-500"
-                          : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                          }`}
-                      >
-                        {user?.userType === "worker"
-                          ? "Applications"
-                          : "Applications"}
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        onClick={() => setIsOpen(false)}
-                        to="/contracts"
-                        className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
-                          ? "text-sky-500"
-                          : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
-                          }`}
-                      >
-                        My Contracts
-                      </Link>
-                    </li>
-                  </>
+                  <li>
+                    <Link
+                      onClick={() => setIsOpen(false)}
+                      to="/find-work"
+                      className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-work")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                        }`}
+                    >
+                      Find Work
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      onClick={() => setIsOpen(false)}
+                      to="/find-workers"
+                      className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/find-workers")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                        }`}
+                    >
+                      Find Worker
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      onClick={() => setIsOpen(false)}
+                      to="/ads"
+                      className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/ads")
+                        ? "text-sky-500"
+                        : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                        }`}
+                    >
+                      Advertisement
+                    </Link>
+                  </li>
+
+                  {user && (
+                    <>
+                      <li>
+                        <Link
+                          onClick={() => setIsOpen(false)}
+                          to="/applications"
+                          className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/applications")
+                            ? "text-sky-500"
+                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                            }`}
+                        >
+                          {user?.userType === "worker"
+                            ? "Applications"
+                            : "Applications"}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          onClick={() => setIsOpen(false)}
+                          to="/contracts"
+                          className={`block py-2 px-3 rounded-sm md:p-0 ${isActive("/contracts")
+                            ? "text-sky-500"
+                            : "text-neutral-900 hover:bg-gray-100 md:hover:bg-transparent md:hover:text-sky-500"
+                            }`}
+                        >
+                          My Contracts
+                        </Link>
+                      </li>
+                    </>
+                  )}
+                </div>
+
+                {/* Mobile full-width Log out button at the bottom */}
+                {!showAuthButtons && (
+                  <li className="md:hidden list-none mt-4">
+                    <button
+                      onClick={(e) => handleLogout(e)}
+                      className="w-full text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-md"
+                    >
+                      Log out
+                    </button>
+                  </li>
                 )}
 
               </ul>

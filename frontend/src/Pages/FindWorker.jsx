@@ -152,27 +152,68 @@ const FindWorker = () => {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="w-full md:flex-1 h-10 bg-gray-200 rounded-[18px]" />
+          {/* Search + Filters Skeleton (FindWork-like) */}
+          <div className="relative w-full md:flex-1 mb-2">
+            <div className="w-full h-11 bg-gray-200 rounded-[18px]" />
+            <div className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 h-8 w-24 bg-gray-200 rounded-[14px]" />
+            <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 h-8 w-20 bg-gray-200 rounded-[14px]" />
           </div>
-          {[1, 2, 3].map((i) => (
+
+          {/* Worker Card Skeletons */}
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
+              className="relative bg-white rounded-2xl shadow-md p-4 pb-14 md:pt-4 md:pr-4 md:pb-4"
             >
-              <div className="flex justify-between items-center mb-2">
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-                <div className="h-4 bg-gray-200 rounded w-1/4" />
+              {/* Rating (top-right) */}
+              <div className="hidden md:flex absolute top-2 right-4 md:top-4 items-center gap-2">
+                <div className="w-4 h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded w-10" />
+                <div className="h-4 bg-gray-200 rounded w-12" />
               </div>
-              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2" />
-              <div className="flex gap-2 mt-3">
-                <div className="h-6 bg-gray-200 rounded-full w-24" />
-                <div className="h-6 bg-gray-200 rounded-full w-20" />
+
+              {/* Card content */}
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full" />
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-40 mb-2" />
+                  {/* Mobile rating row */}
+                  <div className="md:hidden flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                    <div className="h-4 bg-gray-200 rounded w-10" />
+                    <div className="h-4 bg-gray-200 rounded w-12" />
+                  </div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-3" />
+
+                  {/* Desktop location & skills placeholders */}
+                  <div className="hidden md:flex items-center gap-2 text-gray-500 mt-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                    <div className="h-4 bg-gray-200 rounded w-40" />
+                  </div>
+                  <div className="hidden md:flex flex-wrap gap-2 mt-3">
+                    <div className="h-6 bg-gray-200 rounded-md w-24" />
+                    <div className="h-6 bg-gray-200 rounded-md w-20" />
+                    <div className="h-6 bg-gray-200 rounded-md w-28" />
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center mt-4">
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-                <div className="h-4 bg-gray-200 rounded w-1/6" />
+
+              {/* Mobile location & skills placeholders */}
+              <div className="block md:hidden mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-4 h-4 bg-gray-200 rounded" />
+                  <div className="h-4 bg-gray-200 rounded w-40" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-gray-200 rounded-md w-24" />
+                  <div className="h-6 bg-gray-200 rounded-md w-20" />
+                  <div className="h-6 bg-gray-200 rounded-md w-16" />
+                </div>
               </div>
+
+              {/* Status pill (bottom-right) */}
+              <div className="absolute bottom-3 md:bottom-4 right-2 h-6 w-28 bg-gray-200 rounded-full" />
             </div>
           ))}
         </div>
@@ -184,7 +225,7 @@ const FindWorker = () => {
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-2">
         <div ref={desktopFilterContainerRef} className="relative w-full md:flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
           <input
@@ -422,162 +463,178 @@ const FindWorker = () => {
           No workers found matching your criteria
         </div>
       ) : (
-  <div className="custom-scrollbar flex flex-col overflow-y-auto pr-2 h-[calc(100vh-230px)] md:h-[calc(100vh-220px)]">
+        <div className="custom-scrollbar flex flex-col overflow-y-auto pr-2 h-[calc(100vh-230px)] md:h-[calc(100vh-220px)]">
           {filteredWorkers.map((worker) => {
-                  // Prefer backend-provided average rating; fallback to computing from reviews if present
-                  const avgRating = Number.isFinite(worker.rating)
-                    ? Number(worker.rating).toFixed(1)
-                    : Array.isArray(worker.reviews) && worker.reviews.length
-                      ? (
-                        worker.reviews.reduce(
-                          (sum, r) => sum + (Number(r.rating) || 0),
-                          0
-                        ) / worker.reviews.length
-                      ).toFixed(1)
-                      : "0";
+            // Prefer backend-provided average rating; fallback to computing from reviews if present
+            const avgRating = Number.isFinite(worker.rating)
+              ? Number(worker.rating).toFixed(1)
+              : Array.isArray(worker.reviews) && worker.reviews.length
+                ? (
+                  worker.reviews.reduce(
+                    (sum, r) => sum + (Number(r.rating) || 0),
+                    0
+                  ) / worker.reviews.length
+                ).toFixed(1)
+                : "0";
 
-                  // Show review count from backend if available; fallback to reviews length
-                  const reviewCount = Number.isFinite(worker.totalRatings)
-                    ? worker.totalRatings
-                    : Array.isArray(worker.reviews)
-                      ? worker.reviews.length
-                      : 0;
+            // Show review count from backend if available; fallback to reviews length
+            const reviewCount = Number.isFinite(worker.totalRatings)
+              ? worker.totalRatings
+              : Array.isArray(worker.reviews)
+                ? worker.reviews.length
+                : 0;
 
-                  return (
-                    <Link
-                      to={`/worker/${worker._id}`}
-                      key={worker._id}
-                      className="w-full py-4"
-                    >
-                      <div
-                        className="relative bg-white rounded-2xl shadow-md p-4 pr-20 pb-14 md:pt-4 md:pr-4 md:pb-4 flex flex-col md:flex-row md:items-center w-full"
-                        onMouseOver={isMouseOver}
-                        onMouseOut={isMouseOut}
-                      >
-                        <div className="flex flex-col justify-between h-full mr-4" />
-                        <div className="flex-1 text-[#252525]">
-                          <div className="flex items-start gap-4">
-                            <img
-                              src={
-                                worker?.profilePicture?.url ||
-                                "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                              }
-                              alt={worker.fullName}
-                              className="w-20 h-20 md:w-30 md:h-30 rounded-full object-cover border"
-                            />
-                            <div className="flex flex-col justify-between h-full flex-1">
-                              <h2 className="text-[14px] md:text-xl font-semibold text-left">
-                                {worker.fullName}
-                              </h2>
+            return (
+              <Link
+                to={`/worker/${worker._id}`}
+                key={worker._id}
+                className="w-full py-2"
+              >
+                <div
+                  className="relative bg-white rounded-2xl shadow-md p-4 md:pt-4 md:pr-4 md:pb-4 flex flex-col md:flex-row md:items-center w-full"
+                  onMouseOver={isMouseOver}
+                  onMouseOut={isMouseOut}
+                >
+                  <div className="flex-1 text-[#252525]">
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={
+                          worker?.profilePicture?.url ||
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                        }
+                        alt={worker.fullName}
+                        className="w-15 h-15 md:w-30 md:h-30 rounded-full object-cover border"
+                      />
+                      <div className="flex flex-col justify-between h-full flex-1">
+                        <div className="flex flex-row justify-between items-start w-full md:block">
+                          <h2 className="text-[14px] md:text-xl font-semibold text-left pr-10">
+                            {worker.fullName}
+                          </h2>
 
-                              <p className="text-[12px] md:text-base text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
-                                {worker.biography ||
-                                  "4th Year BSIT Student from Cabiao, Nueva Ecija."}
-                              </p>
-
-                              {/* Desktop/tablet: location and skills in the right column */}
-                              <p className="hidden md:flex text-[12px] md:text-base text-gray-500 text-left items-center gap-1 mt-3">
-                                <MapPin className="w-4 h-4 text-gray-500" />
-                                {worker.location}
-                              </p>
-                              <div className="hidden md:flex flex-wrap gap-2 mt-3">
-                                {(worker.skills || []).map((skill, index) => (
-                                  <span
-                                    key={skill.skillCategoryId || index}
-                                    className="text-[#f4f6f6] text-[12px] md:text-sm  font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
-                                  >
-                                    {skill.categoryName}
-                                  </span>
-                                ))}
-    
-                              </div>
-                            </div>
-                          </div>
-                          {/* Location below image and bio (mobile aligns with profile picture) */}
-                          <p className="block md:hidden text-[12px] text-gray-500 flex items-center gap-1 mt-3">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            {worker.location}
-                          </p>
-                          {/* Skills below image and bio */}
-                          <div className="block md:hidden flex flex-wrap gap-2 mt-3">
-                            {(worker.skills || []).slice(0, 3).map((skill, index) => (
-                              <span
-                                key={skill.skillCategoryId || index}
-                                className="text-[#f4f6f6] text-[12px] md:text-sm font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
-                              >
-                                {skill.categoryName}
-                              </span>
-                            ))}
-
-                            {/* {(worker.skills?.length || 0) > 3 && (
-                              <span className="text-gray-500 text-[12px] px-3 py-1  md:text-sm italic">
-                                +{worker.skills.length - 3} more
-                              </span>
-                            )} */}
-                          </div>
-                        </div>
-
-                        <div className="absolute top-2 right-4 md:top-4 px-3 py-1">
-                          <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
+                          {/* Mobile rating row (aligned right) */}
+                          <div className="md:hidden text-gray-700 font-medium text-xs flex items-center gap-1 mt-0.5">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="w-4 h-4 text-yellow-500"
+                              className="w-4 h-4 mb-0.5 text-yellow-500"
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
                               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
                             </svg>
-                            <span className="mt-0.5">{avgRating || 0}</span>
-                            <span className="mt-0.5 text-gray-500">
-                              ({reviewCount})
-                            </span>
-                          </p>
+                            <span>{avgRating || 0}</span>
+                            <span className="text-gray-500">({reviewCount})</span>
+                          </div>
                         </div>
 
-                        <p
-                          className={`
-                                    absolute bottom-3 md:bottom-4 right-2
+
+                        <p className="text-xs md:text-base text-gray-700 mt-1 text-left line-clamp-3 md:line-clamp-3">
+                          {worker.biography ||
+                            "4th Year BSIT Student from Cabiao, Nueva Ecija."}
+                        </p>
+
+                        {/* Desktop/tablet: location and skills in the right column */}
+                        <p className="hidden md:flex text-xs md:text-base text-gray-500 text-left items-center gap-1 mt-3">
+                          <MapPin className="w-4 h-4 text-gray-500" />
+                          {worker.location}
+                        </p>
+                        <div className="hidden md:flex flex-wrap gap-2 mt-3">
+                          {(worker.skills || []).map((skill, index) => (
+                            <span
+                              key={skill.skillCategoryId || index}
+                              className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm "
+                            >
+                              {skill.categoryName}
+                            </span>
+                          ))}
+
+                        </div>
+                      </div>
+                    </div>
+                    {/* Location below image and bio (mobile aligns with profile picture) */}
+                    <p className="block md:hidden text-[12px] text-gray-500 flex items-center gap-1 mt-3">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      {worker.location}
+                    </p>
+                    {/* Skills below image and bio */}
+                    <div className="block md:hidden text-sm flex flex-wrap gap-2 mt-3">
+                      {(worker.skills || []).slice(0, 2).map((skill, index) => (
+                        <span
+                          key={skill.skillCategoryId || index}
+                          className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-xs"
+                        >
+                          {skill.categoryName}
+                        </span>
+                      ))}
+
+                      {/* {(worker.skills?.length || 0) > 3 && (
+                              <span className="text-gray-500 text-[12px] px-3 py-1  md:text-sm italic">
+                                +{worker.skills.length - 3} more
+                              </span>
+                            )} */}
+                    </div>
+                  </div>
+
+                  <div className="hidden md:block absolute top-2 right-4 md:top-4">
+                    <p className="text-gray-700 font-medium text-sm flex items-center gap-1">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-4 h-4 text-yellow-500"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.97c.3.922-.755 1.688-1.54 1.118l-3.386-2.46a1 1 0 00-1.175 0l-3.386 2.46c-.785.57-1.84-.196-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.05 9.397c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.97z" />
+                      </svg>
+                      <span className="mt-0.5">{avgRating || 0}</span>
+                      <span className="mt-0.5 text-gray-500">
+                        ({reviewCount})
+                      </span>
+                    </p>
+                  </div>
+
+                  <p
+                    className={`
+                                    absolute bottom-4 md:bottom-4 right-2
                                     inline-flex items-center gap-2
-                                    text-xs md:text-[12px] font-semibold
+                                    text-xs md:text-sm font-semibold
                                     px-2 py-1.5 rounded-full 
                                     shadow-md
                                     transition-colors duration-200
                                     ${worker.status === "available"
-                              ? "bg-green-100 text-green-600"
-                              : ""
-                            }
+                        ? "bg-green-100 text-green-600"
+                        : ""
+                      }
                                     ${worker.status === "working"
-                              ? "bg-red-100 text-red-700"
-                              : ""
-                            }
+                        ? "bg-red-100 text-red-700"
+                        : ""
+                      }
                                     ${!worker.status ||
-                              worker.status === "not available"
-                              ? "bg-gray-200 text-gray-600"
-                              : ""
-                            }
+                        worker.status === "not available"
+                        ? "bg-gray-200 text-gray-600"
+                        : ""
+                      }
                                   `}
-                        >
-                          <span
-                            className={`h-2 w-2 rounded-full 
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full 
                           ${worker.status === "available" ? "bg-green-500" : ""}
                           ${worker.status === "working" ? "bg-red-500" : ""}
                           ${!worker.status || worker.status === "not available"
-                                ? "bg-gray-400"
-                                : ""
-                              }
+                          ? "bg-gray-400"
+                          : ""
+                        }
                         `}
-                          ></span>
-                          {worker.status
-                            ? worker.status.charAt(0).toUpperCase() +
-                            worker.status.slice(1)
-                            : "not available"}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                    ></span>
+                    {worker.status
+                      ? worker.status.charAt(0).toUpperCase() +
+                      worker.status.slice(1)
+                      : "not available"}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
