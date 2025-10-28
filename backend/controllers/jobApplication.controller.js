@@ -246,7 +246,7 @@ const applyToJob = async (req, res) => {
       _id: jobId,
       isDeleted: false,
       status: "open",
-    }).populate("clientId", "isVerified blocked");
+    }).populate("clientId", "credentialId isVerified blocked");
 
     if (!job) {
       return res.status(404).json({
@@ -328,6 +328,20 @@ const applyToJob = async (req, res) => {
         },
       },
     ]);
+
+    // Realtime: notify client about new application
+    try {
+      const clientCred = job.clientId?.credentialId;
+      if (clientCred) {
+        emitToUser(clientCred, "application:created", {
+          applicationId: application.id,
+          jobId,
+          status: application.applicationStatus,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for applyToJob", { error: e.message });
+    }
 
     const processingTime = Date.now() - startTime;
 
@@ -696,18 +710,7 @@ const getWorkerApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-    try {
-      // Notify both parties discussion started
-      emitToUsers(
-        [application.workerId.credentialId, req.user.id],
-        "application:discussion_started",
-        { applicationId }
-      );
-    } catch (e) {
-      logger.warn("Socket emit failed for startApplicationDiscussion", {
-        error: e.message,
-      });
-    }
+    // Note: no socket emits from this listing endpoint
   } catch (error) {
     return handleApplicationError(error, res, "Get worker applications", req);
   }
@@ -815,28 +818,7 @@ const getClientApplications = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
-    try {
-      // Emit agreement update
-      const clientCred = application.clientId.credentialId;
-      const workerCred = application.workerId.credentialId;
-      emitToUsers([clientCred, workerCred], "application:agreement", {
-        applicationId,
-        status: newStatus,
-        clientAgreed: application.clientAgreed,
-        workerAgreed: application.workerAgreed,
-      });
-      // If contract created, emit contract event
-      if (contract) {
-        emitToUsers([clientCred, workerCred], "contract:created", {
-          contractId: contract._id,
-          applicationId,
-        });
-      }
-    } catch (e) {
-      logger.warn("Socket emit failed for markApplicationAgreement", {
-        error: e.message,
-      });
-    }
+    // Note: no socket emits from this listing endpoint
   } catch (error) {
     return handleApplicationError(error, res, "Get client applications", req);
   }
@@ -1219,6 +1201,26 @@ const markApplicationAgreement = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    // Realtime: agreement updates and contract creation
+    try {
+      const clientCred = application.clientId?.credentialId;
+      const workerCred = application.workerId?.credentialId;
+      emitToUsers([clientCred, workerCred].filter(Boolean), "application:agreement", {
+        applicationId,
+        status: newStatus,
+        clientAgreed: application.clientAgreed,
+        workerAgreed: application.workerAgreed,
+      });
+      if (contract) {
+        emitToUsers([clientCred, workerCred].filter(Boolean), "contract:created", {
+          contractId: contract._id,
+          applicationId,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for markApplicationAgreement", { error: e.message });
+    }
   } catch (error) {
     return handleApplicationError(
       error,

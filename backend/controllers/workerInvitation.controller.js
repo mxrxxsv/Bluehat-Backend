@@ -12,6 +12,7 @@ const Conversation = require("../models/Conversation");
 
 // Utils
 const logger = require("../utils/logger");
+const { emitToUser, emitToUsers } = require("../socket");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
 const { sendJobProgressEmail } = require("../mailer/jobProgressNotifications");
 
@@ -399,6 +400,20 @@ const inviteWorker = async (req, res) => {
       },
     ]);
 
+    // Realtime notify worker about new invitation
+    try {
+      const workerCred = invitation.workerId?.credentialId;
+      if (workerCred) {
+        emitToUser(workerCred, "invitation:created", {
+          invitationId: invitation._id,
+          jobId: invitation.jobId?._id || null,
+          status: invitation.invitationStatus,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for inviteWorker", { error: e.message });
+    }
+
     // Send email notification to worker
     try {
       logger.info("Starting email notification process", {
@@ -698,6 +713,26 @@ const respondToInvitation = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    // Realtime notify client about invitation update; if contract created notify both
+    try {
+      const clientCred = invitation.clientId?.credentialId;
+      if (clientCred) {
+        emitToUser(clientCred, "invitation:updated", {
+          invitationId,
+          status: invitation.invitationStatus,
+        });
+      }
+      if (contract) {
+        const workerCred = req.workerProfile?.credentialId || invitation.workerId?.credentialId;
+        emitToUsers([clientCred, workerCred].filter(Boolean), "contract:created", {
+          contractId: contract._id,
+          invitationId,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for respondToInvitation", { error: e.message });
+    }
   } catch (error) {
     return handleInvitationError(error, res, "Invitation response", req);
   }
@@ -1038,6 +1073,17 @@ const startInvitationDiscussion = async (req, res) => {
         },
       },
     });
+    try {
+      const clientCred = invitation.clientId?.credentialId;
+      // We also need worker cred, but we are in worker route; emit to client only here
+      if (clientCred) {
+        emitToUser(clientCred, "invitation:discussion_started", {
+          invitationId,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for startInvitationDiscussion", { error: e.message });
+    }
   } catch (error) {
     return handleInvitationError(
       error,
@@ -1106,11 +1152,11 @@ const markInvitationAgreement = async (req, res) => {
       },
       {
         path: "workerId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
       {
         path: "clientId",
-        select: "firstName lastName profilePicture",
+        select: "firstName lastName profilePicture credentialId",
       },
     ]);
 
@@ -1242,6 +1288,26 @@ const markInvitationAgreement = async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    // Realtime: emit agreement update; and contract created if applicable
+    try {
+      const clientCred = invitation.clientId?.credentialId;
+      const workerCred = invitation.workerId?.credentialId;
+      emitToUsers([clientCred, workerCred].filter(Boolean), "invitation:agreement", {
+        invitationId,
+        status: newStatus,
+        clientAgreed: invitation.clientAgreed,
+        workerAgreed: invitation.workerAgreed,
+      });
+      if (contract) {
+        emitToUsers([clientCred, workerCred].filter(Boolean), "contract:created", {
+          contractId: contract._id,
+          invitationId,
+        });
+      }
+    } catch (e) {
+      logger.warn("Socket emit failed for markInvitationAgreement", { error: e.message });
+    }
   } catch (error) {
     return handleInvitationError(error, res, "Mark invitation agreement", req);
   }
