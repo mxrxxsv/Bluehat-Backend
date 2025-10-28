@@ -148,14 +148,14 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
                 return (
                   <span
                     key={key}
-                    className="px-2 py-1 bg-[#55b3f3] text-white text-xs rounded-full"
+                    className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm"
                   >
                     {label}
                   </span>
                 );
               })}
               {worker.skills.length > 4 && (
-                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
                   +{worker.skills.length - 4} more
                 </span>
               )}
@@ -181,10 +181,10 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
           {(worker.availability || worker.status) && (
             <span
               className={
-                "font-medium px-2 py-0.5 rounded-full " +
+                "font-medium px-2 py-1 rounded-full " +
                 (isBusy
                   ? "bg-red-50 text-red-600 border border-red-200"
-                  : "text-[#55b3f3]")
+                  : "bg-green-100 text-green-600")
               }
               title={isBusy ? "This worker is currently busy" : undefined}
             >

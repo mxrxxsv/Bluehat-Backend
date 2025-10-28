@@ -27,7 +27,7 @@ const FindWork = () => {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [location, setLocation] = useState("");
-  const [locationInput, setLocationInput] = useState(""); 
+  const [locationInput, setLocationInput] = useState("");
   const [jobPosts, setJobPosts] = useState([]);
   const [user, setUser] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -71,6 +71,9 @@ const FindWork = () => {
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
 
   const [showIdSetup, setShowIdSetup] = useState(false);
+
+  // NEW: UI-styled alert/validation modal
+  const [alertModal, setAlertModal] = useState({ open: false, title: "", message: "" });
 
   // NEW: Reset form helper
   const resetForm = () => {
@@ -252,11 +255,20 @@ const FindWork = () => {
   const handlePostJob = async (e) => {
     e.preventDefault();
     if (!newJob.description || !newJob.location || !newJob.priceOffer) {
-      alert("Please fill out all required fields");
+      setAlertModal({
+        open: true,
+        title: "Complete required fields",
+        message:
+          "Please fill out all required fields",
+      });
       return;
     }
     if (!selectedCategory) {
-      alert("Please select a category");
+      setAlertModal({
+        open: true,
+        title: "Select a category",
+        message: "Please select a category for your job post.",
+      });
       return;
     }
     try {
@@ -270,8 +282,8 @@ const FindWork = () => {
       await createJob(jobData);
 
       // Refresh job list to include the new job
-  setPage(1);
-  await fetchJobs({ useCache: false, pageOverride: 1 });
+      setPage(1);
+      await fetchJobs({ useCache: false, pageOverride: 1 });
 
       resetForm();
       setIsModalOpen(false);
@@ -279,15 +291,19 @@ const FindWork = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
-      alert(error.response?.data?.message || "Failed to post job");
+      setAlertModal({
+        open: true,
+        title: "Failed to post job",
+        message: error.response?.data?.message || "Something went wrong while posting your job. Please try again.",
+      });
     }
   };
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-  const res = await checkAuth();
-  const userData = res.data?.data;
+        const res = await checkAuth();
+        const userData = res.data?.data;
 
         setUser(userData);
 
@@ -366,59 +382,73 @@ const FindWork = () => {
   // Filter jobs (client-side search across description, location, and category label)
   const filteredJobs = Array.isArray(jobPosts)
     ? jobPosts.filter((job) => {
-        const q = (search || "").trim().toLowerCase();
-        if (!q) return true;
-        const desc = (job.description || "").toLowerCase();
-        const loc = (job.location || "").toLowerCase();
-        const cat = (
-          job.category?.name || job.category?.categoryName || ""
-        ).toLowerCase();
-        return (
-          desc.includes(q) ||
-          loc.includes(q) ||
-          cat.includes(q)
-        );
-      })
+      const q = (search || "").trim().toLowerCase();
+      if (!q) return true;
+      const desc = (job.description || "").toLowerCase();
+      const loc = (job.location || "").toLowerCase();
+      const cat = (
+        job.category?.name || job.category?.categoryName || ""
+      ).toLowerCase();
+      return (
+        desc.includes(q) ||
+        loc.includes(q) ||
+        cat.includes(q)
+      );
+    })
     : [];
 
   if (loading && (page === 1 || jobPosts.length === 0)) {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
-          {/* Search Bar Skeleton */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="w-full md:w-1/2 h-10 bg-gray-200 rounded-[18px]" />
-            <div className="w-full md:w-1/4 h-10 bg-gray-200 rounded-md" />
+          {/* Search + Filters Skeleton */}
+          <div className="relative w-full md:flex-1 mb-2">
+            <div className="w-full h-11 bg-gray-200 rounded-[18px]" />
+            <div className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 h-8 w-24 bg-gray-200 rounded-[14px]" />
+            <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 h-8 w-20 bg-gray-200 rounded-[14px]" />
           </div>
 
-          {/* Post Box Skeleton */}
+          {/* Post Box Skeleton (client only) */}
           {user?.userType === "client" && (
-            <div className="bg-white shadow rounded-[20px] p-4 mb-6">
+            <div className="bg-white shadow rounded-[20px] p-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-200" />
-                <div className="flex-1 bg-gray-100 h-10 rounded-full" />
+                <div className="flex-1 h-10 bg-gray-100 rounded-full" />
               </div>
             </div>
           )}
 
-          {/* Job Cards Skeleton (repeat 3 times) */}
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-                <div className="h-4 bg-gray-200 rounded w-1/4" />
+          {/* Job Card Skeletons */}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-[20px] p-4 bg-white shadow-sm">
+              {/* Header: avatar + name/time + date */}
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200" />
+                  <div className="flex flex-col gap-1">
+                    <div className="h-4 bg-gray-200 rounded w-32" />
+                    <div className="h-3 bg-gray-200 rounded w-20" />
+                  </div>
+                </div>
+                <div className="h-4 bg-gray-200 rounded w-16" />
               </div>
-              <div className="h-5 bg-gray-200 rounded w-2/3 mb-2" />
-              <div className="flex gap-2 mt-3">
+
+              {/* Description line */}
+              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
+
+              {/* Category chips */}
+              <div className="flex gap-2 mt-2">
                 <div className="h-6 bg-gray-200 rounded-full w-24" />
                 <div className="h-6 bg-gray-200 rounded-full w-20" />
               </div>
+
+              {/* Footer: location + price */}
               <div className="flex justify-between items-center mt-4">
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-                <div className="h-4 bg-gray-200 rounded w-1/6" />
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-200 rounded" />
+                  <div className="h-4 bg-gray-200 rounded w-40" />
+                </div>
+                <div className="h-4 bg-gray-200 rounded w-16" />
               </div>
             </div>
           ))}
@@ -433,7 +463,7 @@ const FindWork = () => {
       <VerificationNotice user={user} />
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div ref={desktopFilterContainerRef} className="relative w-full md:flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
           <input
@@ -660,7 +690,7 @@ const FindWork = () => {
       {user?.userType === "client" && (
         <div
           onClick={() => setIsModalOpen(true)}
-          className="bg-white shadow rounded-[20px] p-4 mb-6 cursor-pointer hover:shadow-md transition"
+          className="bg-white shadow rounded-[20px] p-4 mb-4 cursor-pointer hover:shadow-md transition"
         >
           <div className="flex items-center gap-3">
             <img
@@ -678,7 +708,7 @@ const FindWork = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
             {/* CHANGED: Close uses draft check */}
             <button
@@ -688,77 +718,56 @@ const FindWork = () => {
               <X size={20} />
             </button>
 
-            {/* Job Preview (skeleton when empty, live preview when filled) */}
-            <div className="mt-6 pt-4">
-              <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
-                {newJob.description || newJob.location || selectedCategory || newJob.priceOffer ? (
-                  <>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={user?.image || currentUser.avatar}
-                          alt="Avatar"
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                        <span className="text-sm font-medium text-[#252525] opacity-75">
-                          {user?.fullName || "Client Name"}
-                        </span>
-                      </div>
-                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                        {/* <Clock size={16} /> Just now */}
+            {/* Job Preview: show only after user inputs something; no loading skeleton */}
+            {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
+              <div className="mt-6 pt-4">
+                <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={user?.image || currentUser.avatar}
+                        alt="Avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <span className="text-md font-semibold text-[#252525]">
+                        {user?.fullName || "Client Name"}
                       </span>
                     </div>
-                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                      <span className="flex items-center justify-center w-5 h-5">
-                        <Briefcase size={20} className="text-blue-400" />
-                      </span>
-                      <span className="line-clamp-1 md:text-base">
-                        {newJob.description || "Job description will appear here..."}
-                      </span>
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedCategory ? (
-                        <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
-                          {categories.find((c) => c._id === selectedCategory)?.categoryName}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">No category selected</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={16} />
-                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
-                          {newJob.location || "Location"}
-                        </span>
-                      </span>
-                      <span className="font-bold text-green-400">
-                        {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="animate-pulse">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gray-200" />
-                        <div className="h-4 bg-gray-200 rounded w-24" />
-                      </div>
-                      <div className="h-4 bg-gray-200 rounded w-16" />
-                    </div>
-                    <div className="mt-2 h-5 bg-gray-200 rounded w-3/4" />
-                    <div className="flex gap-2 mt-3">
-                      <div className="h-6 bg-gray-200 rounded-full w-24" />
-                      <div className="h-6 bg-gray-200 rounded-full w-20" />
-                    </div>
-                    <div className="flex justify-between items-center mt-4">
-                      <div className="h-4 bg-gray-200 rounded w-1/3" />
-                      <div className="h-4 bg-gray-200 rounded w-1/6" />
-                    </div>
+                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                      {/* <Clock size={16} /> Just now */}
+                    </span>
                   </div>
-                )}
+                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5">
+                      <Briefcase size={20} className="text-[#55B2F3]" />
+                    </span>
+                    <span className="line-clamp-1 md:text-base">
+                      {newJob.description}
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedCategory ? (
+                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
+                        {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No category selected</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={16} />
+                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                        {newJob.location}
+                      </span>
+                    </span>
+                    <span className="font-bold text-green-400">
+                      {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Job Creation Form */}
             <form onSubmit={handlePostJob} className="space-y-3">
@@ -821,7 +830,7 @@ const FindWork = () => {
 
       {/* Draft confirmation modal */}
       {showDraftConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-40 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
           <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
             <h3 className="text-lg font-semibold mb-4">Save draft</h3>
             <p className="text-gray-600 mb-6">
@@ -840,6 +849,37 @@ const FindWork = () => {
                 className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
               >
                 Save Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation/Alert Modal */}
+      {alertModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
+          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {alertModal.title || "Notice"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+              >
+                OK
               </button>
             </div>
           </div>
@@ -866,143 +906,143 @@ const FindWork = () => {
         <div ref={listRef} style={{ height: listHeight }} className="custom-scrollbar flex flex-col overflow-y-auto pr-2">
           <div className="space-y-4 pb-4">
             {filteredJobs.map((job) => {
-            const toIdString = (val) => {
-              if (!val) return "";
-              if (typeof val === "string") return val;
-              if (typeof val === "object") return val._id || val.id || "";
-              try { return String(val); } catch { return ""; }
-            };
-            // Robustly derive the Client model id for profile route
-            const clientProfileId =
-              toIdString(job?.client?.id) ||
-              toIdString(job?.client?._id) ||
-              toIdString(job?.clientId);
-            return (
-              <div
-                key={job.id || job._id}
-                className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
-                onClick={() => {
-                  const viewerIsClient = user?.userType === "client";
+              const toIdString = (val) => {
+                if (!val) return "";
+                if (typeof val === "string") return val;
+                if (typeof val === "object") return val._id || val.id || "";
+                try { return String(val); } catch { return ""; }
+              };
+              // Robustly derive the Client model id for profile route
+              const clientProfileId =
+                toIdString(job?.client?.id) ||
+                toIdString(job?.client?._id) ||
+                toIdString(job?.clientId);
+              return (
+                <div
+                  key={job.id || job._id}
+                  className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                  onClick={() => {
+                    const viewerIsClient = user?.userType === "client";
 
-                  const idToStr = (val) => {
-                    if (!val) return "";
-                    if (typeof val === "string") return val;
-                    if (typeof val === "object") return val._id || val.id || String(val || "");
-                    try {
-                      return String(val);
-                    } catch {
-                      return "";
+                    const idToStr = (val) => {
+                      if (!val) return "";
+                      if (typeof val === "string") return val;
+                      if (typeof val === "object") return val._id || val.id || String(val || "");
+                      try {
+                        return String(val);
+                      } catch {
+                        return "";
+                      }
+                    };
+
+                    const viewerCandidates = [
+                      user?.profileId,
+                      user?.credentialId?._id,
+                      user?.credentialId,
+                      user?._id,
+                      user?.id,
+                    ]
+                      .map(idToStr)
+                      .filter((s) => typeof s === "string" && s.length);
+
+                    const ownerCandidates = [
+                      job?.client?.credentialId?._id,
+                      job?.client?.credentialId,
+                      job?.client?.id,
+                      job?.client?._id,
+                      job?.credentialId,
+                    ]
+                      .map(idToStr)
+                      .filter((s) => typeof s === "string" && s.length);
+
+                    const anyMatch = viewerCandidates.some((v) =>
+                      ownerCandidates.includes(v)
+                    );
+
+                    const isOwner = Boolean(viewerIsClient && anyMatch);
+
+                    if (isOwner) {
+                      navigate(`/invite-workers/${job.id || job._id}`);
+                    } else {
+                      navigate(`/job/${job.id || job._id}`);
                     }
-                  };
-
-                  const viewerCandidates = [
-                    user?.profileId, 
-                    user?.credentialId?._id, 
-                    user?.credentialId, 
-                    user?._id, 
-                    user?.id, 
-                  ]
-                    .map(idToStr)
-                    .filter((s) => typeof s === "string" && s.length);
-
-                  const ownerCandidates = [
-                    job?.client?.credentialId?._id,
-                    job?.client?.credentialId,
-                    job?.client?.id,
-                    job?.client?._id,
-                    job?.credentialId,
-                  ]
-                    .map(idToStr)
-                    .filter((s) => typeof s === "string" && s.length);
-
-                  const anyMatch = viewerCandidates.some((v) =>
-                    ownerCandidates.includes(v)
-                  );
-
-                  const isOwner = Boolean(viewerIsClient && anyMatch);
-
-                  if (isOwner) {
-                    navigate(`/invite-workers/${job.id || job._id}`);
-                  } else {
-                    navigate(`/job/${job.id || job._id}`);
-                  }
-                }}
-              >
-                <div className="rounded-xl p-4 bg-white transition-all">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (clientProfileId) navigate(`/client/${clientProfileId}`);
-                        }}
-                        className="focus:outline-none"
-                        title="View client profile"
-                      >
-                        <img
-                          src={
-                            job.client?.profilePicture?.url ||
-                            currentUser.avatar
-                          }
-                          alt="Client Avatar"
-                          className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                        />
-                      </button>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#252525] opacity-75">
-                          {job.client?.name || "Client Name"}
-                        </span>
+                  }}
+                >
+                  <div className="rounded-xl p-4 bg-white transition-all">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (clientProfileId) navigate(`/client/${clientProfileId}`);
+                          }}
+                          className="focus:outline-none"
+                          title="View client profile"
+                        >
+                          <img
+                            src={
+                              job.client?.profilePicture?.url ||
+                              currentUser.avatar
+                            }
+                            alt="Client Avatar"
+                            className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                          />
+                        </button>
+                        <div className="flex flex-col">
+                          <span className="md:text-md font-bold text-[#252525]">
+                            {job.client?.name || "Client Name"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <span className="flex items-center gap-1 font-bold text-sm text-[#252525] opacity-80">
-                      {new Date(job.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5">
-                      <Briefcase size={20} className="text-blue-400" />
-                    </span>
-                    <span className="line-clamp-1 md:text-base">
-                      {job.description}
-                    </span>
-                  </p>
-
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
-                      {job.category?.name || "Uncategorized"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={16} />
-                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
-                        {job.location}
+                      <span className="flex items-center gap-1 font-medium text-sm text-[#252525] opacity-80">
+                        {new Date(job.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
-                    </span>
-                    <span className="font-bold text-green-400">
-                      ₱{job.price?.toLocaleString() || 0}
-                    </span>
+                    </div>
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <Briefcase size={20} className="text-[#55B2F3]" />
+                      </span>
+                      <span className="line-clamp-1 md:text-base">
+                        {job.description}
+                      </span>
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
+                        {job.category?.name || "Uncategorized"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} />
+                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                          {job.location}
+                        </span>
+                      </span>
+                      <span className="font-bold text-green-400">
+                        ₱{job.price?.toLocaleString() || 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
             {hasMore && (
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={isFetchingMore}
-                className="px-4 py-2 bg-white shadow rounded-md hover:shadow-md disabled:opacity-60"
-              >
-                {isFetchingMore ? "Loading…" : "Load more"}
-              </button>
-            </div>
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={isFetchingMore}
+                  className="px-4 py-2 bg-white shadow rounded-md hover:shadow-md disabled:opacity-60"
+                >
+                  {isFetchingMore ? "Loading…" : "Load more"}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1010,10 +1050,10 @@ const FindWork = () => {
         <div className="text-center mt-10">
           <p className="text-gray-500 mb-4">No job posts found.</p>
           {search ||
-          location ||
-          filterCategory ||
-          sortBy !== "createdAt" ||
-          order !== "desc" ? (
+            location ||
+            filterCategory ||
+            sortBy !== "createdAt" ||
+            order !== "desc" ? (
             <p className="text-sm text-gray-400">
               Try adjusting your search filters or{" "}
               <button

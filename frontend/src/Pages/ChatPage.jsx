@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
 import axios from "axios";
 import React, { useState, useRef, useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
 import {
   getConversations,
   createOrGetConversation,
@@ -72,7 +73,7 @@ const ChatPage = () => {
   try {
     const raw = sessionStorage.getItem("chatAgreementContext");
     if (raw) persistedAgreementContext = JSON.parse(raw);
-  } catch (_) {}
+  } catch (_) { }
   const agreementContext =
     agreementContextFromState || persistedAgreementContext;
   const hasAgreement = Boolean(agreementContext);
@@ -95,7 +96,7 @@ const ChatPage = () => {
         // If user already agreed previously, suppress the banner immediately
         if (agreed) setSuppressAgreementBanner(true);
       }
-    } catch (_) {}
+    } catch (_) { }
   }, [hasAgreement, agreementContext?.kind, agreementContext?.id]);
 
   // Note: Do not clear persisted agreement context immediately; keep it to ensure banner persists across async re-renders.
@@ -360,7 +361,7 @@ const ChatPage = () => {
         sessionStorage.removeItem("chatAgreementContext");
         const key = getSelfAgreedKey(agreementContext);
         if (key) sessionStorage.removeItem(key);
-      } catch (_) {}
+      } catch (_) { }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractBanner]);
@@ -639,7 +640,7 @@ const ChatPage = () => {
             sessionStorage.removeItem("chatAgreementContext");
             const key = getSelfAgreedKey(agreementContext);
             if (key) sessionStorage.removeItem(key);
-          } catch (_) {}
+          } catch (_) { }
           return true;
         }
       } else if (agreementContext.kind === "invitation") {
@@ -659,7 +660,7 @@ const ChatPage = () => {
             sessionStorage.removeItem("chatAgreementContext");
             const key = getSelfAgreedKey(agreementContext);
             if (key) sessionStorage.removeItem(key);
-          } catch (_) {}
+          } catch (_) { }
           return true;
         }
       }
@@ -681,7 +682,7 @@ const ChatPage = () => {
         setTimeout(() => {
           try {
             refreshContracts();
-          } catch (_) {}
+          } catch (_) { }
         }, 250);
         return;
       }
@@ -720,9 +721,8 @@ const ChatPage = () => {
       <aside
         ref={sidebarRef}
         // duration-300
-        className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white/20 backdrop-blur-md border border-white/30 md:bg-[#f4f6f6] ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } overflow-hidden h-[600px] md:h-[500px]`}
+        className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white/20 backdrop-blur-md border border-white/30 md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } overflow-hidden h-[600px] md:h-[500px]`}
         aria-label="Sidebar"
       >
         <div className="h-full px-3 overflow-y-auto">
@@ -744,9 +744,8 @@ const ChatPage = () => {
                         setIsSidebarOpen(false);
                       }
                     }}
-                    className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${
-                      selectedContactId === otherCred ? "bg-gray-100" : ""
-                    }`}
+                    className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""
+                      }`}
                   >
                     <img
                       src={profile}
@@ -765,9 +764,18 @@ const ChatPage = () => {
       {/* MAIN CHAT AREA */}
       <div className="w-full h-full">
         <div className="flex flex-row items-center justify-between mt-8 px-6 md:px-12 mt-30">
-          <p className="text-[24px] md:text-[32px] font-medium text-sky-500">
-            Message
-          </p>
+          <div className="flex items-left flex-col ">
+            <button
+              onClick={() => navigate(-1)}
+              className="md:hidden flex items-center gap-2 text-[#55b3f3] hover:text-sky-500 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+            <p className="text-[24px] md:text-[32px] font-medium text-sky-500">
+              Message
+            </p>
+          </div>
           {/* {currentUser?.userType === "client" && (
                         <button
                             className="p-2 bg-sky-500 rounded-[12px] text-white cursor-pointer shadow-sm"
@@ -791,13 +799,12 @@ const ChatPage = () => {
               }}
               disabled={contractBanner || showAgreeToast || agreeToastMessage}
               className={`p-2 rounded-lg sm:hidden focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200
-                            ${
-                              contractBanner ||
-                              showAgreeToast ||
-                              agreeToastMessage
-                                ? "text-gray-300 cursor-not-allowed"
-                                : "text-gray-500 hover:bg-gray-100"
-                            }`}
+                            ${contractBanner ||
+                  showAgreeToast ||
+                  agreeToastMessage
+                  ? "text-gray-300 cursor-not-allowed"
+                  : "text-gray-500 hover:bg-gray-100"
+                }`}
             >
               <svg
                 className="w-6 h-6"
@@ -870,10 +877,10 @@ const ChatPage = () => {
                           setContractBanner((prev) =>
                             prev
                               ? {
-                                  ...prev,
-                                  contractStatus: "in_progress",
-                                  startDate: new Date().toISOString(),
-                                }
+                                ...prev,
+                                contractStatus: "in_progress",
+                                startDate: new Date().toISOString(),
+                              }
                               : prev
                           );
                           alert("Work started");
@@ -895,11 +902,11 @@ const ChatPage = () => {
                           setContractBanner((prev) =>
                             prev
                               ? {
-                                  ...prev,
-                                  contractStatus:
-                                    "awaiting_client_confirmation",
-                                  workerCompletedAt: new Date().toISOString(),
-                                }
+                                ...prev,
+                                contractStatus:
+                                  "awaiting_client_confirmation",
+                                workerCompletedAt: new Date().toISOString(),
+                              }
                               : prev
                           );
                           alert("Marked completed");
@@ -914,7 +921,7 @@ const ChatPage = () => {
                   )}
                 {currentUser?.userType === "client" &&
                   contractBanner.contractStatus ===
-                    "awaiting_client_confirmation" && (
+                  "awaiting_client_confirmation" && (
                     <button
                       onClick={async () => {
                         try {
@@ -922,12 +929,12 @@ const ChatPage = () => {
                           setContractBanner((prev) =>
                             prev
                               ? {
-                                  ...prev,
-                                  contractStatus: "completed",
-                                  completedAt: new Date().toISOString(),
-                                  actualEndDate: new Date().toISOString(),
-                                  clientConfirmedAt: new Date().toISOString(),
-                                }
+                                ...prev,
+                                contractStatus: "completed",
+                                completedAt: new Date().toISOString(),
+                                actualEndDate: new Date().toISOString(),
+                                clientConfirmedAt: new Date().toISOString(),
+                              }
                               : prev
                           );
                           alert("Confirmed completion");
@@ -955,11 +962,10 @@ const ChatPage = () => {
         {showAgreementBanner && (
           <div className="p-4 sm:ml-64">
             <div
-              className={`${
-                selfAgreed
-                  ? "bg-blue-50 border-blue-200"
-                  : "bg-yellow-50 border-yellow-200"
-              } border rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3`}
+              className={`${selfAgreed
+                ? "bg-blue-50 border-blue-200"
+                : "bg-yellow-50 border-yellow-200"
+                } border rounded-xl shadow-sm p-4 mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3`}
             >
               <div className="text-left">
                 {/* Hide the self-agreed "Waiting for the other party" line; only show when not agreed */}
@@ -1004,13 +1010,13 @@ const ChatPage = () => {
                           sessionStorage.removeItem("chatAgreementContext");
                           const key = getSelfAgreedKey(agreementContext);
                           if (key) sessionStorage.removeItem(key);
-                        } catch (_) {}
+                        } catch (_) { }
 
                         // Show a transient success toast for 10 seconds
                         try {
                           if (agreeToastTimer.current)
                             clearTimeout(agreeToastTimer.current);
-                        } catch (_) {}
+                        } catch (_) { }
                         setAgreeToastMessage(
                           "You agreed — waiting for the other party."
                         );
@@ -1028,7 +1034,7 @@ const ChatPage = () => {
                             sessionStorage.removeItem("chatAgreementContext");
                             const key = getSelfAgreedKey(agreementContext);
                             if (key) sessionStorage.removeItem(key);
-                          } catch (_) {}
+                          } catch (_) { }
                         } else {
                           // If contract not created yet, verify agreement state directly
                           const both = await checkBothAgreedAndSuppress();
@@ -1049,12 +1055,12 @@ const ChatPage = () => {
                                 );
                                 const key = getSelfAgreedKey(agreementContext);
                                 if (key) sessionStorage.removeItem(key);
-                              } catch (_) {}
+                              } catch (_) { }
                             } else {
                               const both2 = await checkBothAgreedAndSuppress();
                               if (both2) setSuppressAgreementBanner(true);
                             }
-                          } catch (_) {}
+                          } catch (_) { }
                         }, 1500);
                       } catch (e) {
                         alert(e.message || "Failed to mark agreement");
@@ -1082,7 +1088,7 @@ const ChatPage = () => {
                       try {
                         const key = getSelfAgreedKey(agreementContext);
                         if (key) sessionStorage.removeItem(key);
-                      } catch (_) {}
+                      } catch (_) { }
                       alert("Noted. You can continue the discussion in chat.");
                     } catch (e) {
                       alert(e.message || "Failed to update agreement");
@@ -1105,7 +1111,7 @@ const ChatPage = () => {
               contractBanner || showAgreeToast
                 ? "h-[340px] md:h-[250px]"
                 : "h-full md:h-[400px]"
-            } overflow-y-auto px-2 transition-all duration-300 text-left`}
+              } overflow-y-auto px-2 transition-all duration-300 text-left`}
           >
             {messages.map((msg, index) => {
               const senderCred = idToString(msg?.sender?.credentialId);
@@ -1115,9 +1121,8 @@ const ChatPage = () => {
               return (
                 <div
                   key={index}
-                  className={`flex items-start gap-2.5 mb-4 ${
-                    isMe ? "justify-end" : ""
-                  }`}
+                  className={`flex items-start gap-2.5 mb-4 ${isMe ? "justify-end" : ""
+                    }`}
                 >
                   {!isMe && (
                     <img
@@ -1134,21 +1139,19 @@ const ChatPage = () => {
                     />
                   )}
                   <div
-                    className={`flex flex-col gap-1 max-w-[320px] ${
-                      isMe ? "items-end" : "items-start"
-                    }`}
+                    className={`flex flex-col gap-1 max-w-[320px] ${isMe ? "items-end" : "items-start"
+                      }`}
                   >
                     <div className="flex items-center justify-between space-x-2">
                       <span
-                        className={`text-sm font-semibold ${
-                          isMe ? "text-black" : "text-gray-900"
-                        }`}
+                        className={`text-sm font-semibold ${isMe ? "text-black" : "text-gray-900"
+                          }`}
                       >
                         {isMe
                           ? "You"
                           : contactNames[
-                              idToString(msg?.sender?.credentialId)
-                            ] || "Unnamed"}
+                          idToString(msg?.sender?.credentialId)
+                          ] || "Unnamed"}
                       </span>
 
                       {/* Three-dot menu */}
@@ -1191,11 +1194,10 @@ const ChatPage = () => {
 
                     {/* Message Content / Edit Input */}
                     <div
-                      className={`inline-block leading-1.5 p-4 ${
-                        isMe
-                          ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end"
-                          : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"
-                      }`}
+                      className={`inline-block leading-1.5 p-4 ${isMe
+                        ? "bg-sky-500 rounded-s-xl rounded-ee-xl self-end"
+                        : "bg-gray-200 rounded-e-xl rounded-es-xl self-start"
+                        }`}
                     >
                       {editingMessageId === msg._id ? (
                         <div className="flex items-center gap-2">
@@ -1224,9 +1226,8 @@ const ChatPage = () => {
                         </div>
                       ) : (
                         <p
-                          className={`text-sm font-normal ${
-                            isMe ? "text-white" : "text-gray-900"
-                          }`}
+                          className={`text-sm font-normal ${isMe ? "text-white" : "text-gray-900"
+                            }`}
                         >
                           {msg.content}
                         </p>
@@ -1236,9 +1237,9 @@ const ChatPage = () => {
                       <span className="text-[12px] font-normal text-gray-500">
                         {msg.createdAt
                           ? new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                           : ""}
                       </span>
                       {msg.updatedAt &&

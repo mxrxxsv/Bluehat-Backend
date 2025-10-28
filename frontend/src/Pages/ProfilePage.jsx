@@ -354,14 +354,14 @@ const ProfilePage = () => {
     }
   };
 
-  // 🟠 Open delete confirm
+  // Open delete confirm
   const handleConfirmDelete = (job) => {
     if (isJobLocked(job)) return;
     setJobToDelete(job);
     setIsDeleteConfirmOpen(true);
   };
 
-  // 🔴 Delete job
+  // Delete job
   const handleDeleteJob = async () => {
     if (!jobToDelete?.id) return;
     try {
@@ -451,14 +451,14 @@ const ProfilePage = () => {
               {userPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all"
+                  className="rounded-[20px] p-4 bg-white shadow-sm transition-all"
                 >
                   <div className="rounded-xl p-4 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-bold text-[#252525] opacity-75">
+                      <span className="text-md font-bold text-[#252525]">
                         {post.client?.name || "Client Name"}
                       </span>
-                      <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
+                      <span className="flex items-center gap-1 text-sm font-medium text-[#252525] opacity-80">
                         {new Date(post.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
@@ -468,12 +468,12 @@ const ProfilePage = () => {
                     </div>
 
                     <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                      <Briefcase size={20} className="text-blue-400" />
+                      <Briefcase size={20} className="text-[#55B2F3]" />
                       {post.description}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mt-3 items-center">
-                      <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs">
+                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                         {post.category?.name || "Uncategorized"}
                       </span>
                     </div>

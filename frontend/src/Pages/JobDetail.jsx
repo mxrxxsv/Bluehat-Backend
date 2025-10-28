@@ -120,7 +120,7 @@ const JobDetails = () => {
       </div>
 
       {/* Job Card */}
-      <article className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block">
+      <article className="rounded-[20px] p-4 bg-white shadow-sm transition-all block">
         <div className="rounded-xl p-4 bg-white transition-all">
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2">
@@ -138,11 +138,11 @@ const JobDetails = () => {
                 className="w-8 h-8 rounded-full object-cover cursor-pointer"
                 onClick={goToClientProfile}
               />
-              <span className="text-sm md:text-base font-bold text-[#252525] opacity-75 ">
+              <span className="text-md md:text-base font-bold text-[#252525]">
                 {job.client?.name || "Client Name"}
               </span>
             </div>
-            <span className="flex items-center gap-1 font-bold text-sm text-[#252525] opacity-80">
+            <span className="flex items-center gap-1 font-medium text-sm text-[#252525] opacity-80">
               {new Date(job.createdAt).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",
@@ -153,13 +153,13 @@ const JobDetails = () => {
 
           <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5">
-              <Briefcase size={20} className="text-blue-400" />
+              <Briefcase size={20} className="text-[#55B2F3]" />
             </span>
             <span className="line-clamp-1 md:text-base">{job.description}</span>
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
-            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-xs md:text-sm">
+            <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
               {job.category?.name || "Uncategorized"}
             </span>
           </div>

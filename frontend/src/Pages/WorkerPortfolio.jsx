@@ -27,8 +27,7 @@ const WorkerPortfolio = () => {
     averageRating: 0,
     totalReviews: 0,
   });
-  const [jobMap, setJobMap] = useState({}); // cache for enriched job details
-  // Quick invite modal state (create job + invite)
+  const [jobMap, setJobMap] = useState({});
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
@@ -39,6 +38,7 @@ const WorkerPortfolio = () => {
   const [jobCategory, setJobCategory] = useState("");
   const [jobPrice, setJobPrice] = useState("");
   const [inviteFeedback, setInviteFeedback] = useState({ show: false, message: "" });
+
   // Existing jobs for the current user
   const [useExistingJob, setUseExistingJob] = useState(false);
   const [userJobs, setUserJobs] = useState([]);
@@ -116,7 +116,7 @@ const WorkerPortfolio = () => {
         setCatsLoading(false);
       }
     };
-  const loadUserJobs = async () => {
+    const loadUserJobs = async () => {
       // Backend expects clientId to be the Client profile _id, not credential _id
       const clientProfileId = currentUser?.profileId;
       if (!clientProfileId) return;
@@ -128,7 +128,7 @@ const WorkerPortfolio = () => {
           const resp1 = await getAllJobs({ clientId: clientProfileId, status: "open", page: 1, limit: 50, _t: Date.now() });
           const p1 = resp1?.data || resp1;
           jobs = p1?.data?.jobs || p1?.data || p1?.jobs || [];
-        } catch {}
+        } catch { }
 
         // 2) Fallback: filter by clientId only
         if (!Array.isArray(jobs) || jobs.length === 0) {
@@ -136,7 +136,7 @@ const WorkerPortfolio = () => {
             const resp2 = await getAllJobs({ clientId: clientProfileId, page: 1, limit: 50, _t: Date.now() });
             const p2 = resp2?.data || resp2;
             jobs = p2?.data?.jobs || p2?.data || p2?.jobs || [];
-          } catch {}
+          } catch { }
         }
 
         // 3) Last resort: fetch without filters then filter locally by client id
@@ -148,7 +148,7 @@ const WorkerPortfolio = () => {
             jobs = Array.isArray(all)
               ? all.filter((j) => (j?.client?.id) === clientProfileId)
               : [];
-          } catch {}
+          } catch { }
         }
 
         const arr = Array.isArray(jobs) ? jobs : [];
@@ -370,7 +370,7 @@ const WorkerPortfolio = () => {
           {(worker.skills || []).map((skill, index) => (
             <span
               key={skill.skillCategoryId || index}
-              className="text-[#f4f6f6] text-[12.5px] font-light px-3 py-1 rounded-full text-xs bg-[#55b3f3] shadow-md"
+              className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm"
             >
               {skill.categoryName || "Unnamed Skill"}
             </span>
@@ -568,12 +568,12 @@ const WorkerPortfolio = () => {
                               }
                             />
 
-                            <span className="text-sm font-medium text-[#252525] opacity-75">
+                            <span className="text-md font-semibold text-[#252525]">
                               {clientName}
                             </span>
                           </div>
 
-                          <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                          <span className="flex items-center gap-1 text-sm font-medium text-[#252525] opacity-80">
                             {reviewDate
                               ? new Date(reviewDate).toLocaleDateString(
                                 "en-US",
@@ -588,7 +588,7 @@ const WorkerPortfolio = () => {
                         </div>
                         <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5">
-                            <Briefcase size={20} className="text-blue-400" />
+                            <Briefcase size={20} className="text-[#55B2F3]" />
                           </span>
                           <span className="line-clamp-1 md:text-base">
                             {job.description || job.title || "Job post"}
@@ -600,7 +600,7 @@ const WorkerPortfolio = () => {
                             job.category?.categoryName ||
                             (typeof job.category === "string" &&
                               job.category)) && (
-                              <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                              <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                                 {job.category?.name ||
                                   job.category?.categoryName ||
                                   (typeof job.category === "string"
@@ -784,19 +784,19 @@ const WorkerPortfolio = () => {
                                   className="w-8 h-8 rounded-full object-cover"
                                   onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                                 />
-                                <span className="text-sm font-medium text-[#252525] opacity-75">{clientName}</span>
+                                <span className="text-md font-semibold text-[#252525]">{clientName}</span>
                               </div>
                               <span className="text-xs text-gray-500">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ""}</span>
                             </div>
                             <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                               <span className="flex items-center justify-center w-5 h-5">
-                                <Briefcase size={20} className="text-blue-400" />
+                                <Briefcase size={20} className="text-[#55B2F3]" />
                               </span>
                               <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
                             </p>
                             <div className="flex flex-wrap gap-2 mt-3">
                               {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
-                                <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                                <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
                                   {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
                                 </span>
                               )}
@@ -804,7 +804,7 @@ const WorkerPortfolio = () => {
                             <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
                               <span className="flex items-center gap-1">
                                 <MapPin size={16} />
-                                <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location || ""}</span>
+                                <span className="truncate overflow-hidden max-w-45 md:max-w-full text-sm text-gray-500">{job.location || ""}</span>
                               </span>
                               <span className="font-bold text-green-500">{(typeof job.price === "number" || typeof job.price === "string") ? `₱${Number(job.price).toLocaleString()}` : ""}</span>
                             </div>

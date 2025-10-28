@@ -44,7 +44,7 @@ const renderStars = (rating) => {
 };
 
 export default function ClientProfile() {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
@@ -52,7 +52,7 @@ export default function ClientProfile() {
   const [stats, setStats] = useState(null);
   const [clientInfo, setClientInfo] = useState(null);
   const [page, setPage] = useState(1);
-  const [jobMap, setJobMap] = useState({}); 
+  const [jobMap, setJobMap] = useState({});
 
   // Status color mapping similar to profile job post styling
   const getStatusStyle = (status) => {
@@ -232,12 +232,12 @@ export default function ClientProfile() {
                       className="w-8 h-8 rounded-full object-cover"
                     />
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-[#252525] opacity-75">
+                      <span className="text-md font-bold text-[#252525]">
                         {job.client?.name || "Client Name"}
                       </span>
                     </div>
                   </div>
-                  <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
+                  <span className="flex items-center gap-1 text-sm font-medium text-[#252525] opacity-80">
                     {new Date(job.createdAt).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
@@ -248,13 +248,13 @@ export default function ClientProfile() {
 
                 <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5">
-                    <Briefcase size={20} className="text-blue-400" />
+                    <Briefcase size={20} className="text-[#55B2F3]" />
                   </span>
                   <span className="line-clamp-1 md:text-base">{job.description}</span>
                 </p>
 
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                  <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm">
                     {job.category?.name || "Uncategorized"}
                   </span>
                   {job.status && (
@@ -292,14 +292,14 @@ export default function ClientProfile() {
             const baseJob = rev.jobId || rev.job || null;
             const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id || baseJob?.id;
             const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
-            
+
             return (
               <div key={rev._id} className="p-3 rounded-xl border border-gray-100">
                 {/* Job post header - FindWork-style block above each review */}
                 {job && (
                   <div className="w-full mb-3">
                     <div
-                      className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                      className="rounded-[20px] p-4 bg-white shadow-sm transition-all block cursor-pointer"
                       onClick={() => jobId && navigate(`/job/${jobId}`)}
                       role="button"
                       aria-label="View job details"
@@ -313,11 +313,11 @@ export default function ClientProfile() {
                               className="w-8 h-8 rounded-full object-cover"
                               onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                             />
-                            <span className="text-sm font-bold text-[#252525] opacity-75">
+                            <span className="text-md font-bold text-[#252525]">
                               {job.client?.name || jobs?.[0]?.client?.name || "Client"}
                             </span>
                           </div>
-                          <span className="flex items-center gap-1 text-sm font-bold text-[#252525] opacity-80">
+                          <span className="flex items-center gap-1 text-sm font-medium text-[#252525] opacity-80">
                             {rev.reviewDate ? new Date(rev.reviewDate).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "short",
@@ -327,13 +327,13 @@ export default function ClientProfile() {
                         </div>
                         <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5">
-                            <Briefcase size={20} className="text-blue-400" />
+                            <Briefcase size={20} className="text-[#55B2F3]" />
                           </span>
                           <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
                         </p>
                         <div className="flex flex-wrap gap-2 mt-3">
                           {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
-                            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                            <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm">
                               {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
                             </span>
                           )}
