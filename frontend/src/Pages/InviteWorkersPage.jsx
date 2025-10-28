@@ -171,14 +171,14 @@ const InviteWorkersPage = () => {
         normalizedWorkers
       );
 
-  setWorkers(enrichedWorkers);
-  setFilteredWorkers(enrichedWorkers);
+      setWorkers(enrichedWorkers);
+      setFilteredWorkers(enrichedWorkers);
       // Compute suggestions based on job requirements
       const suggestions = getSuggestedWorkers(jobData, enrichedWorkers);
       setSuggestedWorkers(suggestions);
     } catch (error) {
       console.error("Failed to load data:", error);
-   
+
     } finally {
       setLoading(false);
     }
@@ -348,19 +348,9 @@ const InviteWorkersPage = () => {
     return (
       <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 py-8 mt-24 space-y-8 mt-35">
-          {/* Header Skeleton */}
-          <div className="bg-white rounded-xl p-6 shadow-md animate-pulse">
-            <div className="h-6 w-1/3 bg-gray-200 rounded mb-3"></div>
-            <div className="h-4 w-2/3 bg-gray-200 rounded mb-4"></div>
-            <div className="flex flex-wrap gap-3">
-              <div className="h-4 w-24 bg-gray-200 rounded"></div>
-              <div className="h-4 w-20 bg-gray-200 rounded"></div>
-              <div className="h-4 w-28 bg-gray-200 rounded"></div>
-            </div>
-          </div>
 
           {/* Search & Filter Skeleton */}
-          <div className="bg-white rounded-xl p-6 shadow-md animate-pulse">
+          <div className="bg-white rounded-[20px] p-6 shadow-md animate-pulse">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
                 <div className="h-10 w-full bg-gray-200 rounded-lg"></div>
@@ -369,6 +359,17 @@ const InviteWorkersPage = () => {
                 <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
                 <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
               </div>
+            </div>
+          </div>
+
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-xl p-6 shadow-md animate-pulse">
+            <div className="h-6 w-1/3 bg-gray-200 rounded mb-3"></div>
+            <div className="h-4 w-2/3 bg-gray-200 rounded mb-4"></div>
+            <div className="flex flex-wrap gap-3">
+              <div className="h-4 w-24 bg-gray-200 rounded"></div>
+              <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              <div className="h-4 w-28 bg-gray-200 rounded"></div>
             </div>
           </div>
 
@@ -411,7 +412,7 @@ const InviteWorkersPage = () => {
     <div className="min-h-screen">
 
       <div className="max-w-7xl mx-auto px-4 py-8 mt-25">
-       
+
         {/* Header */}
         <div className="mb-8">
           <button
@@ -421,6 +422,225 @@ const InviteWorkersPage = () => {
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
+
+          {/* Search and Filters (FindWork-like) */}
+          <div className="p-6 rounded-[20px] bg-white shadow-md mb-8">
+            <div ref={desktopFilterContainerRef} className="relative w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+              <input
+                type="text"
+                placeholder="Search by name, skills, or bio..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              <button
+                type="button"
+                onClick={() => setSearchTerm(searchInput.trim())}
+                className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-[#55b3f3] text-white text-sm hover:bg-blue-400 shadow-md cursor-pointer"
+                aria-label="Search"
+              >
+                Search
+              </button>
+
+              {/* Mobile filters trigger inline */}
+              <button
+                type="button"
+                onClick={() => setShowMobileFilters(true)}
+                className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+                aria-label="Filters"
+                aria-expanded={showMobileFilters}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+              </button>
+
+              {/* Desktop filters trigger */}
+              <button
+                type="button"
+                onClick={() => setShowDesktopFilters((s) => !s)}
+                className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
+                aria-label="Filters"
+                aria-expanded={showDesktopFilters}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+              </button>
+
+              {/* Desktop filters dropdown */}
+              {showDesktopFilters && (
+                <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+                  <div className="flex items-stretch gap-2 mb-3">
+                    <input
+                      type="text"
+                      placeholder="Filter by location"
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      onKeyDown={handleLocationKeyDown}
+                      className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
+                      className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <select
+                    value={filters.minRating}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
+                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                  >
+                    <option value="">Any Rating</option>
+                    <option value="4">4+ Stars</option>
+                    <option value="4.5">4.5+ Stars</option>
+                    <option value="5">5 Stars</option>
+                  </select>
+                  <select
+                    value={filters.experienceLevel}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
+                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                  >
+                    <option value="">Any Experience</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Expert">Expert</option>
+                  </select>
+                  <select
+                    value={filters.availability}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
+                    className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+                  >
+                    <option value="">Any Availability</option>
+                    <option value="Available">Available</option>
+                    <option value="Busy">Busy</option>
+                    <option value="Part-time">Part-time</option>
+                  </select>
+                  {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSearchInput("");
+                        setLocationInput("");
+                        setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                      }}
+                      className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile filters modal */}
+          {showMobileFilters && (
+            <div className="fixed inset-0 z-40 md:hidden">
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setShowMobileFilters(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-800">Filters</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileFilters(false)}
+                    className="p-2 rounded-full hover:bg-gray-100"
+                    aria-label="Close filters"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                {loading ? (
+                  <div className="space-y-3 animate-pulse">
+                    <div className="flex gap-2">
+                      <div className="flex-1 h-10 bg-gray-100 rounded-md" />
+                      <div className="w-20 h-10 bg-gray-100 rounded-md" />
+                    </div>
+                    <div className="h-10 bg-gray-100 rounded-md" />
+                    <div className="h-10 bg-gray-100 rounded-md" />
+                    <div className="h-10 bg-gray-100 rounded-md" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-stretch gap-2 mb-3">
+                      <input
+                        type="text"
+                        placeholder="Filter by location"
+                        value={locationInput}
+                        onChange={(e) => setLocationInput(e.target.value)}
+                        onKeyDown={handleLocationKeyDown}
+                        className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
+                        className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    <div className="mb-3">
+                      <select
+                        value={filters.minRating}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
+                        className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <option value="">Any Rating</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="4.5">4.5+ Stars</option>
+                        <option value="5">5 Stars</option>
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <select
+                        value={filters.experienceLevel}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
+                        className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <option value="">Any Experience</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                        <option value="Expert">Expert</option>
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <select
+                        value={filters.availability}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
+                        className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <option value="">Any Availability</option>
+                        <option value="Available">Available</option>
+                        <option value="Busy">Busy</option>
+                        <option value="Part-time">Part-time</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSearchInput("");
+                      setLocationInput("");
+                      setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                    }}
+                    className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {job && (
             <div className="space-y-4 pb-4">
@@ -432,12 +652,12 @@ const InviteWorkersPage = () => {
                       <img
                         src={
                           typeof job?.client?.profilePicture === "string" &&
-                          job.client.profilePicture.trim() !== ""
+                            job.client.profilePicture.trim() !== ""
                             ? job.client.profilePicture
                             : job?.client?.profilePicture?.url &&
                               job.client.profilePicture.url.trim() !== ""
-                            ? job.client.profilePicture.url
-                            : currentUser?.avatar ||
+                              ? job.client.profilePicture.url
+                              : currentUser?.avatar ||
                               "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                         }
                         alt={job?.client?.name || "Client Avatar"}
@@ -447,14 +667,14 @@ const InviteWorkersPage = () => {
 
                       <span
                         onClick={goToClientProfile}
-                        className="text-sm font-medium text-[#252525] opacity-75 cursor-pointer hover:underline"
+                        className="text-sm font-bold text-[#252525] opacity-75 cursor-pointer hover:underline"
                         title="View client profile"
                       >
                         {job.client?.name || "Client Name"}
                       </span>
                     </div>
-    
-                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+
+                    <span className="flex items-center gap-1 font-bold text-sm text-[#252525] opacity-80">
                       {/* <Clock size={16} /> */}
                       {new Date(job.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
@@ -492,8 +712,8 @@ const InviteWorkersPage = () => {
 
         </div>
 
-         {/* Suggested Workers (minimal) */}
-        {suggestedWorkers.length > 0 && (
+        {/* Suggested Workers (minimal) */}
+        {/* {suggestedWorkers.length > 0 && (
           <div className="mb-6">
             <h3 className="text-base font-semibold text-gray-700 mb-3 text-left">Suggested for this job</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -537,226 +757,9 @@ const InviteWorkersPage = () => {
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
-        {/* Search and Filters (FindWork-like) */}
-        <div className="bg-white rounded-xl p-6 shadow-md mb-8">
-          <div ref={desktopFilterContainerRef} className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-            <input
-              type="text"
-              placeholder="Search by name, skills, or bio..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-            <button
-              type="button"
-              onClick={() => setSearchTerm(searchInput.trim())}
-              className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-[#55b3f3] text-white text-sm hover:bg-blue-400 shadow-md cursor-pointer"
-              aria-label="Search"
-            >
-              Search
-            </button>
 
-            {/* Mobile filters trigger inline */}
-            <button
-              type="button"
-              onClick={() => setShowMobileFilters(true)}
-              className="flex md:hidden absolute right-2 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
-              aria-label="Filters"
-              aria-expanded={showMobileFilters}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-            </button>
-
-            {/* Desktop filters trigger */}
-            <button
-              type="button"
-              onClick={() => setShowDesktopFilters((s) => !s)}
-              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-[14px] bg-white border border-gray-200 text-gray-700 text-sm shadow-sm hover:bg-gray-50 cursor-pointer items-center gap-2"
-              aria-label="Filters"
-              aria-expanded={showDesktopFilters}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-            </button>
-
-            {/* Desktop filters dropdown */}
-            {showDesktopFilters && (
-              <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
-                <div className="flex items-stretch gap-2 mb-3">
-                  <input
-                    type="text"
-                    placeholder="Filter by location"
-                    value={locationInput}
-                    onChange={(e) => setLocationInput(e.target.value)}
-                    onKeyDown={handleLocationKeyDown}
-                    className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
-                    className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-                  >
-                    Apply
-                  </button>
-                </div>
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="4.5">4.5+ Stars</option>
-                  <option value="5">5 Stars</option>
-                </select>
-                <select
-                  value={filters.experienceLevel}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Experience</option>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                  <option value="Expert">Expert</option>
-                </select>
-                <select
-                  value={filters.availability}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Availability</option>
-                  <option value="Available">Available</option>
-                  <option value="Busy">Busy</option>
-                  <option value="Part-time">Part-time</option>
-                </select>
-                {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSearchInput("");
-                      setLocationInput("");
-                      setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
-                    }}
-                    className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
-                  >
-                    Clear all filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile filters modal */}
-        {showMobileFilters && (
-          <div className="fixed inset-0 z-40 md:hidden">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setShowMobileFilters(false)}
-              aria-hidden="true"
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-gray-800">Filters</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowMobileFilters(false)}
-                  className="p-2 rounded-full hover:bg-gray-100"
-                  aria-label="Close filters"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              {loading ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="flex gap-2">
-                    <div className="flex-1 h-10 bg-gray-100 rounded-md" />
-                    <div className="w-20 h-10 bg-gray-100 rounded-md" />
-                  </div>
-                  <div className="h-10 bg-gray-100 rounded-md" />
-                  <div className="h-10 bg-gray-100 rounded-md" />
-                  <div className="h-10 bg-gray-100 rounded-md" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-stretch gap-2 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Filter by location"
-                      value={locationInput}
-                      onChange={(e) => setLocationInput(e.target.value)}
-                      onKeyDown={handleLocationKeyDown}
-                      className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFilters((prev) => ({ ...prev, location: locationInput.trim() }))}
-                      className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  <div className="mb-3">
-                    <select
-                      value={filters.minRating}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
-                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    >
-                      <option value="">Any Rating</option>
-                      <option value="4">4+ Stars</option>
-                      <option value="4.5">4.5+ Stars</option>
-                      <option value="5">5 Stars</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <select
-                      value={filters.experienceLevel}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    >
-                      <option value="">Any Experience</option>
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                      <option value="Expert">Expert</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <select
-                      value={filters.availability}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                      className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    >
-                      <option value="">Any Availability</option>
-                      <option value="Available">Available</option>
-                      <option value="Busy">Busy</option>
-                      <option value="Part-time">Part-time</option>
-                    </select>
-                  </div>
-                </>
-              )}
-              {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
-                <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSearchInput("");
-                    setLocationInput("");
-                    setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
-                  }}
-                  className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Results Count */}
         <div className="mb-6">

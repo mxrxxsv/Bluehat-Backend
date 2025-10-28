@@ -232,8 +232,8 @@ const WorkerPortfolio = () => {
 
           <div className="mt-3 flex gap-2">
             {currentUser?.userType === "client" && (
-              <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[14px] hover:bg-blue-400 hover:shadow-lg cursor-pointer">
-                Message
+              <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[16px] hover:bg-sky-500 hover:shadow-lg cursor-pointer">
+                Invite Worker
               </button>
             )}
 
