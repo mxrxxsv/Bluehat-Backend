@@ -712,6 +712,7 @@ const InviteWorkersPage = () => {
 
         </div>
 
+
         {/* Suggested Workers (minimal) */}
         {/* {suggestedWorkers.length > 0 && (
           <div className="mb-6">
@@ -785,6 +786,7 @@ const InviteWorkersPage = () => {
                 <WorkerInvitationCard
                   worker={worker}
                   jobId={jobId}
+                  jobPrice={job?.price}
                 />
               </div>
             ))}

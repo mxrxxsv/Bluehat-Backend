@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Briefcase } from "lucide-react";
+import { ArrowLeft, MapPin, Briefcase, CheckCircle, X } from "lucide-react";
+import axios from "axios";
+import AddressInput from "../components/AddressInput";
 
 const PLACEHOLDER =
   "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
 import { getWorkerById } from "../api/worker";
 import { getWorkerReviewsById } from "../api/feedback";
-import { getJobById } from "../api/jobs";
+import { getJobById, postJob as createJob, getAllJobs } from "../api/jobs";
+import { inviteWorker } from "../api/workerInvitation.jsx";
+import { baseURL } from "../utils/appMode.js";
 import { checkAuth } from "../api/auth";
 
 const WorkerPortfolio = () => {
@@ -24,6 +28,22 @@ const WorkerPortfolio = () => {
     totalReviews: 0,
   });
   const [jobMap, setJobMap] = useState({}); // cache for enriched job details
+  // Quick invite modal state (create job + invite)
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [catsLoading, setCatsLoading] = useState(false);
+  const [jobDescription, setJobDescription] = useState("");
+  const [jobLocation, setJobLocation] = useState("");
+  const [jobCategory, setJobCategory] = useState("");
+  const [jobPrice, setJobPrice] = useState("");
+  const [inviteFeedback, setInviteFeedback] = useState({ show: false, message: "" });
+  // Existing jobs for the current user
+  const [useExistingJob, setUseExistingJob] = useState(false);
+  const [userJobs, setUserJobs] = useState([]);
+  const [userJobsLoading, setUserJobsLoading] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState("");
 
   useEffect(() => {
     const fetchWorker = async () => {
@@ -47,9 +67,9 @@ const WorkerPortfolio = () => {
             ),
             totalReviews: Number(
               stats?.totalReviews ??
-                (Array.isArray(workerData?.reviews)
-                  ? workerData.reviews.length
-                  : 0)
+              (Array.isArray(workerData?.reviews)
+                ? workerData.reviews.length
+                : 0)
             ),
           });
         } catch (e) {
@@ -63,7 +83,7 @@ const WorkerPortfolio = () => {
             : [];
           const avg = fallbackReviews.length
             ? fallbackReviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) /
-              fallbackReviews.length
+            fallbackReviews.length
             : 0;
           setReviewsState({
             reviews: fallbackReviews,
@@ -80,6 +100,81 @@ const WorkerPortfolio = () => {
 
     fetchWorker();
   }, [id]);
+
+  // Load categories and user's jobs when opening invite modal
+  useEffect(() => {
+    const loadCats = async () => {
+      try {
+        setCatsLoading(true);
+        const res = await axios.get(`${baseURL}/skills`);
+        const cats = res?.data?.data?.categories || [];
+        setCategories(Array.isArray(cats) ? cats : []);
+      } catch (e) {
+        console.error("[WorkerPortfolio] Failed to load categories", e);
+        setCategories([]);
+      } finally {
+        setCatsLoading(false);
+      }
+    };
+  const loadUserJobs = async () => {
+      // Backend expects clientId to be the Client profile _id, not credential _id
+      const clientProfileId = currentUser?.profileId;
+      if (!clientProfileId) return;
+      try {
+        setUserJobsLoading(true);
+        let jobs = [];
+        // 1) Try: filter by clientId + open
+        try {
+          const resp1 = await getAllJobs({ clientId: clientProfileId, status: "open", page: 1, limit: 50, _t: Date.now() });
+          const p1 = resp1?.data || resp1;
+          jobs = p1?.data?.jobs || p1?.data || p1?.jobs || [];
+        } catch {}
+
+        // 2) Fallback: filter by clientId only
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          try {
+            const resp2 = await getAllJobs({ clientId: clientProfileId, page: 1, limit: 50, _t: Date.now() });
+            const p2 = resp2?.data || resp2;
+            jobs = p2?.data?.jobs || p2?.data || p2?.jobs || [];
+          } catch {}
+        }
+
+        // 3) Last resort: fetch without filters then filter locally by client id
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          try {
+            const resp3 = await getAllJobs({ page: 1, limit: 50, _t: Date.now() });
+            const p3 = resp3?.data || resp3;
+            const all = p3?.data?.jobs || p3?.data || p3?.jobs || [];
+            jobs = Array.isArray(all)
+              ? all.filter((j) => (j?.client?.id) === clientProfileId)
+              : [];
+          } catch {}
+        }
+
+        const arr = Array.isArray(jobs) ? jobs : [];
+        setUserJobs(arr);
+        // Default to existing job tab when jobs are available
+        if (arr.length > 0) {
+          setUseExistingJob(true);
+          // Do not auto-select any job; selection should always be explicit
+        } else {
+          setUseExistingJob(false);
+        }
+      } catch (e) {
+        console.error("[WorkerPortfolio] Failed to load user's jobs", e);
+        setUserJobs([]);
+        setUseExistingJob(false);
+      } finally {
+        setUserJobsLoading(false);
+      }
+    };
+    if (showInviteModal && categories.length === 0) {
+      loadCats();
+    }
+    if (showInviteModal) {
+      loadUserJobs();
+    }
+  }, [showInviteModal, currentUser]);
 
   // Enrich missing job details for each review's job header (frontend-only; cached by jobMap)
   useEffect(() => {
@@ -165,6 +260,11 @@ const WorkerPortfolio = () => {
   }, []);
   const { province, city, barangay } = worker?.address || {};
 
+  const isBusy =
+    String(worker?.status || "").toLowerCase() === "working" ||
+    String(worker?.status || "").toLowerCase() === "not available" ||
+    String(worker?.availability || "").toLowerCase() === "busy";
+
   const calculateAge = (dobString) => {
     if (!dobString) return null;
     const dob = new Date(dobString);
@@ -185,11 +285,11 @@ const WorkerPortfolio = () => {
   const averageRating = Number.isFinite(reviewsState.averageRating)
     ? Number(reviewsState.averageRating).toFixed(1)
     : reviews.length > 0
-    ? (
+      ? (
         reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
         reviews.length
       ).toFixed(1)
-    : "0";
+      : "0";
 
   return (
     <div className="p-6 bg-[#f4f6f6] rounded-xl shadow-md space-y-6 w-full lg:w-[90%] my-4 mx-auto mt-30 bg-white">
@@ -232,7 +332,26 @@ const WorkerPortfolio = () => {
 
           <div className="mt-3 flex gap-2">
             {currentUser?.userType === "client" && (
-              <button className="p-2 bg-[#55b3f3] text-white shadow-md rounded-[16px] hover:bg-sky-500 hover:shadow-lg cursor-pointer">
+              <button
+                onClick={() => {
+                  if (isBusy) {
+                    setInviteFeedback({
+                      show: true,
+                      message:
+                        "This worker is currently busy. Please choose another worker or try again later.",
+                    });
+                    return;
+                  }
+                  setShowInviteModal(true);
+                }}
+                disabled={isBusy}
+                className={
+                  "p-2 px-4 text-white shadow-md rounded-[16px] hover:shadow-lg cursor-pointer " +
+                  (isBusy
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-[#55b3f3] hover:bg-sky-500")
+                }
+              >
                 Invite Worker
               </button>
             )}
@@ -419,9 +538,8 @@ const WorkerPortfolio = () => {
             const reviewDate = review.reviewDate || review.createdAt;
             const clientName =
               job?.client?.name ||
-              `${job?.client?.firstName || ""} ${
-                job?.client?.lastName || ""
-              }`.trim() ||
+              `${job?.client?.firstName || ""} ${job?.client?.lastName || ""
+                }`.trim() ||
               reviewerName;
 
             return (
@@ -458,13 +576,13 @@ const WorkerPortfolio = () => {
                           <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
                             {reviewDate
                               ? new Date(reviewDate).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  }
-                                )
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )
                               : ""}
                           </span>
                         </div>
@@ -482,14 +600,14 @@ const WorkerPortfolio = () => {
                             job.category?.categoryName ||
                             (typeof job.category === "string" &&
                               job.category)) && (
-                            <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
-                              {job.category?.name ||
-                                job.category?.categoryName ||
-                                (typeof job.category === "string"
-                                  ? job.category
-                                  : "")}
-                            </span>
-                          )}
+                              <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                                {job.category?.name ||
+                                  job.category?.categoryName ||
+                                  (typeof job.category === "string"
+                                    ? job.category
+                                    : "")}
+                              </span>
+                            )}
                         </div>
                         <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
                           <span className="flex items-center gap-1">
@@ -500,7 +618,7 @@ const WorkerPortfolio = () => {
                           </span>
                           <span className="font-bold text-green-400">
                             {typeof job.price === "number" ||
-                            typeof job.price === "string"
+                              typeof job.price === "string"
                               ? `₱${Number(job.price).toLocaleString()}`
                               : ""}
                           </span>
@@ -528,6 +646,290 @@ const WorkerPortfolio = () => {
           })}
         </div>
       </div>
+
+      {/* Quick Invite Modal: Create Job + Send Invitation */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-xl shadow-lg border border-gray-200 relative">
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowInviteModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-left">
+              Invite {worker.firstName || worker.fullName?.split(" ")?.[0] || "worker"}
+            </h3>
+            {/* Tabs: Existing job vs New job */}
+            <div className="mb-4 flex rounded-lg overflow-hidden border border-gray-200 w-full">
+              <button
+                type="button"
+                onClick={() => setUseExistingJob(true)}
+                className={`flex-1 py-2 text-sm font-medium cursor-pointer ${useExistingJob ? "bg-[#55b3f3] text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+              >
+                Use existing job post
+              </button>
+              <button
+                type="button"
+                onClick={() => setUseExistingJob(false)}
+                className={`flex-1 py-2 text-sm font-medium cursor-pointer ${!useExistingJob ? "bg-[#55b3f3] text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}
+              >
+                Create a new job post
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (isBusy) {
+                  setInviteFeedback({ show: true, message: "Worker is busy." });
+                  return;
+                }
+                // Validation conditional on tab
+                if (useExistingJob) {
+                  if (!selectedJobId) {
+                    setInviteFeedback({ show: true, message: "Please select one of your job posts." });
+                    return;
+                  }
+                } else {
+                  if (!jobDescription.trim() || !jobLocation.trim() || !jobCategory || !jobPrice) {
+                    setInviteFeedback({ show: true, message: "Please complete the job details." });
+                    return;
+                  }
+                }
+                if (!inviteMessage.trim() || inviteMessage.trim().length < 20) {
+                  setInviteFeedback({ show: true, message: "Please add a message (≥ 20 chars)." });
+                  return;
+                }
+                setSendingInvite(true);
+                try {
+                  let finalJobId = selectedJobId;
+                  let proposedRate = 0;
+                  if (useExistingJob) {
+                    const jobObj = userJobs.find((j) => (j._id || j.id) === selectedJobId) || {};
+                    finalJobId = selectedJobId;
+                    proposedRate = Number(jobObj.price || 0);
+                    if (!finalJobId) throw new Error("No job selected");
+                  } else {
+                    const createPayload = {
+                      description: jobDescription.trim(),
+                      location: jobLocation.trim(),
+                      price: parseFloat(jobPrice),
+                      category: jobCategory,
+                    };
+                    const jobRes = await createJob(createPayload);
+                    const created = jobRes?.data?.data?.job || jobRes?.data?.job || jobRes?.data?.data || jobRes?.data;
+                    const createdJobId = created?._id || created?.id;
+                    if (!createdJobId) throw new Error("Couldn't get created job id");
+                    finalJobId = createdJobId;
+                    proposedRate = Number(jobPrice);
+                  }
+
+                  await inviteWorker(worker._id || worker.id, {
+                    jobId: finalJobId,
+                    description: inviteMessage.trim(),
+                    proposedRate,
+                  });
+
+                  // reset & close
+                  setShowInviteModal(false);
+                  setJobDescription("");
+                  setJobLocation("");
+                  setJobCategory("");
+                  setJobPrice("");
+                  setSelectedJobId("");
+                  setUseExistingJob(false);
+                  setInviteMessage("");
+                  setInviteFeedback({ show: true, message: "Invitation sent successfully!" });
+                } catch (err) {
+                  console.error("[WorkerPortfolio] Invite flow failed", err);
+                  const msg = err?.response?.data?.message || err?.message || "Something went wrong.";
+                  setInviteFeedback({ show: true, message: msg });
+                } finally {
+                  setSendingInvite(false);
+                }
+              }}
+              className="space-y-4 text-left"
+            >
+              {/* Job fields or Existing job selector */}
+              {useExistingJob ? (
+                <div className="space-y-3">
+                  {userJobsLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                      <div className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                    </div>
+                  ) : userJobs.length === 0 ? (
+                    <div className="p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                      You have no job posts yet. Switch to "Create a new job post".
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-auto custom-scrollbar space-y-3">
+                      {userJobs.map((job) => {
+                        const jid = job._id || job.id;
+                        const isSelected = selectedJobId === jid;
+                        const clientName = (job.client?.name || `${job.client?.firstName || ""} ${job.client?.lastName || ""}`.trim()) || currentUser?.name || "You";
+                        return (
+                          <div
+                            key={jid}
+                            className={`rounded-[16px] p-4 bg-white border transition-all cursor-pointer ${isSelected ? "border-[#252525] shadow-md " : "border-gray-200 hover:shadow"}`}
+                            onClick={() => setSelectedJobId(jid)}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={job.client?.profilePicture?.url || PLACEHOLDER}
+                                  alt="Client Avatar"
+                                  className="w-8 h-8 rounded-full object-cover"
+                                  onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
+                                />
+                                <span className="text-sm font-medium text-[#252525] opacity-75">{clientName}</span>
+                              </div>
+                              <span className="text-xs text-gray-500">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ""}</span>
+                            </div>
+                            <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5">
+                                <Briefcase size={20} className="text-blue-400" />
+                              </span>
+                              <span className="line-clamp-1 md:text-base">{job.description || job.title || "Job post"}</span>
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {(job.category?.name || job.category?.categoryName || (typeof job.category === "string" && job.category)) && (
+                                <span className="bg-[#55b3f3] shadow-md text-white px-3 py-1 rounded-full text-sm">
+                                  {job.category?.name || job.category?.categoryName || (typeof job.category === "string" ? job.category : "")}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                              <span className="flex items-center gap-1">
+                                <MapPin size={16} />
+                                <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">{job.location || ""}</span>
+                              </span>
+                              <span className="font-bold text-green-500">{(typeof job.price === "number" || typeof job.price === "string") ? `₱${Number(job.price).toLocaleString()}` : ""}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Job description</label>
+                    <textarea
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      rows={3}
+                      placeholder="Describe the job..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <AddressInput
+                      value={jobLocation}
+                      onChange={(address) => setJobLocation(address)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                      {catsLoading ? (
+                        <div className="h-10 bg-gray-100 rounded-md animate-pulse" />
+                      ) : (
+                        <select
+                          value={jobCategory}
+                          onChange={(e) => setJobCategory(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
+                        >
+                          <option value="">Select a category</option>
+                          {categories.map((cat) => (
+                            <option key={cat._id} value={cat._id}>
+                              {cat.categoryName}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Price offer (₱)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={jobPrice}
+                        onChange={(e) => setJobPrice(e.target.value)}
+                        placeholder="e.g. 1500"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Invite fields */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Invitation message</label>
+                <textarea
+                  value={inviteMessage}
+                  onChange={(e) => setInviteMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Tell the worker about your project..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
+                />
+              </div>
+              {/* Proposed rate removed: we use Price offer as the proposed rate */}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                  disabled={sendingInvite}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingInvite}
+                  className="flex-1 bg-[#55b3f3] text-white py-2 px-4 rounded-lg hover:bg-sky-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {sendingInvite ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      {/* <CheckCircle className="w-4 h-4" /> */}
+                      Invite Worker
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback overlay */}
+      {inviteFeedback.show && (
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center">
+            <div className="flex flex-col items-center gap-3">
+              {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}
+              <p className="text-gray-700 text-base font-medium">{inviteFeedback.message}</p>
+              <button
+                onClick={() => setInviteFeedback({ show: false, message: "" })}
+                className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

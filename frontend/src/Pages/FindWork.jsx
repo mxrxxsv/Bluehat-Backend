@@ -444,14 +444,14 @@ const FindWork = () => {
             onKeyDown={handleSearchKeyPress}
             className="w-full px-4 py-4 md:py-3 shadow rounded-[18px] bg-white pl-10 pr-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
-          <button
+          {/* <button
             type="button"
             onClick={() => setSearch(searchInput.trim())}
-            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-3 py-2 rounded-[14px] bg-sky-500 text-white text-sm hover:bg-sky-700 shadow-md cursor-pointer"
+            className="absolute right-24 md:right-26 top-1/2 -translate-y-1/2 px-2 md:px-3 py-2 rounded-[14px] bg-sky-500 text-white text-sm hover:bg-sky-700 shadow-md cursor-pointer"
             aria-label="Search"
           >
             Search
-          </button>
+          </button> */}
 
           {/* Mobile filters trigger next to Search (inline) */}
           <button
