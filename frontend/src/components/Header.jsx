@@ -1,10 +1,12 @@
 import { useRef } from "react";
-import { Bell, Mail } from "lucide-react";
+import { Bell, Mail, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "../assets/BlueHat_logo.png";
 import profile from "../assets/client.png";
 import { checkAuth, Logout } from "../api/auth";
+import { io } from "socket.io-client";
+import { baseURL } from "../utils/appMode";
 
 const Header = () => {
   const [user, setUser] = useState(null);
@@ -21,6 +23,13 @@ const Header = () => {
   const currentPath = location.pathname;
   const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
+  const socketRef = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const pathnameRef = useRef(location.pathname);
+  // Bell notifications (applications/invitations/contracts)
+  const [bellUnread, setBellUnread] = useState(0);
+  const [bellItems, setBellItems] = useState([]); // {id, text, link, ts}
+  const [showAllBell, setShowAllBell] = useState(false);
 
 
   const handleNotificationClick = () => {
@@ -97,6 +106,75 @@ const Header = () => {
           if (user.userType === "worker") setMenuLabel("My Applications");
           else if (user.userType === "client") setMenuLabel("Applications Received");
           else setMenuLabel("Applications");
+
+          // Setup socket.io for real-time message and bell notifications
+          try {
+            if (!socketRef.current) {
+              const s = io(baseURL, { withCredentials: true });
+              socketRef.current = s;
+              // Register this credential to receive personal events
+              const credId = user?.credentialId || user?._id || user?.id;
+              if (credId) s.emit("registerUser", String(credId));
+
+              s.on("receiveMessage", (msg) => {
+                // Ignore if it's from self
+                const senderCred =
+                  msg?.sender?.credentialId || msg?.senderCredentialId || msg?.fromCredentialId;
+                const selfCred = user?.credentialId || user?._id || user?.id;
+                if (selfCred && senderCred && String(senderCred) === String(selfCred)) return;
+
+                // If currently viewing chat, don't increase unread
+                if (pathnameRef.current && pathnameRef.current.startsWith("/chat")) return;
+                setUnreadCount((c) => c + 1);
+              });
+
+              // Helper: push a bell notification
+              const pushBell = (text, link = "/applications") => {
+                setBellItems((items) => {
+                  const next = [
+                    { id: Date.now() + Math.random(), text, link, ts: new Date().toISOString() },
+                    ...items,
+                  ];
+                  return next.slice(0, 20);
+                });
+                // Increment only if not already on target page
+                const onApplications = pathnameRef.current.startsWith("/applications");
+                const onContracts = pathnameRef.current.startsWith("/contracts");
+                const isContracts = link === "/contracts";
+                if ((isContracts && !onContracts) || (!isContracts && !onApplications)) {
+                  setBellUnread((c) => c + 1);
+                }
+              };
+
+              // Applications
+              s.on("application:created", () => pushBell("New job application received", "/applications"));
+              s.on("application:updated", (p) => {
+                const st = p?.status || "updated";
+                pushBell(`Application ${st}`, "/applications");
+              });
+              s.on("application:discussion_started", () => pushBell("Application discussion started", "/applications"));
+              s.on("application:agreement", () => pushBell("Application agreement updated", "/applications"));
+
+              // Invitations
+              s.on("invitation:created", () => pushBell("You received a work invitation", "/applications"));
+              s.on("invitation:updated", (p) => {
+                const st = p?.status || "updated";
+                pushBell(`Invitation ${st}`, "/applications");
+              });
+              s.on("invitation:discussion_started", () => pushBell("Invitation discussion started", "/applications"));
+              s.on("invitation:agreement", () => pushBell("Invitation agreement updated", "/applications"));
+
+              // Contracts
+              s.on("contract:created", () => pushBell("A new contract has been created", "/contracts"));
+
+              // Optional: handle cleanup on reconnects
+              s.on("disconnect", () => {
+                // keep unread count; connection will auto-retry
+              });
+            }
+          } catch (_) {
+            // fail-safe: ignore socket setup errors
+          }
         }
       })
       // .catch(() => {
@@ -113,13 +191,29 @@ const Header = () => {
       });
   }, [location.pathname, navigate]);
 
+  // Clear unread indicator when navigating to chat
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+    if (location.pathname.startsWith("/chat")) {
+      setUnreadCount(0);
+    }
+    if (location.pathname.startsWith("/applications") || location.pathname.startsWith("/contracts")) {
+      setBellUnread(0);
+    }
+  }, [location.pathname]);
 
-  // Sample notifications
-  const notifications = [
-    "Your task was marked as completed.",
-    "New job posting available in your area.",
-    "New update available for your profile.",
-  ];
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+
+  // Notifications now come from socket: bellItems
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -156,6 +250,11 @@ const Header = () => {
     e.stopPropagation();
     try {
       await Logout();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setUnreadCount(0);
       setUser(null);
       setShowDropdown(false);
       navigate("/home");
@@ -215,35 +314,94 @@ const Header = () => {
               ) : (
                 <>
                   <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
-                    <Link to="/chat">
+                    <Link to="/chat" onClick={() => setUnreadCount(0)} className="relative">
                       <Mail className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
                     </Link>
 
-                    <Bell
-                      className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowNotifications((prev) => !prev);
-                      }}
-                    />
+                    <div className="relative">
+                      <Bell
+                        className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowNotifications((prev) => !prev);
+                          setBellUnread(0);
+                          setShowAllBell(false);
+                        }}
+                      />
+                      {bellUnread > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                          {bellUnread > 9 ? "9+" : bellUnread}
+                        </span>
+                      )}
+                    </div>
 
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-30 mt-10 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-100"
+                        className="absolute right-30 mt-10 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-100"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
-                          <ul className="space-y-2">
-                            {notifications.map((notification, index) => (
-                              <li
-                                key={index}
-                                className="p-2 hover:bg-gray-100 rounded-md text-left"
-                              >
-                                {notification}
-                              </li>
-                            ))}
-                          </ul>
+                          {bellItems.length === 0 ? (
+                            <p className="text-gray-500">No notifications yet</p>
+                          ) : (
+                            <>
+                              <ul className="space-y-1 max-h-80 overflow-auto">
+                                {(showAllBell ? bellItems : bellItems.slice(0, 5)).map((n) => (
+                                  <li key={n.id} className="flex items-start justify-between gap-2">
+                                    <button
+                                      className="flex-1 text-left p-2 hover:bg-gray-100 rounded-md"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowNotifications(false);
+                                        navigate(n.link);
+                                      }}
+                                    >
+                                      <div className="text-gray-800 text-sm">{n.text}</div>
+                                      <div className="text-gray-400 text-xs">{new Date(n.ts).toLocaleString()}</div>
+                                    </button>
+                                    <button
+                                      className="p-2 text-gray-400 hover:text-red-500"
+                                      title="Delete"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setBellItems((items) => items.filter((x) => x.id !== n.id));
+                                      }}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="mt-3 flex items-center justify-between">
+                                <button
+                                  className="text-xs text-red-600 hover:underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setBellItems([]);
+                                  }}
+                                >
+                                  Clear all
+                                </button>
+                                {bellItems.length > 5 && (
+                                  <button
+                                    className="text-xs text-blue-600 hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowAllBell((v) => !v);
+                                    }}
+                                  >
+                                    {showAllBell ? "View less" : "View more"}
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -287,7 +445,7 @@ const Header = () => {
                                 Profile
                               </button>
                             </li>
-                            <li>
+                            {/* <li>
                               <Link
                                 to="/applications"
                                 className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -304,7 +462,7 @@ const Header = () => {
                               >
                                 My Contracts
                               </Link>
-                            </li>
+                            </li> */}
                             <li>
                               <button
                                 onClick={(e) => {
@@ -327,8 +485,13 @@ const Header = () => {
               {/* Mobile Messages & Notifications */}
               {!showAuthButtons && (
                 <div className="flex md:hidden items-center gap-1">
-                  <Link to="/chat">
+                  <Link to="/chat" onClick={() => setUnreadCount(0)} className="relative">
                     <Mail className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
 
                   <div className="relative">
@@ -337,26 +500,78 @@ const Header = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowNotifications((prev) => !prev);
+                        setBellUnread(0);
+                        setShowAllBell(false);
                       }}
                     />
+                    {bellUnread > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                        {bellUnread > 9 ? "9+" : bellUnread}
+                      </span>
+                    )}
 
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-50"
+                        className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-50"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
-                          <ul className="space-y-2">
-                            {notifications.map((notification, index) => (
-                              <li
-                                key={index}
-                                className="p-2 hover:bg-gray-100 rounded-md text-left"
-                              >
-                                {notification}
-                              </li>
-                            ))}
-                          </ul>
+                          {bellItems.length === 0 ? (
+                            <p className="text-gray-500">No notifications yet</p>
+                          ) : (
+                            <>
+                              <ul className="space-y-1 max-h-80 overflow-auto">
+                                {(showAllBell ? bellItems : bellItems.slice(0, 5)).map((n) => (
+                                  <li key={n.id} className="flex items-start justify-between gap-2">
+                                    <button
+                                      className="flex-1 text-left p-2 hover:bg-gray-100 rounded-md"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowNotifications(false);
+                                        navigate(n.link);
+                                      }}
+                                    >
+                                      <div className="text-gray-800 text-sm">{n.text}</div>
+                                      <div className="text-gray-400 text-xs">{new Date(n.ts).toLocaleString()}</div>
+                                    </button>
+                                    <button
+                                      className="p-2 text-gray-400 hover:text-red-500"
+                                      title="Delete"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setBellItems((items) => items.filter((x) => x.id !== n.id));
+                                      }}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="mt-3 flex items-center justify-between">
+                                <button
+                                  className="text-xs text-red-600 hover:underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setBellItems([]);
+                                  }}
+                                >
+                                  Clear all
+                                </button>
+                                {bellItems.length > 5 && (
+                                  <button
+                                    className="text-xs text-blue-600 hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowAllBell((v) => !v);
+                                    }}
+                                  >
+                                    {showAllBell ? "View less" : "View more"}
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -477,7 +692,7 @@ const Header = () => {
 
                 {user && (
                   <>
-                    <li className="md:hidden">
+                    <li>
                       <Link
                         onClick={() => setIsOpen(false)}
                         to="/applications"
@@ -487,11 +702,11 @@ const Header = () => {
                           }`}
                       >
                         {user?.userType === "worker"
-                          ? "My Applications"
-                          : "Applications Received"}
+                          ? "Applications"
+                          : "Applications"}
                       </Link>
                     </li>
-                    <li className="md:hidden">
+                    <li>
                       <Link
                         onClick={() => setIsOpen(false)}
                         to="/contracts"
