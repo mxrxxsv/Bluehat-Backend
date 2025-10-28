@@ -6,6 +6,7 @@ const Worker = require("../models/Worker");
 const Joi = require("joi");
 const mongoose = require("mongoose");
 const { decryptAES128 } = require("../utils/encipher");
+const socketBus = require("../socket");
 const xss = require("xss"); 
 
 const createConversationSchema = Joi.object({
@@ -232,6 +233,27 @@ exports.sendMessage = async (req, res) => {
     });
 
     await conversation.save();
+
+    // === Emit real-time event to all recipients (non-sender participants) ===
+    try {
+      conversation.participants.forEach((p) => {
+        const recipientIdStr = p.credentialId.toString();
+        if (recipientIdStr !== senderCredentialIdStr) {
+          const payload = {
+            _id: message._id,
+            conversationId: conversation._id.toString(),
+            sender: { credentialId: senderCredentialIdStr, userType },
+            content: cleanContent,
+            type: message.type,
+            createdAt: message.createdAt,
+            toCredentialId: recipientIdStr,
+          };
+          socketBus.emitToUser(recipientIdStr, "receiveMessage", payload);
+        }
+      });
+    } catch (e) {
+      console.error("[socket] failed to emit receiveMessage:", e);
+    }
 
     return res.status(201).json({ success: true, data: { message, conversation } });
   } catch (err) {

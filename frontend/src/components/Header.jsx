@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import logo from "../assets/BlueHat_logo.png";
 import profile from "../assets/client.png";
 import { checkAuth, Logout } from "../api/auth";
+import { io } from "socket.io-client";
+import { baseURL } from "../utils/appMode";
 
 const Header = () => {
   const [user, setUser] = useState(null);
@@ -21,6 +23,9 @@ const Header = () => {
   const currentPath = location.pathname;
   const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
+  const socketRef = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const pathnameRef = useRef(location.pathname);
 
 
   const handleNotificationClick = () => {
@@ -97,6 +102,36 @@ const Header = () => {
           if (user.userType === "worker") setMenuLabel("My Applications");
           else if (user.userType === "client") setMenuLabel("Applications Received");
           else setMenuLabel("Applications");
+
+          // Setup socket.io for real-time message indicator
+          try {
+            if (!socketRef.current) {
+              const s = io(baseURL, { withCredentials: true });
+              socketRef.current = s;
+              // Register this credential to receive personal events
+              const credId = user?.credentialId || user?._id || user?.id;
+              if (credId) s.emit("registerUser", String(credId));
+
+              s.on("receiveMessage", (msg) => {
+                // Ignore if it's from self
+                const senderCred =
+                  msg?.sender?.credentialId || msg?.senderCredentialId || msg?.fromCredentialId;
+                const selfCred = user?.credentialId || user?._id || user?.id;
+                if (selfCred && senderCred && String(senderCred) === String(selfCred)) return;
+
+                // If currently viewing chat, don't increase unread
+                if (pathnameRef.current && pathnameRef.current.startsWith("/chat")) return;
+                setUnreadCount((c) => c + 1);
+              });
+
+              // Optional: handle cleanup on reconnects
+              s.on("disconnect", () => {
+                // keep unread count; connection will auto-retry
+              });
+            }
+          } catch (_) {
+            // fail-safe: ignore socket setup errors
+          }
         }
       })
       // .catch(() => {
@@ -112,6 +147,24 @@ const Header = () => {
         setAuthLoading(false);
       });
   }, [location.pathname, navigate]);
+
+  // Clear unread indicator when navigating to chat
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+    if (location.pathname.startsWith("/chat")) {
+      setUnreadCount(0);
+    }
+  }, [location.pathname]);
+
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
 
   // Sample notifications
@@ -156,6 +209,11 @@ const Header = () => {
     e.stopPropagation();
     try {
       await Logout();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setUnreadCount(0);
       setUser(null);
       setShowDropdown(false);
       navigate("/home");
@@ -215,8 +273,13 @@ const Header = () => {
               ) : (
                 <>
                   <div className="w-25 pt-1 md:pt-0 md:w-43 flex flex-row gap-5 md:gap-2 hidden md:flex">
-                    <Link to="/chat">
+                    <Link to="/chat" onClick={() => setUnreadCount(0)} className="relative">
                       <Mail className="mt-1.5 w-5 h-5 text-gray-600 hover:text-blue-500 cursor-pointer" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
                     </Link>
 
                     <Bell
@@ -287,7 +350,7 @@ const Header = () => {
                                 Profile
                               </button>
                             </li>
-                            <li>
+                            {/* <li>
                               <Link
                                 to="/applications"
                                 className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -304,7 +367,7 @@ const Header = () => {
                               >
                                 My Contracts
                               </Link>
-                            </li>
+                            </li> */}
                             <li>
                               <button
                                 onClick={(e) => {
@@ -327,8 +390,13 @@ const Header = () => {
               {/* Mobile Messages & Notifications */}
               {!showAuthButtons && (
                 <div className="flex md:hidden items-center gap-1">
-                  <Link to="/chat">
+                  <Link to="/chat" onClick={() => setUnreadCount(0)} className="relative">
                     <Mail className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] leading-3 px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
 
                   <div className="relative">
@@ -477,7 +545,7 @@ const Header = () => {
 
                 {user && (
                   <>
-                    <li className="md:hidden">
+                    <li>
                       <Link
                         onClick={() => setIsOpen(false)}
                         to="/applications"
@@ -487,11 +555,11 @@ const Header = () => {
                           }`}
                       >
                         {user?.userType === "worker"
-                          ? "My Applications"
-                          : "Applications Received"}
+                          ? "Applications"
+                          : "Applications"}
                       </Link>
                     </li>
-                    <li className="md:hidden">
+                    <li>
                       <Link
                         onClick={() => setIsOpen(false)}
                         to="/contracts"
