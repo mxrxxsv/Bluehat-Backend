@@ -331,6 +331,8 @@ const Header = () => {
                           setShowNotifications((prev) => !prev);
                           setBellUnread(0);
                           setShowAllBell(false);
+                          // Close profile dropdown when opening bell
+                          setShowDropdown(false);
                         }}
                       />
                       {bellUnread > 0 && (
@@ -427,6 +429,8 @@ const Header = () => {
                           className="w-8 h-8 rounded-full object-cover cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
+                            // Close bell notifications when opening profile modal
+                            setShowNotifications(false);
                             setShowDropdown(!showDropdown);
                           }}
                         />
@@ -502,6 +506,8 @@ const Header = () => {
                         setShowNotifications((prev) => !prev);
                         setBellUnread(0);
                         setShowAllBell(false);
+                        // Close profile dropdown when opening bell
+                        setShowDropdown(false);
                       }}
                     />
                     {bellUnread > 0 && (
@@ -625,7 +631,11 @@ const Header = () => {
                       }
                       alt="Avatar"
                       className="w-9 h-9 rounded-full object-cover cursor-pointer"
-                      onClick={() => setShowDropdown(!showDropdown)}
+                      onClick={() => {
+                        // Close bell notifications when opening profile modal (mobile)
+                        setShowNotifications(false);
+                        setShowDropdown(!showDropdown);
+                      }}
                     />
 
                     {showDropdown && (
