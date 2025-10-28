@@ -8,9 +8,8 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { inviteWorker } from "../api/applications.jsx";
-
-const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
+import { inviteWorker } from "../api/workerInvitation.jsx";
+const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
   const [proposedRate, setProposedRate] = useState("");
@@ -45,10 +44,13 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
       return;
     }
 
-    if (!inviteMessage.trim() || !proposedRate) {
+    const hasAutoRate = jobPrice !== undefined && jobPrice !== null && jobPrice !== "";
+    if (!inviteMessage.trim() || (!hasAutoRate && !proposedRate)) {
       setFeedback({
         show: true,
-        message: "Please fill in all fields before sending.",
+        message: hasAutoRate
+          ? "Please add a message before sending."
+          : "Please fill in all fields before sending.",
       });
       return;
     }
@@ -63,16 +65,16 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
 
     setSending(true);
     try {
-      await inviteWorker({
-        workerId: worker._id,
+      const rateToSend = hasAutoRate ? Number(jobPrice) : Number(proposedRate);
+      await inviteWorker(worker._id, {
         jobId,
         description: inviteMessage,
-        proposedRate: Number(proposedRate),
+        proposedRate: rateToSend,
       });
 
       setShowInviteModal(false);
       setInviteMessage("");
-      setProposedRate("");
+  setProposedRate("");
       onInviteSent?.();
 
       setFeedback({
@@ -240,21 +242,25 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
                   required
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Proposed Rate (₱)
-                </label>
-                <input
-                  type="number"
-                  value={proposedRate}
-                  onChange={(e) => setProposedRate(e.target.value)}
-                  placeholder="Enter your proposed rate"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
-                  min="1"
-                  required
-                />
-              </div>
+              {!(jobPrice !== undefined && jobPrice !== null && jobPrice !== "") && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Proposed Rate (₱)
+                  </label>
+                  <input
+                    type="number"
+                    value={proposedRate}
+                    onChange={(e) => setProposedRate(e.target.value)}
+                    placeholder="Enter your proposed rate"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#55b3f3]"
+                    min="1"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Tip: When a job price is set, it will be used automatically.
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -277,7 +283,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent }) => {
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="w-4 h-4" />
+                      {/* <CheckCircle className="w-4 h-4" /> */}
                       Send Invitation
                     </>
                   )}
