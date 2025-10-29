@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Briefcase, CheckCircle, X } from "lucide-react";
+import { ArrowLeft, MapPin, Briefcase, CheckCircle, X, Send } from "lucide-react";
 import axios from "axios";
 import AddressInput from "../components/AddressInput";
 
@@ -346,13 +346,15 @@ const WorkerPortfolio = () => {
                 }}
                 disabled={isBusy}
                 className={
-                  "p-2 px-4 text-white shadow-md rounded-[16px] hover:shadow-lg cursor-pointer " +
+                  "flex p-2 px-4 text-white shadow-md rounded-[16px] hover:shadow-lg cursor-pointer " +
                   (isBusy
                     ? "bg-gray-300 cursor-not-allowed"
                     : "bg-[#55b3f3] hover:bg-sky-500")
                 }
               >
+                <Send className="w-4 h-4 mt-1 mr-2" /> 
                 Invite Worker
+                
               </button>
             )}
 
@@ -380,62 +382,65 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
-      {/* Work Experience Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">
-          Work Experience
-        </h2>
-        <div className="space-y-4">
-          {(worker.experience || []).map((exp, index) => (
-            <div
-              key={exp._id || index}
-              className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
-            >
-              <h3 className="font-semibold text-lg">
-                {exp.companyName || exp.company}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {exp.startYear || exp.years} • {exp.position}
-              </p>
-              <p className="mt-1 text-gray-700">
-                {exp.description || exp.responsibilities}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Education Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2 text-left">Education</h2>
-        <div className="space-y-4">
-          {(worker.education || []).map((edu, index) => {
-            const startDate = edu.startDate
-              ? new Date(edu.startDate).getFullYear()
-              : "";
-            const endDate = edu.endDate
-              ? new Date(edu.endDate).getFullYear()
-              : "Present";
-            const yearRange = startDate ? `${startDate} - ${endDate}` : "";
-
-            return (
+      {/* Experience + Education side-by-side on large screens */}
+      <div className="mt-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Work Experience Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-2 text-left">
+            Work Experience
+          </h2>
+          <div className="space-y-4">
+            {(worker.experience || []).map((exp, index) => (
               <div
-                key={edu._id || index}
+                key={exp._id || index}
                 className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
               >
-                <h3 className="font-semibold text-lg">{edu.schoolName}</h3>
+                <h3 className="font-semibold text-lg">
+                  {exp.companyName || exp.company}
+                </h3>
                 <p className="text-sm text-gray-500">
-                  {yearRange} • {edu.educationLevel}
+                  {exp.startYear || exp.years} • {exp.position}
                 </p>
-                {edu.degree && (
-                  <p className="text-sm text-gray-600 mt-1">{edu.degree}</p>
-                )}
-                <p className="text-sm text-gray-500 mt-1">
-                  Status: {edu.educationStatus}
+                <p className="mt-1 text-gray-700">
+                  {exp.description || exp.responsibilities}
                 </p>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </div>
+
+        {/* Education Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-2 text-left">Education</h2>
+          <div className="space-y-4">
+            {(worker.education || []).map((edu, index) => {
+              const startDate = edu.startDate
+                ? new Date(edu.startDate).getFullYear()
+                : "";
+              const endDate = edu.endDate
+                ? new Date(edu.endDate).getFullYear()
+                : "Present";
+              const yearRange = startDate ? `${startDate} - ${endDate}` : "";
+
+              return (
+                <div
+                  key={edu._id || index}
+                  className="shadow p-4 my-2 rounded-md text-left bg-white shadow-sm"
+                >
+                  <h3 className="font-semibold text-lg">{edu.schoolName}</h3>
+                  <p className="text-sm text-gray-500">
+                    {yearRange} • {edu.educationLevel}
+                  </p>
+                  {edu.degree && (
+                    <p className="text-sm text-gray-600 mt-1">{edu.degree}</p>
+                  )}
+                  <p className="text-sm text-gray-500 mt-1">
+                    Status: {edu.educationStatus}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -443,7 +448,7 @@ const WorkerPortfolio = () => {
       <div>
         <h2 className="text-xl font-semibold mb-2 text-left">Portfolio</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {worker.portfolio.map((item) => (
+          {(worker.portfolio || []).map((item) => (
             <div
               key={item._id}
               className="shadow p-4 rounded-xl text-left bg-white hover:shadow-lg transition flex flex-col justify-between"
@@ -551,7 +556,7 @@ const WorkerPortfolio = () => {
                 {job && (
                   <div className="w-full mb-3 space-y-4 pb-4">
                     <div
-                      className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                      className="rounded-[20px] p-2 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
                       onClick={() => jobId && navigate(`/job/${jobId}`)}
                       role="button"
                       aria-label="View job details"
@@ -647,7 +652,7 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
-      {/* Quick Invite Modal: Create Job + Send Invitation */}
+      {/* Quick Invite Modal: Create Job Send Invitation */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-xl shadow-lg border border-gray-200 relative">

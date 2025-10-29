@@ -1125,34 +1125,53 @@ const ChatPage = () => {
                     }`}
                 >
                   {!isMe && (
-                    <img
-                      src={
-                        contactProfiles[idToString(msg?.sender?.credentialId)]
-                          ?.url ||
-                        "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                      }
-                      alt={
-                        contactNames[idToString(msg?.sender?.credentialId)] ||
-                        "Unnamed"
-                      }
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const otherId = idToString(msg?.sender?.credentialId);
+                        const pid = otherId ? contactProfileIds[otherId] : null;
+                        if (!pid || !currentUser) return;
+                        const path = currentUser.userType === "client" ? `/worker/${pid}` : `/client/${pid}`;
+                        navigate(path);
+                      }}
+                      className="shrink-0"
+                      aria-label="Open profile"
+                    >
+                      <img
+                        src={
+                          contactProfiles[idToString(msg?.sender?.credentialId)]?.url ||
+                          "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+                        }
+                        alt={
+                          contactNames[idToString(msg?.sender?.credentialId)] ||
+                          "Unnamed"
+                        }
+                        className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                      />
+                    </button>
                   )}
                   <div
                     className={`flex flex-col gap-1 max-w-[320px] ${isMe ? "items-end" : "items-start"
                       }`}
                   >
                     <div className="flex items-center justify-between space-x-2">
-                      <span
-                        className={`text-sm font-semibold ${isMe ? "text-black" : "text-gray-900"
-                          }`}
-                      >
-                        {isMe
-                          ? "You"
-                          : contactNames[
-                          idToString(msg?.sender?.credentialId)
-                          ] || "Unnamed"}
-                      </span>
+                      {isMe ? (
+                        <span className="text-sm font-semibold text-black">You</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const otherId = idToString(msg?.sender?.credentialId);
+                            const pid = otherId ? contactProfileIds[otherId] : null;
+                            if (!pid || !currentUser) return;
+                            const path = currentUser.userType === "client" ? `/worker/${pid}` : `/client/${pid}`;
+                            navigate(path);
+                          }}
+                          className="text-sm font-semibold text-gray-900 hover:underline text-left"
+                        >
+                          {contactNames[idToString(msg?.sender?.credentialId)] || "Unnamed"}
+                        </button>
+                      )}
 
                       {/* Three-dot menu */}
                       {isMe && (

@@ -471,7 +471,7 @@ const ProfilePage = () => {
               {userPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-[20px] p-4 bg-white shadow-sm transition-all"
+                  className="rounded-[20px] p-2 bg-white shadow-sm transition-all"
                 >
                   <div className="rounded-xl p-4 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">
@@ -762,143 +762,147 @@ const ProfilePage = () => {
               />
             )}
 
-            {/* ================= EXPERIENCE ================= */}
-            <div className="mb-8 mt-4">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Work Experience
-                {isEditMode && (
-                  <button
-                    onClick={() => setIsAddExperienceOpen(true)}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    + Add
-                  </button>
-                )}
-              </h3>
-              {currentUser.experience && currentUser.experience.length > 0 ? (
-                <div className="space-y-4">
-                  {currentUser.experience.map((exp) => (
-                    <div
-                      key={exp._id}
-                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+            {/* Experience + Education side-by-side on large screens */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* ================= EXPERIENCE ================= */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                  Work Experience
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsAddExperienceOpen(true)}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
                     >
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-800">
-                          {exp.position || "Unknown Position"}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {exp.companyName || "Unknown Company"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {exp.startYear} – {exp.endYear || "Present"}
-                        </p>
-                        <p className="text-gray-700 mt-2 text-sm">
-                          {exp.responsibilities || "No details provided."}
-                        </p>
-                      </div>
-
-                      {/* Delete button at bottom */}
-                      {isEditMode && (
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() =>
-                              confirmDelete(
-                                () => handleDeleteExperience(exp._id),
-                                exp.position
-                              )
-                            }
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
+                      + Add
+                    </button>
+                  )}
+                </h3>
+                {currentUser.experience && currentUser.experience.length > 0 ? (
+                  <div className="space-y-4">
+                    {currentUser.experience.map((exp) => (
+                      <div
+                        key={exp._id}
+                        className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+                      >
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-800">
+                            {exp.position || "Unknown Position"}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {exp.companyName || "Unknown Company"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {exp.startYear} – {exp.endYear || "Present"}
+                          </p>
+                          <p className="text-gray-700 mt-2 text-sm">
+                            {exp.responsibilities || "No details provided."}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No work experience added yet.</p>
-              )}
+
+                        {/* Delete button at bottom */}
+                        {isEditMode && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() =>
+                                confirmDelete(
+                                  () => handleDeleteExperience(exp._id),
+                                  exp.position
+                                )
+                              }
+                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No work experience added yet.</p>
+                )}
+              </div>
+
+              {/* ================= EDUCATION ================= */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
+                  Education
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsAddEducationOpen(true)}
+                      className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  )}
+                </h3>
+                {currentUser.education && currentUser.education.length > 0 ? (
+                  <div className="space-y-4">
+                    {currentUser.education.map((edu) => (
+                      <div
+                        key={edu._id}
+                        className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
+                      >
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-800">
+                            {edu.schoolName || "Unknown School"}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {edu.educationLevel || "Unknown Level"}
+                            {edu.degree && ` - ${edu.degree}`}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {edu.startDate
+                              ? new Date(edu.startDate).toLocaleDateString()
+                              : "Unknown"}{" "}
+                            –{" "}
+                            {edu.endDate
+                              ? new Date(edu.endDate).toLocaleDateString()
+                              : "Present"}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Status: {edu.educationStatus || "Unknown"}
+                          </p>
+                        </div>
+
+                        {/* ✅ Delete button at bottom */}
+                        {isEditMode && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() =>
+                                confirmDelete(
+                                  () => handleDeleteEducation(edu._id),
+                                  edu.schoolName
+                                )
+                              }
+                              className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No education added yet.</p>
+                )}
+              </div>
             </div>
 
+            {/* Modals kept outside the grid */}
             {isAddExperienceOpen && (
               <AddExperience
                 onClose={() => setIsAddExperienceOpen(false)}
                 onAdd={(newExperience) =>
                   setCurrentUser((prev) => ({
                     ...prev,
-                    experiences: [...(prev.experiences || []), newExperience],
+                    experience: [...(prev.experience || []), newExperience],
                   }))
                 }
                 onRefresh={fetchExperiences}
               />
             )}
-
-            {/* ================= EDUCATION ================= */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-gray-700 text-left flex justify-between items-center">
-                Education
-                {isEditMode && (
-                  <button
-                    onClick={() => setIsAddEducationOpen(true)}
-                    className="px-3 py-1 bg-[#55b3f3] text-white text-sm rounded-lg hover:bg-blue-400 cursor-pointer"
-                  >
-                    + Add
-                  </button>
-                )}
-              </h3>
-              {currentUser.education && currentUser.education.length > 0 ? (
-                <div className="space-y-4">
-                  {currentUser.education.map((edu) => (
-                    <div
-                      key={edu._id}
-                      className="shadow-sm p-4 rounded-md text-left bg-white flex flex-col justify-between"
-                    >
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-800">
-                          {edu.schoolName || "Unknown School"}
-                        </h4>
-                        <p className="text-sm text-gray-600">
-                          {edu.educationLevel || "Unknown Level"}
-                          {edu.degree && ` - ${edu.degree}`}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {edu.startDate
-                            ? new Date(edu.startDate).toLocaleDateString()
-                            : "Unknown"}{" "}
-                          –{" "}
-                          {edu.endDate
-                            ? new Date(edu.endDate).toLocaleDateString()
-                            : "Present"}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          Status: {edu.educationStatus || "Unknown"}
-                        </p>
-                      </div>
-
-                      {/* ✅ Delete button at bottom */}
-                      {isEditMode && (
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() =>
-                              confirmDelete(
-                                () => handleDeleteEducation(edu._id),
-                                edu.schoolName
-                              )
-                            }
-                            className="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-800 transition cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No education added yet.</p>
-              )}
-            </div>
 
             {isAddEducationOpen && (
               <AddEducation

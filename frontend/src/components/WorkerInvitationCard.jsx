@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Star,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { inviteWorker } from "../api/workerInvitation.jsx";
 const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
+  const navigate = useNavigate();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
   const [proposedRate, setProposedRate] = useState("");
@@ -101,19 +103,34 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
       <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
         {/* Worker Header */}
         <div className="flex items-center gap-4 mb-4">
-          <img
-            src={
-              worker.profilePicture?.url ||
-              "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-            }
-            alt={worker.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-          />
+          <button
+            type="button"
+            onClick={() => (worker?._id || worker?.id) && navigate(`/worker/${worker._id || worker.id}`)}
+            className="shrink-0 focus:outline-none"
+            aria-label={`View ${worker.firstName || "Worker"} ${worker.lastName || ""} profile`}
+            title="View profile"
+          >
+            <img
+              src={
+                worker.profilePicture?.url ||
+                "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
+              }
+              alt={`${worker.firstName || "Worker"} ${worker.lastName || ""}`}
+              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 cursor-pointer"
+            />
+          </button>
           <div className="flex-1 text-left">
-            <h3 className="text-lg font-semibold text-[#545454] flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-500" />
-              {worker.firstName} {worker.lastName}
-            </h3>
+            <button
+              type="button"
+              onClick={() => (worker?._id || worker?.id) && navigate(`/worker/${worker._id || worker.id}`)}
+              className="text-left"
+              title="View profile"
+            >
+              <h3 className="text-lg font-semibold text-[#545454] flex items-center gap-2 hover:underline">
+                <User className="w-5 h-5 text-blue-500" />
+                {worker.firstName} {worker.lastName}
+              </h3>
+            </button>
 
             {worker.rating !== undefined && (
               <div className="flex items-center gap-1 mt-1">
@@ -148,7 +165,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
                 return (
                   <span
                     key={key}
-                    className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm"
+                    className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-xs"
                   >
                     {label}
                   </span>
@@ -299,13 +316,13 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 transition-opacity duration-300 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center transform transition-transform duration-300 scale-100 animate-scaleIn">
             <div className="flex flex-col items-center gap-3">
-              <CheckCircle className="w-10 h-10 text-[#55b3f3]" />
+              {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}
               <p className="text-gray-700 text-base font-medium">
                 {feedback.message}
               </p>
               <button
                 onClick={() => setFeedback({ show: false, message: "" })}
-                className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
               >
                 OK
               </button>

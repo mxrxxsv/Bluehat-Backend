@@ -36,11 +36,14 @@ const ContractManagement = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef(null);
+  // Per-contract action loading flags: { [contractId]: { starting?: bool, completing?: bool } }
+  const [actionLoading, setActionLoading] = useState({});
   const [feedbackModal, setFeedbackModal] = useState({
     show: false,
     contract: null,
   });
   const [feedback, setFeedback] = useState({ rating: 5, comment: "" });
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [contractDetailsModal, setContractDetailsModal] = useState({
     show: false,
     contractId: null,
@@ -180,6 +183,10 @@ const ContractManagement = () => {
   const handleStartWork = async (contractId) => {
     try {
       console.log("Attempting to start work for contract:", contractId);
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), starting: true },
+      }));
       const result = await startWork(contractId);
       console.log("Start work result:", result);
       showNotification(
@@ -195,12 +202,21 @@ const ContractManagement = () => {
         "Start Work Failed",
         `Failed to start work: ${error.message}`
       );
+    } finally {
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), starting: false },
+      }));
     }
   };
 
   const handleCompleteWork = async (contractId) => {
     try {
       console.log("Attempting to complete work for contract:", contractId);
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), completing: true },
+      }));
       const result = await completeWork(contractId);
       console.log("Complete work result:", result);
       showNotification(
@@ -216,11 +232,20 @@ const ContractManagement = () => {
         "Complete Work Failed",
         `Failed to mark work as completed: ${error.message}`
       );
+    } finally {
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), completing: false },
+      }));
     }
   };
 
   const handleConfirmCompletion = async (contractId) => {
     try {
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), confirming: true },
+      }));
       await confirmWorkCompletion(contractId);
       showNotification(
         "success",
@@ -234,6 +259,11 @@ const ContractManagement = () => {
         "Confirmation Failed",
         `Failed to confirm completion: ${error.message}`
       );
+    } finally {
+      setActionLoading((prev) => ({
+        ...prev,
+        [contractId]: { ...(prev[contractId] || {}), confirming: false },
+      }));
     }
   };
 
@@ -258,7 +288,7 @@ const ContractManagement = () => {
         rating: feedback.rating,
         feedback: feedback.comment,
       });
-
+      setSubmittingFeedback(true);
       await submitFeedback(feedbackModal.contract._id, {
         rating: feedback.rating,
         feedback: feedback.comment, // Backend expects 'feedback' not 'comment'
@@ -293,6 +323,8 @@ const ContractManagement = () => {
           `Failed to submit feedback: ${message}`
         );
       }
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -493,19 +525,41 @@ const ContractManagement = () => {
                         {contract.contractStatus === "active" && (
                           <button
                             onClick={() => handleStartWork(contract._id)}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors"
+                            disabled={!!actionLoading[contract._id]?.starting}
+                            className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                              actionLoading[contract._id]?.starting
+                                ? "bg-sky-300 text-white opacity-90 cursor-not-allowed"
+                                : "bg-[#55b3f3] text-white hover:bg-sky-600"
+                            }`}
                           >
-                            <Clock size={16} className="mr-2" />
-                            Start Work
+                            {actionLoading[contract._id]?.starting ? (
+                              <Loader size={16} className="mr-2 animate-spin" />
+                            ) : (
+                              <Clock size={16} className="mr-2" />
+                            )}
+                            {actionLoading[contract._id]?.starting
+                              ? "Starting..."
+                              : "Start Work"}
                           </button>
                         )}
                         {contract.contractStatus === "in_progress" && (
                           <button
                             onClick={() => handleCompleteWork(contract._id)}
-                            className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                            disabled={!!actionLoading[contract._id]?.completing}
+                            className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                              actionLoading[contract._id]?.completing
+                                ? "bg-sky-300 text-white opacity-90 cursor-not-allowed"
+                                : "bg-[#55b3f3] text-white hover:bg-sky-600"
+                            }`}
                           >
-                            <CheckCircle size={16} className="mr-2" />
-                            Request Completion
+                            {actionLoading[contract._id]?.completing ? (
+                              <Loader size={16} className="mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle size={16} className="mr-2" />
+                            )}
+                            {actionLoading[contract._id]?.completing
+                              ? "Requesting..."
+                              : "Request Completion"}
                           </button>
                         )}
                         {contract.contractStatus ===
@@ -547,10 +601,21 @@ const ContractManagement = () => {
                               onClick={() =>
                                 handleConfirmCompletion(contract._id)
                               }
-                              className="inline-flex items-center px-4 py-2 bg-[#55b3f3] text-white text-sm font-medium rounded-md hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
+                              disabled={!!actionLoading[contract._id]?.confirming}
+                              className={`inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer ${
+                                actionLoading[contract._id]?.confirming
+                                  ? "bg-sky-300 opacity-90 cursor-not-allowed"
+                                  : "bg-[#55b3f3] hover:bg-sky-500"
+                              }`}
                             >
-                              <CheckCircle size={16} className="mr-2" />
-                              Confirm Completion
+                              {actionLoading[contract._id]?.confirming ? (
+                                <Loader size={16} className="mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle size={16} className="mr-2" />
+                              )}
+                              {actionLoading[contract._id]?.confirming
+                                ? "Confirming..."
+                                : "Confirm Completion"}
                             </button>
                           )}
                         {contract.contractStatus === "completed" &&
@@ -750,9 +815,19 @@ const ContractManagement = () => {
                 </button>
                 <button
                   onClick={handleSubmitFeedback}
-                  className="px-4 py-2 bg-sky-500 text-white rounded-md hover:bg-sky-600 transition cursor-pointer"
+                  disabled={submittingFeedback}
+                  className={`px-4 py-2 rounded-md transition cursor-pointer text-white ${
+                    submittingFeedback
+                      ? "bg-sky-300 cursor-not-allowed"
+                      : "bg-sky-500 hover:bg-sky-600"
+                  }`}
                 >
-                  Submit Feedback
+                  <span className="inline-flex items-center">
+                    {submittingFeedback && (
+                      <Loader size={16} className="mr-2 animate-spin" />
+                    )}
+                    {submittingFeedback ? "Submitting..." : "Submit Feedback"}
+                  </span>
                 </button>
               </div>
             </div>

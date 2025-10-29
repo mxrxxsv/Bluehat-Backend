@@ -626,8 +626,8 @@ const InviteWorkersPage = () => {
           )}
 
           {job && (
-            <div className="space-y-4 pb-4">
-              <div className="rounded-[20px] p-4 bg-white shadow-sm transition-all block">
+            <div className="space-y-4 pb-4 transition-all">
+              <div className="rounded-[20px] p-2 bg-white shadow-sm transition-all block">
                 <div className="rounded-xl p-4 bg-white transition-all">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
