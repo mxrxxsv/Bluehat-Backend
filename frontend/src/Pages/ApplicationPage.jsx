@@ -1024,50 +1024,74 @@ const ApplicationsPage = () => {
 
             {/* User Info */}
             <div className="flex items-center gap-3 sm:gap-4 mb-4">
-              <img
-                src={
-                  userType === "worker"
-                    ? selectedApp.clientId?.profilePicture?.url ||
-                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                    : selectedApp.workerId?.profilePicture?.url ||
-                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                }
-                alt="Avatar"
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border object-cover"
-              />
-              <div>
-                <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                  {userType === "worker"
-                    ? `${selectedApp.clientId?.firstName} ${selectedApp.clientId?.lastName}`
-                    : `${selectedApp.workerId?.firstName} ${selectedApp.workerId?.lastName}`}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  Status:{" "}
-                  <span
-                    className={`font-medium ${selectedApp.applicationStatus === "accepted"
-                        ? "text-green-600"
-                        : selectedApp.applicationStatus === "rejected"
-                          ? "text-red-600"
-                          : selectedApp.applicationStatus === "in_discussion"
-                            ? "text-blue-600"
-                            : selectedApp.applicationStatus === "client_agreed" ||
-                              selectedApp.applicationStatus === "worker_agreed"
-                              ? "text-yellow-600"
-                              : "text-gray-600"
-                      }`}
-                  >
-                    {selectedApp.applicationStatus === "in_discussion"
-                      ? "In Discussion"
-                      : selectedApp.applicationStatus === "client_agreed"
-                        ? "Client Agreed"
-                        : selectedApp.applicationStatus === "worker_agreed"
-                          ? "Worker Agreed"
-                          : selectedApp.applicationStatus === "both_agreed"
-                            ? "Both Agreed"
-                            : selectedApp.applicationStatus}
-                  </span>
-                </p>
-              </div>
+              {(() => {
+                const isWorker = userType === "worker";
+                const person = isWorker ? selectedApp?.clientId : selectedApp?.workerId;
+                const pid = person?._id || person?.id || null;
+                const routeBase = isWorker ? "/client" : "/worker";
+                const canClick = Boolean(pid);
+                const avatarSrc =
+                  (isWorker
+                    ? selectedApp.clientId?.profilePicture?.url
+                    : selectedApp.workerId?.profilePicture?.url) ||
+                  "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+                const fullName = `${person?.firstName || ""} ${person?.lastName || ""}`.trim();
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => canClick && navigate(`${routeBase}/${pid}`)}
+                      disabled={!canClick}
+                      className={`${canClick ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-60"}`}
+                      aria-label={`View ${isWorker ? "client" : "worker"} profile`}
+                      title="View profile"
+                    >
+                      <img
+                        src={avatarSrc}
+                        alt="Avatar"
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border object-cover"
+                      />
+                    </button>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => canClick && navigate(`${routeBase}/${pid}`)}
+                        disabled={!canClick}
+                        className={`font-semibold text-gray-800 text-sm sm:text-base text-left ${canClick ? "" : "opacity-60"}`}
+                        title="View profile"
+                      >
+                        {fullName || (isWorker ? "Client" : "Worker")}
+                      </button>
+                      <p className="text-xs sm:text-sm text-gray-600">
+                        Status:{" "}
+                        <span
+                          className={`font-medium ${selectedApp.applicationStatus === "accepted"
+                              ? "text-green-600"
+                              : selectedApp.applicationStatus === "rejected"
+                                ? "text-red-600"
+                                : selectedApp.applicationStatus === "in_discussion"
+                                  ? "text-blue-600"
+                                  : selectedApp.applicationStatus === "client_agreed" ||
+                                    selectedApp.applicationStatus === "worker_agreed"
+                                    ? "text-yellow-600"
+                                    : "text-gray-600"
+                            }`}
+                        >
+                          {selectedApp.applicationStatus === "in_discussion"
+                            ? "In Discussion"
+                            : selectedApp.applicationStatus === "client_agreed"
+                              ? "Client Agreed"
+                              : selectedApp.applicationStatus === "worker_agreed"
+                                ? "Worker Agreed"
+                                : selectedApp.applicationStatus === "both_agreed"
+                                  ? "Both Agreed"
+                                  : selectedApp.applicationStatus}
+                        </span>
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Details Box */}
@@ -1244,29 +1268,51 @@ const ApplicationsPage = () => {
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6">
               {/* User Info */}
               <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-                <img
-                  src={
-                    userType === "worker"
-                      ? selectedInvitation.clientId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                      : selectedInvitation.workerId?.profilePicture?.url ||
-                      "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-                  }
-                  alt="Profile"
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-gray-300 shadow-sm"
-                />
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-base sm:text-lg">
-                    {userType === "worker"
-                      ? `${selectedInvitation.clientId?.firstName || ""} ${selectedInvitation.clientId?.lastName || ""
-                      }`
-                      : `${selectedInvitation.workerId?.firstName || ""} ${selectedInvitation.workerId?.lastName || ""
-                      }`}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 flex items-center">
-                    {userType === "worker" ? "Client" : "Worker"}
-                  </p>
-                </div>
+                {(() => {
+                  const isWorker = userType === "worker";
+                  const person = isWorker ? selectedInvitation?.clientId : selectedInvitation?.workerId;
+                  const pid = person?._id || person?.id || null;
+                  const routeBase = isWorker ? "/client" : "/worker";
+                  const canClick = Boolean(pid);
+                  const avatarSrc =
+                    (isWorker
+                      ? selectedInvitation.clientId?.profilePicture?.url
+                      : selectedInvitation.workerId?.profilePicture?.url) ||
+                    "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
+                  const fullName = `${person?.firstName || ""} ${person?.lastName || ""}`.trim();
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => canClick && navigate(`${routeBase}/${pid}`)}
+                        disabled={!canClick}
+                        className={`${canClick ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-60"}`}
+                        aria-label={`View ${isWorker ? "client" : "worker"} profile`}
+                        title="View profile"
+                      >
+                        <img
+                          src={avatarSrc}
+                          alt="Profile"
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-gray-300 shadow-sm"
+                        />
+                      </button>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => canClick && navigate(`${routeBase}/${pid}`)}
+                          disabled={!canClick}
+                          className={`font-semibold text-gray-800 text-base sm:text-lg text-left ${canClick ? "hover:underline" : "opacity-60"}`}
+                          title="View profile"
+                        >
+                          {fullName || (isWorker ? "Client" : "Worker")}
+                        </button>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-0.5 flex items-center">
+                          {isWorker ? "Client" : "Worker"}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Job Info */}

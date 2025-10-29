@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAllJobs, getJobById } from "../api/jobs";
 import { getClientReviewsById } from "../api/feedback";
-import { MapPin, Star, Briefcase } from "lucide-react";
+import { MapPin, Star, Briefcase, ArrowLeft } from "lucide-react";
 
 const PLACEHOLDER =
   "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
@@ -193,6 +193,14 @@ export default function ClientProfile() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-0 mt-35">
+      <div className="mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-[#55b3f3] hover:text-blue-300 font-medium cursor-pointer"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+        </button>
+      </div>
       {/* Header */}
       <div className="bg-white shadow rounded-2xl p-4 mb-6">
         <div className="flex items-center text-left gap-4">
@@ -289,6 +297,7 @@ export default function ClientProfile() {
             const reviewer = rev.reviewerId || {};
             const reviewerName = `${reviewer.firstName || ""} ${reviewer.lastName || ""}`.trim() || "Reviewer";
             const reviewerPic = reviewer.profilePicture?.url || reviewer.profilePicture || PLACEHOLDER;
+            const reviewerId = reviewer._id || reviewer.id;
             const baseJob = rev.jobId || rev.job || null;
             const jobId = typeof baseJob === "string" ? baseJob : baseJob?._id || baseJob?.id;
             const job = jobId ? (jobMap[jobId] || baseJob) : baseJob;
@@ -358,7 +367,13 @@ export default function ClientProfile() {
                 )}
                 {/* Reviewer block styled like Worker reviews */}
                 <div className="p-4 rounded-[10px]">
-                  <div className="flex flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => reviewerId && navigate(`/worker/${reviewerId}`)}
+                    disabled={!reviewerId}
+                    aria-label={`View ${reviewerName} profile`}
+                    className={`flex flex-row gap-2 items-center text-left ${reviewerId ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-60"}`}
+                  >
                     <img
                       src={reviewerPic}
                       alt={reviewerName}
@@ -366,7 +381,7 @@ export default function ClientProfile() {
                       onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
                     />
                     <p className="font-semibold mt-1">{reviewerName}</p>
-                  </div>
+                  </button>
                   <p className="text-sm text-yellow-500 text-left mt-2">{renderStars(Number(rev.rating) || 0)}</p>
                   {rev.feedback && (
                     <p className="mt-1 text-gray-700 text-left">{rev.feedback}</p>

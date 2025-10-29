@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X,
   Calendar,
@@ -20,6 +21,7 @@ import worker from "../assets/worker.png";
 import client from "../assets/client.png";
 
 const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [contractDetails, setContractDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -374,21 +376,46 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                 {getContract()?.clientId && (
                   <div className="bg-white border rounded-lg p-4 md:p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <img
-                        src={getContract().clientId.profilePictureUrl || client}
-                        alt="Client"
-                        className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-                      />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
-                          <User size={16} className="text-sky-500" />
-                          Client Information
-                        </h4>
-                        <p className="text-base md:text-lg font-medium text-gray-800">
-                          {getContract().clientId.firstName}{" "}
-                          {getContract().clientId.lastName}
-                        </p>
-                      </div>
+                      {(() => {
+                        const cid = getContract()?.clientId?._id || getContract()?.clientId?.id || null;
+                        const canClick = Boolean(cid);
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => canClick && navigate(`/client/${cid}`)}
+                              disabled={!canClick}
+                              className={`${canClick ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-60"}`}
+                              aria-label="View client profile"
+                              title="View client profile"
+                            >
+                              <img
+                                src={getContract().clientId.profilePictureUrl || client}
+                                alt="Client"
+                                className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                              />
+                            </button>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
+                                <User size={16} className="text-sky-500" />
+                                Client Information
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => canClick && navigate(`/client/${cid}`)}
+                                disabled={!canClick}
+                                className={`text-left ${canClick ? "" : "opacity-60"}`}
+                                title="View client profile"
+                              >
+                                <p className="text-base md:text-lg font-medium text-gray-800">
+                                  {getContract().clientId.firstName}{" "}
+                                  {getContract().clientId.lastName}
+                                </p>
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="space-y-3">
@@ -414,21 +441,46 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                 {getContract()?.workerId && (
                   <div className="bg-white border rounded-lg p-4 md:p-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <img
-                        src={getContract().workerId.profilePictureUrl || worker}
-                        alt="Worker"
-                        className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-                      />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
-                          <Award size={16} className="text-sky-500" />
-                          Worker Information
-                        </h4>
-                        <p className="text-base md:text-lg font-medium text-gray-800">
-                          {getContract().workerId.firstName}{" "}
-                          {getContract().workerId.lastName}
-                        </p>
-                      </div>
+                      {(() => {
+                        const wid = getContract()?.workerId?._id || getContract()?.workerId?.id || null;
+                        const canClick = Boolean(wid);
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => canClick && navigate(`/worker/${wid}`)}
+                              disabled={!canClick}
+                              className={`${canClick ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-60"}`}
+                              aria-label="View worker profile"
+                              title="View worker profile"
+                            >
+                              <img
+                                src={getContract().workerId.profilePictureUrl || "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
+                                alt="Worker"
+                                className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                              />
+                            </button>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm md:text-base">
+                                <Award size={16} className="text-sky-500" />
+                                Worker Information
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => canClick && navigate(`/worker/${wid}`)}
+                                disabled={!canClick}
+                                className={`text-left ${canClick ? "" : "opacity-60"}`}
+                                title="View worker profile"
+                              >
+                                <p className="text-base md:text-lg font-medium text-gray-800">
+                                  {getContract().workerId.firstName}{" "}
+                                  {getContract().workerId.lastName}
+                                </p>
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="space-y-3">
