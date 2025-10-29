@@ -13,6 +13,7 @@ const logger = require("./utils/logger");
 const http = require("http");
 const { Server } = require("socket.io");
 const socketBus = require("./socket");
+const fs = require("fs");
 
 // Routes
 const verRoute = require("./routes/ver.route");
@@ -120,15 +121,33 @@ app.use("/job-management", jobManagementRoute);
 // =====================
 if (process.env.SERVE_FRONTEND === "true") {
   const frontendDist = path.resolve(__dirname, "../frontend/dist");
+  if (!fs.existsSync(frontendDist)) {
+    console.warn(
+      `⚠️  SERVE_FRONTEND is true, but frontend build folder does not exist: ${frontendDist}`
+    );
+    console.warn(
+      "   Ensure you run the frontend build during deployment so index.html and assets are available."
+    );
+  } else {
+    console.log(`🗂️  Serving frontend from: ${frontendDist}`);
+  }
   app.use(express.static(frontendDist));
 
-  // SPA fallback for browser navigations (HTML accepts)
-  // This catches client-side routes even when they share prefixes with API routers
+  // SPA fallback for client-side routes
+  // Serve index.html for any GET that is not an API path and doesn't look like a file
   app.get("*", (req, res, next) => {
     if (req.method !== "GET") return next();
-    const accept = req.headers["accept"] || "";
-    // If the client is a browser navigation (expects HTML), serve index.html
-    if (accept.includes("text/html")) {
+
+    // Ignore URLs that point to actual files like /assets/app.js, /favicon.ico, etc.
+    const hasFileExtension = path.extname(req.path) !== "";
+
+    // Known API route prefixes to exclude from SPA fallback
+    const isApiRoute = /^\/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api\/dashboard|applications|invitations|contracts|job-management)(\/|$)/.test(
+      req.path
+    );
+
+    if (!hasFileExtension && !isApiRoute) {
+      console.log(`🎯 [SPA] Fallback to index.html for path: ${req.path}`);
       return res.sendFile(path.join(frontendDist, "index.html"));
     }
     return next();
