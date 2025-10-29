@@ -1,6 +1,7 @@
 // index.js
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const cors = require("cors");
@@ -110,6 +111,29 @@ app.use("/contracts", contractRoute);
 
 // Admin management routes
 app.use("/job-management", jobManagementRoute);
+
+// =====================
+// Serve SPA in production (optional)
+// Set SERVE_FRONTEND=true and deploy with frontend built to ../frontend/dist
+// This will serve the Vite build and fall back to index.html for client routes
+// while preserving API routes above.
+// =====================
+if (process.env.SERVE_FRONTEND === "true") {
+  const frontendDist = path.resolve(__dirname, "../frontend/dist");
+  app.use(express.static(frontendDist));
+
+  // SPA fallback for all non-API routes
+  // Excludes API prefixes to avoid shadowing backend endpoints
+  app.get(
+    new RegExp(
+      // negative lookahead for API prefixes
+      `^(?!/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api|applications|invitations|contracts|job-management|healthz)).*`
+    ),
+    (req, res) => {
+      res.sendFile(path.join(frontendDist, "index.html"));
+    }
+  );
+}
 
 // 7) 404 handler
 app.use((req, res) => {
