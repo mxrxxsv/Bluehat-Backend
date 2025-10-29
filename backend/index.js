@@ -122,17 +122,17 @@ if (process.env.SERVE_FRONTEND === "true") {
   const frontendDist = path.resolve(__dirname, "../frontend/dist");
   app.use(express.static(frontendDist));
 
-  // SPA fallback for all non-API routes
-  // Excludes API prefixes to avoid shadowing backend endpoints
-  app.get(
-    new RegExp(
-      // negative lookahead for API prefixes
-      `^(?!/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api|applications|invitations|contracts|job-management|healthz)).*`
-    ),
-    (req, res) => {
-      res.sendFile(path.join(frontendDist, "index.html"));
+  // SPA fallback for browser navigations (HTML accepts)
+  // This catches client-side routes even when they share prefixes with API routers
+  app.get("*", (req, res, next) => {
+    if (req.method !== "GET") return next();
+    const accept = req.headers["accept"] || "";
+    // If the client is a browser navigation (expects HTML), serve index.html
+    if (accept.includes("text/html")) {
+      return res.sendFile(path.join(frontendDist, "index.html"));
     }
-  );
+    return next();
+  });
 }
 
 // 7) 404 handler
