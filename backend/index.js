@@ -119,11 +119,14 @@ app.use("/job-management", jobManagementRoute);
 
 // =====================
 // Serve SPA in production (optional)
-// Set SERVE_FRONTEND=true and deploy with frontend built to ../frontend/dist
+// Set SERVE_FRONTEND to true/1/yes and deploy with frontend built to ../frontend/dist
 // This will serve the Vite build and fall back to index.html for client routes
 // while preserving API routes above.
 // =====================
-if (process.env.SERVE_FRONTEND === "true") {
+const SERVE_FRONTEND_ENABLED = /^(1|true|yes)$/i.test(
+  process.env.SERVE_FRONTEND || ""
+);
+if (SERVE_FRONTEND_ENABLED) {
   const frontendDist = path.resolve(__dirname, "../frontend/dist");
   if (!fs.existsSync(frontendDist)) {
     console.warn(
@@ -152,6 +155,20 @@ if (process.env.SERVE_FRONTEND === "true") {
 
     if (!hasFileExtension && !isApiRoute) {
       console.log(`🎯 [SPA] Fallback to index.html for path: ${req.method} ${req.path}`);
+      return res.sendFile(path.join(frontendDist, "index.html"));
+    }
+    return next();
+  });
+
+  // Extra safety: catch-all for browser navigations that explicitly accept HTML
+  app.get("*", (req, res, next) => {
+    const accept = req.headers["accept"] || "";
+    const hasFileExtension = path.extname(req.path) !== "";
+    const isApiRoute = /^(\/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api\/dashboard|applications|invitations|contracts|job-management))(\/|$)/.test(
+      req.path
+    );
+    if (!hasFileExtension && !isApiRoute && accept.includes("text/html")) {
+      console.log(`🎯 [SPA] Catch-all served index.html for: ${req.method} ${req.path}`);
       return res.sendFile(path.join(frontendDist, "index.html"));
     }
     return next();
