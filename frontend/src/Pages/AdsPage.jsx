@@ -25,26 +25,24 @@ const AdsPage = () => {
   if (loading) {
     return (
       <>
-        <div className='mt-30 ml-5 md:mt-40 md:ml-30 w-75 md:w-95 mb-8 fixed top-0'>
+        <div className="mt-30 md:mt-40 mb-6 max-w-6xl mx-auto px-4">
           <div className="h-8 md:h-10 bg-gray-200 rounded w-3/4 md:w-1/2 animate-pulse" />
         </div>
 
-        <div className="h-180 mt-55 md:h-120 md:mt-60 overflow-auto">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="flex flex-col md:mx-auto items-center bg-white rounded-lg shadow-md md:flex-row md:max-w-xl mt-6 mx-6 text-left mb-8 animate-pulse"
-            >
-              <div className="flex flex-col justify-between p-4 leading-normal w-full">
-                <div className="mb-2 h-6 bg-gray-200 rounded w-2/3" />
-                <div className="mb-2 h-4 bg-gray-200 rounded w-full" />
-                <div className="h-4 bg-gray-200 rounded w-5/6" />
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow overflow-hidden flex flex-col animate-pulse">
+                <div className="relative w-full h-44 sm:h-48 lg:h-44 bg-gray-200" />
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="h-6 md:h-7 bg-gray-200 rounded w-5/6 mb-3" />
+                  <div className="h-4 bg-gray-200 rounded w-full mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-11/12 mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                </div>
               </div>
-              <div className="w-full md:w-50 md:m-2">
-                <div className="object-cover w-full h-100 md:h-80 bg-gray-200 rounded-[10px]" />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </>
     );
@@ -52,15 +50,15 @@ const AdsPage = () => {
 
   return (
     <>
-      <div className='mt-30 ml-5 md:mt-40 md:ml-30 w-75 md:w-95 mb-8 fixed top-0'>
-        <h1 className='text-[24px] md:text-[32px] font-medium text-[#252525] opacity-80'>
+      <div className="mt-30 md:mt-40 mb-6 max-w-6xl mx-auto px-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#252525] opacity-80">
           Free Government Training and Certifications
         </h1>
       </div>
 
-      <div className="h-180 mt-25 md:h-120 md:mt-40 overflow-auto">
+      <div className="max-w-6xl mx-auto px-4">
         {ads.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-center">
+          <div className="flex items-center justify-center py-16 text-center">
             <div>
               <div className="mx-auto mb-3 w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
                 <span className="text-2xl text-gray-400">📭</span>
@@ -70,29 +68,34 @@ const AdsPage = () => {
             </div>
           </div>
         ) : (
-          ads.map((ad) => (
-            <a
-              key={ad._id}
-              href={ad.link}
-              target="_blank"
-              rel="noreferrer"
-              className="flex flex-col md:mx-auto items-center bg-white rounded-lg shadow-md md:flex-row md:max-w-xl hover:bg-gray-100 mt-6 mx-6 text-left mb-8"
-            >
-              <div className="flex flex-col justify-between p-4 leading-normal">
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-[#252525] opacity-80">
-                  {ad.title}
-                </h5>
-                <p className="mb-3 font-normal text-gray-700">
-                  {ad.description}
-                </p>
-              </div>
-              <img
-                className="object-cover w-full h-100 md:h-80 md:w-50 md:m-2 rounded-[10px]"
-                src={ad.image?.url || "/placeholder.png"}
-                alt={ad.title}
-              />
-            </a>
-          ))
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ads.map((ad) => (
+              <a
+                key={ad._id}
+                href={ad.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden flex flex-col"
+              >
+                <div className="relative w-full h-44 sm:h-48 lg:h-44 bg-gray-100">
+                  <img
+                    className="absolute inset-0 w-full h-full object-cover"
+                    src={ad.image?.url || "/placeholder.png"}
+                    alt={ad.title}
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-4 flex-1 flex flex-col text-left">
+                  <h5 className="text-lg md:text-xl font-bold tracking-tight text-[#252525] opacity-90 group-hover:opacity-100 line-clamp-2">
+                    {ad.title}
+                  </h5>
+                  <p className="mt-2 text-gray-700 text-sm md:text-base line-clamp-3">
+                    {ad.description}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
         )}
       </div>
     </>

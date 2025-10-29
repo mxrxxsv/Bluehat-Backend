@@ -15,6 +15,9 @@ import {
   startInvitationDiscussion,
   markInvitationAgreement,
 } from "../api/applications.jsx";
+import { createOrGetConversation } from "../api/message.jsx";
+import { checkAuth } from "../api/auth.jsx";
+import { baseURL } from "../utils/appMode";
 import {
   Loader,
   User,
@@ -30,9 +33,6 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import { checkAuth } from "../api/auth";
-import { createOrGetConversation } from "../api/message";
-import { baseURL } from "../utils/appMode";
 const ApplicationsPage = () => {
   const navigate = useNavigate();
   const socketRef = useRef(null);
@@ -44,6 +44,7 @@ const ApplicationsPage = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedInvitation, setSelectedInvitation] = useState(null);
   const [activeTab, setActiveTab] = useState("applications");
+  const [notice, setNotice] = useState({ open: false, title: "", message: "", variant: "info" });
 
   // Normalize status strings to detect discussion-like states reliably
   const isDiscussionLike = (status) => {
@@ -167,7 +168,12 @@ const ApplicationsPage = () => {
       }
     } catch (err) {
       console.error("Response failed:", err);
-      alert(err.message || "Failed to respond to application");
+      setNotice({
+        open: true,
+        title: "Application",
+        message: err?.message || "Failed to respond to application",
+        variant: "error",
+      });
     }
   };
 
@@ -252,7 +258,12 @@ const ApplicationsPage = () => {
       }
     } catch (err) {
       console.error("Start discussion failed:", err);
-      alert(err.message || "Failed to start discussion");
+      setNotice({
+        open: true,
+        title: "Start Discussion",
+        message: err?.message || "Failed to start discussion",
+        variant: "error",
+      });
     }
   };
 
@@ -279,15 +290,28 @@ const ApplicationsPage = () => {
       }
 
       if (response?.data?.contract) {
-        alert(
-          "🎉 Both parties agreed! Work contract has been created successfully!"
-        );
+        setNotice({
+          open: true,
+          title: "Contract Created",
+          message: "Both parties agreed! Work contract has been created successfully!",
+          variant: "success",
+        });
       } else {
-        alert(response?.message || "Agreement status updated!");
+        setNotice({
+          open: true,
+          title: "Agreement Updated",
+          message: response?.message || "Agreement status updated!",
+          variant: "info",
+        });
       }
     } catch (err) {
       console.error("Agreement failed:", err);
-      alert(err.message || "Failed to update agreement");
+      setNotice({
+        open: true,
+        title: "Agreement Failed",
+        message: err?.message || "Failed to update agreement",
+        variant: "error",
+      });
     }
   };
 
@@ -308,14 +332,24 @@ const ApplicationsPage = () => {
 
       // Update selected invitation if it's the one we just responded to
       if (selectedInvitation?._id === invitationId) {
-        const updatedInvitation = response?.find(
-          (inv) => inv._id === invitationId
-        );
-        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+        const updatedInvitation = response?.find((inv) => inv._id === invitationId);
+        if (updatedInvitation) {
+          setSelectedInvitation(updatedInvitation);
+        } else if (action === "reject") {
+          // If rejected and invitation is no longer in the list, reflect locally
+          setSelectedInvitation((prev) =>
+            prev ? { ...prev, invitationStatus: "rejected" } : prev
+          );
+        }
       }
     } catch (err) {
       console.error("Invitation response failed:", err);
-      alert(err.message || "Failed to respond to invitation");
+      setNotice({
+        open: true,
+        title: "Invitation",
+        message: err?.message || "Failed to respond to invitation",
+        variant: "error",
+      });
     }
   };
 
@@ -335,10 +369,22 @@ const ApplicationsPage = () => {
 
       // Update selected invitation
       if (selectedInvitation?._id === invitationId) {
-        const updatedInvitation = invitationsResponse?.find(
-          (inv) => inv._id === invitationId
-        );
-        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+        let updatedInvitation = invitationsResponse?.find((inv) => inv._id === invitationId);
+        if (!updatedInvitation) {
+          // Try to use API payload if provided
+          updatedInvitation = response?.data?.invitation || response?.data?.updatedInvitation;
+        }
+        if (updatedInvitation) {
+          setSelectedInvitation(updatedInvitation);
+        } else {
+          // Fallback: reflect status immediately in the modal
+          setSelectedInvitation((prev) => {
+            if (!prev) return prev;
+            if (agreed === false) return { ...prev, invitationStatus: "rejected" };
+            const inferred = userType === "worker" ? "worker_agreed" : "client_agreed";
+            return { ...prev, invitationStatus: inferred };
+          });
+        }
       }
 
       // Navigate to Chat with target contact + discussion context
@@ -397,7 +443,12 @@ const ApplicationsPage = () => {
       }
     } catch (err) {
       console.error("Start invitation discussion failed:", err);
-      alert(err.message || "Failed to start discussion");
+      setNotice({
+        open: true,
+        title: "Start Discussion",
+        message: err?.message || "Failed to start discussion",
+        variant: "error",
+      });
     }
   };
 
@@ -414,7 +465,7 @@ const ApplicationsPage = () => {
         return;
       }
 
-      // Derive target
+      // Derive target based on role
       let targetCredentialId = null;
       let targetUserType = null;
       if (userType === "client") {
@@ -476,66 +527,77 @@ const ApplicationsPage = () => {
   const openChatForCurrentInvitation = async () => {
     try {
       if (!selectedInvitation) return;
-      // If worker and still pending, start discussion first then navigate
-      if (
-        userType === "worker" &&
-        selectedInvitation.invitationStatus === "pending"
-      ) {
-        await handleStartInvitationDiscussion(selectedInvitation._id);
-        return;
+
+      let justStarted = false;
+      let convoInfo = null;
+
+      // If still pending, attempt to start discussion regardless of role
+      if (selectedInvitation.invitationStatus === "pending") {
+        try {
+          const res = await startInvitationDiscussion(selectedInvitation._id);
+          convoInfo = res?.data?.conversationInfo || null;
+          justStarted = true;
+          // Refresh invitations after starting discussion
+          const auth = await checkAuth();
+          let refresh;
+          if (auth?.data?.data?.userType === "worker") {
+            refresh = await getMyInvitations();
+          } else if (auth?.data?.data?.userType === "client") {
+            refresh = await getMySentInvitations();
+          }
+          setInvitations(refresh || []);
+          // Update selected invitation if available
+          if (selectedInvitation?._id) {
+            const updated = refresh?.find?.((inv) => inv._id === selectedInvitation._id);
+            if (updated) setSelectedInvitation(updated);
+          }
+        } catch (_) {
+          // Non-fatal; we'll still try to open chat with derived target
+        }
       }
 
-      // Derive target
-      let targetCredentialId = null;
-      let targetUserType = null;
-      if (userType === "worker") {
-        targetCredentialId =
-          selectedInvitation?.clientId?.credentialId &&
-          String(selectedInvitation.clientId.credentialId);
-        targetUserType = "client";
-      } else if (userType === "client") {
-        targetCredentialId =
-          selectedInvitation?.workerId?.credentialId &&
-          String(selectedInvitation.workerId.credentialId);
-        targetUserType = "worker";
+      // Derive target credential and user type
+      let targetCredentialId = convoInfo?.participantCredentialId || null;
+      let targetUserType = convoInfo?.participantUserType || null;
+
+      // Fallback from invitation data
+      if (!targetCredentialId) {
+        if (userType === "worker") {
+          targetCredentialId = String(selectedInvitation?.clientId?.credentialId || "");
+          targetUserType = "client";
+        } else {
+          targetCredentialId = String(selectedInvitation?.workerId?.credentialId || "");
+          targetUserType = "worker";
+        }
       }
+
+      const includeAgreement =
+        justStarted || isDiscussionLike(selectedInvitation.invitationStatus);
 
       if (targetCredentialId && targetUserType) {
-        const includeAgreement = isDiscussionLike(
-          selectedInvitation.invitationStatus
-        );
         try {
-          await createOrGetConversation({
-            participantCredentialId: targetCredentialId,
-            participantUserType: targetUserType,
-          });
-        } catch (_) { }
-
-        const navState = {
-          targetCredentialId,
-          targetUserType,
-          agreementContext: includeAgreement
-            ? { kind: "invitation", id: selectedInvitation._id }
-            : undefined,
-        };
-        try {
-          if (navState.agreementContext) {
-            sessionStorage.setItem(
-              "chatAgreementContext",
-              JSON.stringify(navState.agreementContext)
-            );
-          }
-        } catch (_) { }
-        navigate("/chat", { state: navState });
+          window.sessionStorage.setItem(
+            "chat:targetCredentialId",
+            targetCredentialId
+          );
+          window.sessionStorage.setItem(
+            "chat:targetUserType",
+            targetUserType
+          );
+          window.sessionStorage.setItem(
+            "chat:includeAgreementContext",
+            includeAgreement ? "1" : "0"
+          );
+        } catch (_) {}
+        navigate("/chat");
       } else {
-        if (isDiscussionLike(selectedInvitation?.invitationStatus)) {
-          try {
-            sessionStorage.setItem(
-              "chatAgreementContext",
-              JSON.stringify({ kind: "invitation", id: selectedInvitation._id })
-            );
-          } catch (_) { }
-        }
+        // Last resort: open chat without a pre-selected target but preserve context
+        try {
+          window.sessionStorage.setItem(
+            "chat:includeAgreementContext",
+            includeAgreement ? "1" : "0"
+          );
+        } catch (_) {}
         navigate("/chat");
       }
     } catch (e) {
@@ -705,22 +767,47 @@ const ApplicationsPage = () => {
 
       // Update selected invitation
       if (selectedInvitation?._id === invitationId) {
-        const updatedInvitation = invitationsResponse?.find(
-          (inv) => inv._id === invitationId
-        );
-        if (updatedInvitation) setSelectedInvitation(updatedInvitation);
+        let updatedInvitation = invitationsResponse?.find((inv) => inv._id === invitationId);
+        if (!updatedInvitation) {
+          // Try to use API payload if provided
+          updatedInvitation = response?.data?.invitation || response?.data?.updatedInvitation;
+        }
+        if (updatedInvitation) {
+          setSelectedInvitation(updatedInvitation);
+        } else {
+          // Fallback: reflect status immediately in the modal
+          setSelectedInvitation((prev) => {
+            if (!prev) return prev;
+            if (agreed === false) return { ...prev, invitationStatus: "rejected" };
+            const inferred = userType === "worker" ? "worker_agreed" : "client_agreed";
+            return { ...prev, invitationStatus: inferred };
+          });
+        }
       }
 
       if (response?.data?.contract) {
-        alert(
-          "🎉 Both parties agreed! Work contract has been created successfully!"
-        );
+        setNotice({
+          open: true,
+          title: "Contract Created",
+          message: "Both parties agreed! Work contract has been created successfully!",
+          variant: "success",
+        });
       } else {
-        alert(response?.message || "Agreement status updated!");
+        setNotice({
+          open: true,
+          title: "Agreement Updated",
+          message: response?.message || "Agreement status updated!",
+          variant: "info",
+        });
       }
     } catch (err) {
       console.error("Invitation agreement failed:", err);
-      alert(err.message || "Failed to update agreement");
+      setNotice({
+        open: true,
+        title: "Agreement Failed",
+        message: err?.message || "Failed to update agreement",
+        variant: "error",
+      });
     }
   };
 
@@ -1430,36 +1517,21 @@ const ApplicationsPage = () => {
                 </div>
               )}
 
-            {/* Agreement Buttons for Discussion Phase */}
-            {selectedInvitation.invitationStatus === "in_discussion" && (
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
-                <button
-                  onClick={() =>
-                    handleInvitationAgreement(selectedInvitation._id, true)
-                  }
-                  className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  Agree
-                </button>
-                <button
-                  onClick={() =>
-                    handleInvitationAgreement(selectedInvitation._id, false)
-                  }
-                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  Disagree
-                </button>
-                <button
-                  onClick={openChatForCurrentInvitation}
-                  className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Message
-                </button>
-              </div>
-            )}
+            {/* Client can still message while pending */}
+            {userType === "client" &&
+              selectedInvitation.invitationStatus === "pending" && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+                  <button
+                    onClick={openChatForCurrentInvitation}
+                    className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Message
+                  </button>
+                </div>
+              )}
+
+            {/* Role-specific agreement buttons during discussion */}
 
             {/* Agreement Status Messages */}
             {(selectedInvitation.invitationStatus === "client_agreed" ||
@@ -1476,16 +1548,14 @@ const ApplicationsPage = () => {
             {/* Client Agreement Buttons */}
             {userType === "client" &&
               (selectedInvitation.invitationStatus === "in_discussion" ||
-                selectedInvitation.invitationStatus === "worker_agreed" ||
-                (selectedInvitation.invitationStatus === "client_agreed" &&
-                  userType === "client")) && (
+                selectedInvitation.invitationStatus === "worker_agreed") && (
                 <div className="mb-4">
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <button
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, true)
                       }
-                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsUp className="w-4 h-4" />
                       Agree to Terms
@@ -1494,10 +1564,17 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, false)
                       }
-                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsDown className="w-4 h-4" />
                       Decline Terms
+                    </button>
+                    <button
+                      onClick={openChatForCurrentInvitation}
+                      className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Message
                     </button>
                   </div>
                 </div>
@@ -1506,16 +1583,14 @@ const ApplicationsPage = () => {
             {/* Worker Agreement Buttons */}
             {userType === "worker" &&
               (selectedInvitation.invitationStatus === "in_discussion" ||
-                selectedInvitation.invitationStatus === "client_agreed" ||
-                (selectedInvitation.invitationStatus === "worker_agreed" &&
-                  userType === "worker")) && (
+                selectedInvitation.invitationStatus === "client_agreed") && (
                 <div className="mb-4">
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <button
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, true)
                       }
-                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsUp className="w-4 h-4" />
                       Agree to Terms
@@ -1524,10 +1599,17 @@ const ApplicationsPage = () => {
                       onClick={() =>
                         handleInvitationAgreement(selectedInvitation._id, false)
                       }
-                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ThumbsDown className="w-4 h-4" />
                       Decline Terms
+                    </button>
+                    <button
+                      onClick={openChatForCurrentInvitation}
+                      className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Message
                     </button>
                   </div>
                 </div>
@@ -1553,6 +1635,47 @@ const ApplicationsPage = () => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Notice Modal */}
+      {notice?.open && (
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-[60] px-3">
+          <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-sm relative">
+            <button
+              onClick={() => setNotice({ open: false, title: "", message: "", variant: "info" })}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              {notice.variant === "success" && (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              )}
+              {notice.variant === "error" && (
+                <XCircle className="w-5 h-5 text-red-600" />
+              )}
+              {notice.variant === "info" && (
+                <MessageCircle className="w-5 h-5 text-blue-600" />
+              )}
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+                {notice.title || "Notice"}
+              </h3>
+            </div>
+            <p className="text-sm text-gray-700 mb-4 whitespace-pre-line">
+              {notice.message}
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setNotice({ open: false, title: "", message: "", variant: "info" })}
+                className="bg-[#55b3f3] text-white px-4 py-2 rounded-lg hover:bg-sky-500 transition-colors font-medium text-sm cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

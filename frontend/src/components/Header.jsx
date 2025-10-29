@@ -137,13 +137,8 @@ const Header = () => {
                   ];
                   return next.slice(0, 20);
                 });
-                // Increment only if not already on target page
-                const onApplications = pathnameRef.current.startsWith("/applications");
-                const onContracts = pathnameRef.current.startsWith("/contracts");
-                const isContracts = link === "/contracts";
-                if ((isContracts && !onContracts) || (!isContracts && !onApplications)) {
-                  setBellUnread((c) => c + 1);
-                }
+                // Always increment unread; we'll clear when the bell is opened
+                setBellUnread((c) => c + 1);
               };
 
               // Applications
@@ -196,9 +191,6 @@ const Header = () => {
     pathnameRef.current = location.pathname;
     if (location.pathname.startsWith("/chat")) {
       setUnreadCount(0);
-    }
-    if (location.pathname.startsWith("/applications") || location.pathname.startsWith("/contracts")) {
-      setBellUnread(0);
     }
   }, [location.pathname]);
 
