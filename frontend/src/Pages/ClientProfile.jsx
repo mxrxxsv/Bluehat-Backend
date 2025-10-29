@@ -223,7 +223,7 @@ export default function ClientProfile() {
               className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
               onClick={() => navigate(`/job/${job.id || job._id}`)}
             >
-              <div className="rounded-xl p-4 bg-white transition-all">
+              <div className="rounded-xl p-2 bg-white transition-all">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
                     <img
@@ -304,7 +304,7 @@ export default function ClientProfile() {
                       role="button"
                       aria-label="View job details"
                     >
-                      <div className="rounded-xl p-4 bg-white transition-all">
+                      <div className="rounded-xl p-2 bg-white transition-all">
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center gap-2">
                             <img

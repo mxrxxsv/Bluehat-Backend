@@ -471,7 +471,7 @@ const ProfilePage = () => {
               {userPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-[20px] p-4 bg-white shadow-sm transition-all"
+                  className="rounded-[20px] p-2 bg-white shadow-sm transition-all"
                 >
                   <div className="rounded-xl p-4 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">

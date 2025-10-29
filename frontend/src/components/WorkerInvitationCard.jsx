@@ -148,7 +148,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
                 return (
                   <span
                     key={key}
-                    className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-sm"
+                    className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2 py-1 rounded-md text-xs"
                   >
                     {label}
                   </span>
@@ -299,13 +299,13 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 transition-opacity duration-300 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center transform transition-transform duration-300 scale-100 animate-scaleIn">
             <div className="flex flex-col items-center gap-3">
-              <CheckCircle className="w-10 h-10 text-[#55b3f3]" />
+              {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}
               <p className="text-gray-700 text-base font-medium">
                 {feedback.message}
               </p>
               <button
                 onClick={() => setFeedback({ show: false, message: "" })}
-                className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors"
+                className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
               >
                 OK
               </button>

@@ -720,7 +720,7 @@ const FindWork = () => {
 
             {/* Job Preview: show only after user inputs something; no loading skeleton */}
             {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
-              <div className="mt-6 pt-4">
+              <div className="mt-6 pt-2">
                 <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
@@ -968,7 +968,7 @@ const FindWork = () => {
                     }
                   }}
                 >
-                  <div className="rounded-xl p-4 bg-white transition-all">
+                  <div className="rounded-xl p-2 bg-white transition-all">
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-2">
                         <button

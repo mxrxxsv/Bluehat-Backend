@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Briefcase, CheckCircle, X } from "lucide-react";
+import { ArrowLeft, MapPin, Briefcase, CheckCircle, X, Send } from "lucide-react";
 import axios from "axios";
 import AddressInput from "../components/AddressInput";
 
@@ -346,13 +346,15 @@ const WorkerPortfolio = () => {
                 }}
                 disabled={isBusy}
                 className={
-                  "p-2 px-4 text-white shadow-md rounded-[16px] hover:shadow-lg cursor-pointer " +
+                  "flex p-2 px-4 text-white shadow-md rounded-[16px] hover:shadow-lg cursor-pointer " +
                   (isBusy
                     ? "bg-gray-300 cursor-not-allowed"
                     : "bg-[#55b3f3] hover:bg-sky-500")
                 }
               >
+                <Send className="w-4 h-4 mt-1 mr-2" /> 
                 Invite Worker
+                
               </button>
             )}
 
@@ -554,7 +556,7 @@ const WorkerPortfolio = () => {
                 {job && (
                   <div className="w-full mb-3 space-y-4 pb-4">
                     <div
-                      className="rounded-[20px] p-4 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
+                      className="rounded-[20px] p-2 bg-white shadow-sm hover:shadow-lg transition-all block cursor-pointer"
                       onClick={() => jobId && navigate(`/job/${jobId}`)}
                       role="button"
                       aria-label="View job details"
@@ -650,7 +652,7 @@ const WorkerPortfolio = () => {
         </div>
       </div>
 
-      {/* Quick Invite Modal: Create Job + Send Invitation */}
+      {/* Quick Invite Modal: Create Job Send Invitation */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-xl shadow-lg border border-gray-200 relative">
