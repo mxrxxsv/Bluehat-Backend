@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Clock, MapPin, Briefcase, ArrowLeft, X } from "lucide-react";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { getJobById } from "../api/jobs";
 import { applyToJob } from "../api/jobApplication";
 
@@ -51,7 +51,7 @@ const JobDetails = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await checkAuth();
+        const res = await getProfile();
         if (res.data.success) {
           setCurrentUser(res.data.data);
         }

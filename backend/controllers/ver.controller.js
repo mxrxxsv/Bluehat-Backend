@@ -1123,7 +1123,8 @@ const resendCode = async (req, res) => {
     const secret = pending.totpSecret;
     const otpauthUrl = speakeasy.otpauthURL({
       secret,
-      label: `FixIt ${userType}: (${email})`,
+      // Use the userType from the pending signup record (was undefined before)
+      label: `FixIt ${pending.userType}: (${email})`,
       issuer: "FixIt",
       encoding: "base32",
     });
@@ -1281,13 +1282,15 @@ const login = async (req, res) => {
       let userProfile = null;
 
       if (matchingUser.userType === "client") {
-        userProfile = await Client.findOne({ user: matchingUser._id }).select(
-          "blocked blockReason"
-        );
+        // Match on credentialId consistently across the codebase
+        userProfile = await Client.findOne({
+          credentialId: matchingUser._id,
+        }).select("blocked blockReason");
       } else if (matchingUser.userType === "worker") {
-        userProfile = await Worker.findOne({ user: matchingUser._id }).select(
-          "blocked blockReason"
-        );
+        // Match on credentialId consistently across the codebase
+        userProfile = await Worker.findOne({
+          credentialId: matchingUser._id,
+        }).select("blocked blockReason");
       }
 
       if (userProfile && userProfile.blocked) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Star, Send, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { submitFeedback, getContractById } from "../api/feedback.jsx";
 
 const FeedbackPage = () => {
@@ -26,7 +26,7 @@ const FeedbackPage = () => {
     const fetchUserAndContract = async () => {
       try {
         // Check auth first
-        const authRes = await checkAuth();
+        const authRes = await getProfile();
         if (authRes?.data?.success) {
           const user = authRes.data.data;
           setCurrentUser(user);

@@ -9,10 +9,10 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { checkAuth } from "../api/auth";
 import { getAllJobs, postJob as createJob } from "../api/jobs";
 import axios from "axios";
 import AddressInput from "../components/AddressInput";
+import { getProfile } from "../api/profile";
 import PortfolioSetup from "../components/PortfolioSetup";
 import IDSetup from "../components/IDSetup";
 import VerificationNotice from "../components/VerificationNotice";
@@ -302,7 +302,7 @@ const FindWork = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await checkAuth();
+        const res = await getProfile();
         const userData = res.data?.data;
 
         setUser(userData);

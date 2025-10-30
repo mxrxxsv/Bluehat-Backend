@@ -27,8 +27,8 @@ import {
 import { createOrGetConversation } from "../api/message.jsx";
 import worker from "../assets/worker.png";
 import client from "../assets/client.png";
-import { checkAuth } from "../api/auth";
 import { baseURL } from "../utils/appMode";
+import { getProfile } from "../api/profile";
 
 const ContractManagement = () => {
   const navigate = useNavigate();
@@ -116,7 +116,7 @@ const ContractManagement = () => {
 
   const loadUserAndContracts = async () => {
     try {
-      const authRes = await checkAuth();
+      const authRes = await getProfile();
       if (!authRes?.data?.success) {
         return;
       }

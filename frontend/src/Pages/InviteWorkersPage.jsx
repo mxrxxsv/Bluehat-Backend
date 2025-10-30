@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Search, Filter, MapPin, Star, ArrowLeft, X, Briefcase, SlidersHorizontal } from "lucide-react";
 import Header from "../components/Header";
 import WorkerInvitationCard from "../components/WorkerInvitationCard";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { getJobById } from "../api/jobs.jsx";
 import { searchWorkers } from "../api/worker.jsx";
 import { getWorkerReviewsById } from "../api/feedback.jsx";
@@ -36,7 +36,7 @@ const InviteWorkersPage = () => {
     const initializePage = async () => {
       try {
         // Check auth first
-        const authRes = await checkAuth();
+          const authRes = await getProfile();
         if (
           !authRes?.data?.success ||
           authRes.data.data.userType !== "client"

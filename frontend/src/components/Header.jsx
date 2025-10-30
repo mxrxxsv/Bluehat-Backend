@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "../assets/BlueHat_logo.png";
 import profile from "../assets/client.png";
-import { checkAuth, Logout } from "../api/auth";
+import { Logout } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { io } from "socket.io-client";
 import { baseURL } from "../utils/appMode";
 
@@ -97,7 +98,7 @@ const Header = () => {
     const excludeAuthPages = ["/setup-2fa", "/verify-email"];
     if (excludeAuthPages.includes(location.pathname)) return;
 
-    checkAuth()
+    getProfile()
       .then((res) => {
         if (res.data.success) {
           const user = res.data.data;

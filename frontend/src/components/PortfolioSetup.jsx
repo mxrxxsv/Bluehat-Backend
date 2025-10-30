@@ -7,7 +7,7 @@ import {
   updateWorkerBiography,
 } from "../api/profile";
 import DropzoneFileInput from "./DropzoneFileInput";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { baseURL } from "../utils/appMode";
 import { addEducation } from "../api/education";
 
@@ -54,7 +54,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
   const [educationError, setEducationError] = useState("");
 
   useEffect(() => {
-    checkAuth()
+    getProfile()
       .then((res) => {
         const user = res.data.data;
         setCurrentUser({

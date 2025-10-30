@@ -5,7 +5,7 @@ import {
   uploadSelfie,
   getVerificationStatus,
 } from "../api/idVerification";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 
 const IDSetup = ({ onClose }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -22,7 +22,7 @@ const IDSetup = ({ onClose }) => {
   const [selfieUploaded, setSelfieUploaded] = useState(false);
 
   useEffect(() => {
-    checkAuth()
+    getProfile()
       .then((res) => {
         setCurrentUser(res.data.data);
       })
