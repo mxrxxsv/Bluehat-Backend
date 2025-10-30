@@ -46,10 +46,6 @@ const allowedOrigins = [
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Behind a proxy (e.g., Render, Heroku) so Express should trust X-Forwarded-* headers
-// This prevents express-rate-limit from throwing when X-Forwarded-For is present
-app.set("trust proxy", 1);
-
 // 1) Security headers
 app.use(
   helmet({
@@ -119,14 +115,11 @@ app.use("/job-management", jobManagementRoute);
 
 // =====================
 // Serve SPA in production (optional)
-// Set SERVE_FRONTEND to true/1/yes and deploy with frontend built to ../frontend/dist
+// Set SERVE_FRONTEND=true and deploy with frontend built to ../frontend/dist
 // This will serve the Vite build and fall back to index.html for client routes
 // while preserving API routes above.
 // =====================
-const SERVE_FRONTEND_ENABLED = /^(1|true|yes)$/i.test(
-  process.env.SERVE_FRONTEND || ""
-);
-if (SERVE_FRONTEND_ENABLED) {
+if (process.env.SERVE_FRONTEND === "true") {
   const frontendDist = path.resolve(__dirname, "../frontend/dist");
   if (!fs.existsSync(frontendDist)) {
     console.warn(
@@ -141,9 +134,9 @@ if (SERVE_FRONTEND_ENABLED) {
   app.use(express.static(frontendDist));
 
   // SPA fallback for client-side routes
-  // Serve index.html for any GET/HEAD that is not an API path and doesn't look like a file
-  app.use((req, res, next) => {
-    if (!(req.method === "GET" || req.method === "HEAD")) return next();
+  // Serve index.html for any GET that is not an API path and doesn't look like a file
+  app.get("*", (req, res, next) => {
+    if (req.method !== "GET") return next();
 
     // Ignore URLs that point to actual files like /assets/app.js, /favicon.ico, etc.
     const hasFileExtension = path.extname(req.path) !== "";
@@ -154,32 +147,15 @@ if (SERVE_FRONTEND_ENABLED) {
     );
 
     if (!hasFileExtension && !isApiRoute) {
-      console.log(`🎯 [SPA] Fallback to index.html for path: ${req.method} ${req.path}`);
-      return res.sendFile(path.join(frontendDist, "index.html"));
-    }
-    return next();
-  });
-
-  // Extra safety: catch-all for browser navigations that explicitly accept HTML
-  app.get("*", (req, res, next) => {
-    const accept = req.headers["accept"] || "";
-    const hasFileExtension = path.extname(req.path) !== "";
-    const isApiRoute = /^(\/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api\/dashboard|applications|invitations|contracts|job-management))(\/|$)/.test(
-      req.path
-    );
-    if (!hasFileExtension && !isApiRoute && accept.includes("text/html")) {
-      console.log(`🎯 [SPA] Catch-all served index.html for: ${req.method} ${req.path}`);
+      console.log(`🎯 [SPA] Fallback to index.html for path: ${req.path}`);
       return res.sendFile(path.join(frontendDist, "index.html"));
     }
     return next();
   });
 }
 
-// 7) 404 handler with diagnostics
+// 7) 404 handler
 app.use((req, res) => {
-  console.warn(
-    `⚠️  404 Not Found: ${req.method} ${req.path} | accept=${req.headers["accept"] || ""}`
-  );
   res.status(404).json({ success: false, message: "Not Found" });
 });
 
