@@ -38,7 +38,6 @@ const contractUpdateSchema = Joi.object({
       "any.only":
         "Status must be one of: active, in_progress, completed, cancelled, disputed",
     }),
-  expectedEndDate: Joi.date().optional(),
 });
 
 const feedbackSchema = Joi.object({
