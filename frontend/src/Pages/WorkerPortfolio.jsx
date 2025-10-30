@@ -11,7 +11,7 @@ import { getWorkerReviewsById } from "../api/feedback";
 import { getJobById, postJob as createJob, getAllJobs } from "../api/jobs";
 import { inviteWorker } from "../api/workerInvitation.jsx";
 import { baseURL } from "../utils/appMode.js";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 
 const WorkerPortfolio = () => {
   const { id } = useParams();
@@ -249,7 +249,7 @@ const WorkerPortfolio = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const userData = await checkAuth();
+        const userData = await getProfile();
         setCurrentUser(userData.data.data);
       } catch {
         setCurrentUser(null);

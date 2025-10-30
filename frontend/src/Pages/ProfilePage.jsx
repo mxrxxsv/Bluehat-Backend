@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Clock, MapPin, Briefcase, X, Tag, Pencil } from "lucide-react";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import {
   uploadProfilePicture,
   removeProfilePicture,
@@ -79,7 +79,7 @@ const ProfilePage = () => {
 
   // Load user
   useEffect(() => {
-    checkAuth()
+    getProfile()
       .then((res) => {
         setCurrentUser(res.data.data);
         console.log(res.data.data);
@@ -114,7 +114,7 @@ const ProfilePage = () => {
 
   const fetchPortfolios = async () => {
     try {
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh portfolios:", err);
@@ -123,7 +123,7 @@ const ProfilePage = () => {
 
   const fetchSkills = async () => {
     try {
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh skills:", err);
@@ -132,7 +132,7 @@ const ProfilePage = () => {
 
   const fetchCertificates = async () => {
     try {
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh certificates:", err);
@@ -141,7 +141,7 @@ const ProfilePage = () => {
 
   const fetchExperiences = async () => {
     try {
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh experiences:", err);
@@ -151,7 +151,7 @@ const ProfilePage = () => {
   const handleSaveBiography = async (newBio) => {
     try {
       await updateWorkerBiography({ biography: newBio });
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data); // refresh state from server
       setIsBioModalOpen(false);
     } catch (err) {
@@ -254,7 +254,7 @@ const ProfilePage = () => {
 
   const fetchEducation = async () => {
     try {
-      const res = await checkAuth();
+      const res = await getProfile();
       setCurrentUser(res.data.data);
     } catch (err) {
       console.error("Failed to refresh education:", err);

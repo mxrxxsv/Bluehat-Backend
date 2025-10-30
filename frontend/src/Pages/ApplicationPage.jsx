@@ -16,7 +16,7 @@ import {
   markInvitationAgreement,
 } from "../api/applications.jsx";
 import { createOrGetConversation } from "../api/message.jsx";
-import { checkAuth } from "../api/auth.jsx";
+import { getProfile } from "../api/profile.jsx";
 import { baseURL } from "../utils/appMode";
 import {
   Loader,
@@ -63,7 +63,7 @@ const ApplicationsPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await checkAuth();
+        const res = await getProfile();
         if (!res?.data?.success) {
           setError("Not authenticated");
           return;
@@ -81,7 +81,7 @@ const ApplicationsPage = () => {
           // Application related events
           const onAppUpdate = async () => {
             try {
-              const who = await checkAuth();
+              const who = await getProfile();
               let resp;
               if (who.data.data.userType === "worker")
                 resp = await getWorkerApplications();
@@ -93,7 +93,7 @@ const ApplicationsPage = () => {
           };
           const onInvitationUpdate = async () => {
             try {
-              const who = await checkAuth();
+              const who = await getProfile();
               let inv;
               if (who.data.data.userType === "worker")
                 inv = await getMyInvitations();
@@ -150,7 +150,7 @@ const ApplicationsPage = () => {
     try {
       await respondToApplication(applicationId, { action });
       // Refresh applications to get updated status
-      const user = await checkAuth();
+  const user = await getProfile();
       let response;
       if (user.data.data.userType === "worker") {
         response = await getWorkerApplications();
@@ -182,7 +182,7 @@ const ApplicationsPage = () => {
       const response = await startApplicationDiscussion(applicationId);
 
       // Refresh applications
-      const user = await checkAuth();
+  const user = await getProfile();
       let appsResponse;
       if (user.data.data.userType === "worker") {
         appsResponse = await getWorkerApplications();
@@ -272,7 +272,7 @@ const ApplicationsPage = () => {
       const response = await markApplicationAgreement(applicationId, agreed);
 
       // Refresh applications
-      const user = await checkAuth();
+  const user = await getProfile();
       let appsResponse;
       if (user.data.data.userType === "worker") {
         appsResponse = await getWorkerApplications();
@@ -321,7 +321,7 @@ const ApplicationsPage = () => {
       await respondToInvitation(invitationId, { action });
 
       // Refresh invitations to get updated status
-      const user = await checkAuth();
+  const user = await getProfile();
       let response;
       if (user.data.data.userType === "worker") {
         response = await getMyInvitations();
@@ -358,7 +358,7 @@ const ApplicationsPage = () => {
       const response = await startInvitationDiscussion(invitationId);
 
       // Refresh invitations
-      const user = await checkAuth();
+  const user = await getProfile();
       let invitationsResponse;
       if (user.data.data.userType === "worker") {
         invitationsResponse = await getMyInvitations();
@@ -538,7 +538,7 @@ const ApplicationsPage = () => {
           convoInfo = res?.data?.conversationInfo || null;
           justStarted = true;
           // Refresh invitations after starting discussion
-          const auth = await checkAuth();
+          const auth = await getProfile();
           let refresh;
           if (auth?.data?.data?.userType === "worker") {
             refresh = await getMyInvitations();
@@ -756,7 +756,7 @@ const ApplicationsPage = () => {
       const response = await markInvitationAgreement(invitationId, { agreed });
 
       // Refresh invitations
-      const user = await checkAuth();
+  const user = await getProfile();
       let invitationsResponse;
       if (user.data.data.userType === "worker") {
         invitationsResponse = await getMyInvitations();

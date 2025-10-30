@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { addSkillCategory } from "../api/profile";
-import { checkAuth } from "../api/auth";
+import { getProfile } from "../api/profile";
 import { baseURL } from "../utils/appMode";
 
 const AddSkill = ({ onClose, onAdd }) => {
@@ -14,7 +14,7 @@ const AddSkill = ({ onClose, onAdd }) => {
 
   // Get user (so we have userId)
   useEffect(() => {
-    checkAuth()
+    getProfile()
       .then((res) => {
         const user = res.data.data;
         setCurrentUser({

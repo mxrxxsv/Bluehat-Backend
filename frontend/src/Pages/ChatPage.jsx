@@ -12,7 +12,7 @@ import {
   deleteMessageREST,
 } from "../api/message.jsx";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { checkAuth } from "../api/auth.jsx";
+import { getProfile } from "../api/profile.jsx";
 import {
   getClientContracts,
   getWorkerContracts,
@@ -212,7 +212,7 @@ const ChatPage = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const userRes = await checkAuth();
+  const userRes = await getProfile();
         const user = userRes?.data?.data;
         setCurrentUser(user || null);
 

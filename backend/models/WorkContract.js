@@ -47,10 +47,6 @@ const workContractSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    expectedEndDate: {
-      type: Date,
-      default: null,
-    },
     actualEndDate: {
       type: Date,
       default: null,

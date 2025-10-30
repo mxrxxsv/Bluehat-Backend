@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const logger = require("../utils/logger");
 const Client = require("../models/Client");
 const Worker = require("../models/Worker");
+const Credential = require("../models/Credential");
 const SkillCategory = require("../models/SkillCategory");
 const cloudinary = require("../db/cloudinary");
 const { encryptAES128, decryptAES128 } = require("../utils/encipher");
@@ -316,8 +317,8 @@ const removeProfilePicture = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const Model = req.user.userType === "client" ? Client : Worker;
-    const profile = await Model.findOne({ credentialId: req.user._id });
+  const Model = req.user.userType === "client" ? Client : Worker;
+  const profile = await Model.findOne({ credentialId: req.user.id });
 
     if (!profile) {
       return res.status(404).json({
@@ -417,7 +418,7 @@ const updateBasicProfile = async (req, res) => {
 
     const Model = req.user.userType === "client" ? Client : Worker;
     const profile = await Model.findOneAndUpdate(
-      { credentialId: req.user._id },
+      { credentialId: req.user.id },
       encryptedData,
       { new: true, runValidators: true }
     );
@@ -707,7 +708,7 @@ const updatePortfolio = async (req, res) => {
 
     const sanitizedData = sanitizeInput(value);
 
-    const worker = await Worker.findOne({ credentialId: req.user._id });
+  const worker = await Worker.findOne({ credentialId: req.user.id });
 
     if (!worker) {
       return res.status(404).json({
@@ -1725,16 +1726,40 @@ const getProfile = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const Model = req.user.userType === "client" ? Client : Worker;
-    const populateOptions =
-      req.user.userType === "worker"
-        ? { path: "skillsByCategory.skillCategoryId", select: "categoryName" }
-        : "";
+    const { id, userType } = req.user;
 
-    let profile = await Model.findOne({ credentialId: req.user.id })
-      .populate(populateOptions)
+    const credentialPromise = Credential.findById(id)
+      .select("_id userType isAuthenticated")
       .lean();
 
+    let profileQuery;
+    if (userType === "client") {
+      profileQuery = Client.findOne({ credentialId: id })
+        .select("_id firstName lastName address profilePicture isVerified")
+        .lean();
+    } else if (userType === "worker") {
+      profileQuery = Worker.findOne({ credentialId: id })
+        .select(
+          "_id firstName lastName address profilePicture isVerified " +
+            "portfolio skillsByCategory experience certificates " +
+            "idPictureId idPictureUrl verificationStatus biography education"
+        )
+        .populate("skillsByCategory.skillCategoryId", "categoryName")
+        .lean();
+    }
+
+    const [credential, profile] = await Promise.all([
+      credentialPromise,
+      profileQuery,
+    ]);
+
+    if (!credential) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
     if (!profile) {
       return res.status(404).json({
         success: false,
@@ -1743,26 +1768,49 @@ const getProfile = async (req, res) => {
       });
     }
 
-    // ✅ Decrypt sensitive data
+    // Decrypt name and address safely
+    let decryptedFirstName, decryptedLastName, decryptedAddress;
     try {
-      profile.firstName = decryptAES128(profile.firstName);
-      profile.lastName = decryptAES128(profile.lastName);
-      if (profile.middleName)
-        profile.middleName = decryptAES128(profile.middleName);
-      if (profile.suffixName)
-        profile.suffixName = decryptAES128(profile.suffixName);
-      profile.contactNumber = decryptAES128(profile.contactNumber);
+      decryptedFirstName = decryptAES128(profile.firstName);
+      decryptedLastName = decryptAES128(profile.lastName);
+
+      decryptedAddress = null;
+      if (profile.address && typeof profile.address === "object") {
+        decryptedAddress = {
+          region: profile.address.region
+            ? decryptAES128(profile.address.region)
+            : "",
+          province: profile.address.province
+            ? decryptAES128(profile.address.province)
+            : "",
+          city: profile.address.city
+            ? decryptAES128(profile.address.city)
+            : "",
+          barangay: profile.address.barangay
+            ? decryptAES128(profile.address.barangay)
+            : "",
+          street: profile.address.street
+            ? decryptAES128(profile.address.street)
+            : "",
+        };
+      }
     } catch (decryptError) {
-      logger.warn("Failed to decrypt profile data", {
-        userId: req.user.id,
-        profileId: profile._id,
+      logger.error("Decryption error during getProfile", {
         error: decryptError.message,
+        userId: id,
+        timestamp: new Date().toISOString(),
+      });
+      return res.status(500).json({
+        success: false,
+        message: "Error retrieving user data",
+        code: "DECRYPTION_ERROR",
       });
     }
 
-    // ✅ Remove sensitive fields
-    delete profile.credentialId;
-    delete profile.__v;
+    // Remove sensitive mongoose-internal fields from embedded profile copy
+    const sanitizedProfile = { ...profile };
+    delete sanitizedProfile.credentialId;
+    delete sanitizedProfile.__v;
 
     const processingTime = Date.now() - startTime;
 
@@ -1776,12 +1824,34 @@ const getProfile = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    res.status(200).json({
+    // Build response aligned with ver.controller checkAuth, with profile included for backward-compat
+    return res.status(200).json({
       success: true,
       message: "Profile retrieved successfully",
       code: "PROFILE_RETRIEVED",
       data: {
-        profile: profile,
+        id: credential._id,
+        profileId: profile._id,
+        fname: decryptedFirstName,
+        fullName: `${decryptedFirstName} ${decryptedLastName}`,
+        userType: credential.userType,
+        isAuthenticated: credential.isAuthenticated,
+        isVerified: profile.isVerified,
+        address: decryptedAddress,
+        image: profile.profilePicture?.url || null,
+        ...(userType === "worker" && {
+          portfolio: profile.portfolio || [],
+          skillsByCategory: profile.skillsByCategory || [],
+          experience: profile.experience || [],
+          certificates: profile.certificates || [],
+          idPictureId: profile.idPictureId,
+          idPictureUrl: profile.idPictureUrl,
+          verified: profile.verificationStatus,
+          biography: profile.biography,
+          education: profile.education || [],
+        }),
+        // Backward-compatibility: include the full profile object
+        profile: sanitizedProfile,
       },
       meta: {
         processingTime: `${processingTime}ms`,

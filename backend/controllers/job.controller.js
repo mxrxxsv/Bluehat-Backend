@@ -510,29 +510,51 @@ const getAllJobs = async (req, res) => {
 
     const processingTime = Date.now() - startTime;
 
-    // ✅ Format response
-  const optimizedJobs = filteredJobs.map((job) => ({
-      id: job._id,
-      description: job.description,
-      price: job.price,
-      location: job.location,
-      status: job.status,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      category: job.category
-        ? { id: job.category._id, name: job.category.categoryName }
-        : null,
-      client: job.clientId
-        ? {
-            id: job.clientId._id,
-            name: `${decryptAES128(job.clientId.firstName)} ${decryptAES128(
-              job.clientId.lastName
-            )}`,
-            profilePicture: job.clientId.profilePicture,
-            isVerified: job.clientId.isVerified || false,
-          }
-        : null,
-    }));
+    // ✅ Format response with safe decryption for client names
+    const optimizedJobs = filteredJobs.map((job) => {
+      let clientName = null;
+      if (job.clientId) {
+        try {
+          const first = job.clientId.firstName
+            ? decryptAES128(job.clientId.firstName)
+            : "";
+          const last = job.clientId.lastName
+            ? decryptAES128(job.clientId.lastName)
+            : "";
+          const full = `${first} ${last}`.trim();
+          clientName = full || "Anonymous Client";
+        } catch (e) {
+          logger.warn("Failed to decrypt client name in job list", {
+            jobId: job._id,
+            clientId: job.clientId?._id,
+            error: e.message,
+            timestamp: new Date().toISOString(),
+          });
+          clientName = "Anonymous Client";
+        }
+      }
+
+      return {
+        id: job._id,
+        description: job.description,
+        price: job.price,
+        location: job.location,
+        status: job.status,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        category: job.category
+          ? { id: job.category._id, name: job.category.categoryName }
+          : null,
+        client: job.clientId
+          ? {
+              id: job.clientId._id,
+              name: clientName,
+              profilePicture: job.clientId.profilePicture,
+              isVerified: job.clientId.isVerified || false,
+            }
+          : null,
+      };
+    });
 
     logger.info("Jobs retrieved successfully", {
       totalJobs: filteredJobs.length,
