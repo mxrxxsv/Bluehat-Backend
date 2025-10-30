@@ -4,9 +4,7 @@ const ConversationSchema = new mongoose.Schema(
   {
     participants: [
       {
-        credentialId: { type: mongoose.Schema.Types.ObjectId, ref: "Credential", required: true },
-        profileId: { type: mongoose.Schema.Types.ObjectId, required: false }, // optional
-        userType: { type: String, enum: ["client", "worker"], required: true }
+        credentialId: { type: mongoose.Schema.Types.ObjectId, ref: "Credential", required: true }
       }
     ],
     lastMessage: { type: String, default: null },

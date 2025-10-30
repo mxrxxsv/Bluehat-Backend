@@ -11,11 +11,11 @@ const xss = require("xss");
 
 const createConversationSchema = Joi.object({
   // allow either a string ObjectId or an object with _id to be defensive
-  participantCredentialId: Joi.alternatives().try(
-    Joi.string(),
-    Joi.object({ _id: Joi.string().required() })
-  ).required(), // the other user's credential id
-  participantUserType: Joi.string().valid("client", "worker").required()
+  participantCredentialId: Joi.alternatives()
+    .try(Joi.string(), Joi.object({ _id: Joi.string().required() }))
+    .required(), // the other user's credential id
+  // participantUserType no longer required since we don't store userType on Conversation
+  participantUserType: Joi.string().valid("client", "worker").optional(),
 });
 
 const sendMessageSchema = Joi.object({
@@ -96,15 +96,16 @@ exports.createOrGetConversation = async (req, res) => {
     }
 
     // --- Determine proper order ---
-    const participantsOrdered = myId.toString() < otherId.toString()
-      ? [
-        { credentialId: new mongoose.Types.ObjectId(myId), userType: req.user.userType, profileId: req.user.profileId || undefined },
-        { credentialId: new mongoose.Types.ObjectId(otherId), userType: value.participantUserType }
-      ]
-      : [
-        { credentialId: new mongoose.Types.ObjectId(otherId), userType: value.participantUserType },
-        { credentialId: new mongoose.Types.ObjectId(myId), userType: req.user.userType, profileId: req.user.profileId || undefined }
-      ];
+    const participantsOrdered =
+      myId.toString() < otherId.toString()
+        ? [
+            { credentialId: new mongoose.Types.ObjectId(myId) },
+            { credentialId: new mongoose.Types.ObjectId(otherId) },
+          ]
+        : [
+            { credentialId: new mongoose.Types.ObjectId(otherId) },
+            { credentialId: new mongoose.Types.ObjectId(myId) },
+          ];
 
     // ✅ Initialize unreadCounts with 0 for each participant
     const initialUnreadCounts = {};
@@ -199,9 +200,9 @@ exports.sendMessage = async (req, res) => {
       if (!conversation) {
         conversation = await Conversation.create({
           participants: [
-            { credentialId: senderCredentialId, userType },
-            { credentialId: toId, userType: value.toUserType || "client" }
-          ]
+            { credentialId: senderCredentialId },
+            { credentialId: toId },
+          ],
         });
       }
     }
