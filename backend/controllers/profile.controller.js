@@ -1721,7 +1721,7 @@ const deleteEducation = async (req, res) => {
   }
 };
 
-// ✅ GET PROFILE CONTROLLERS
+// GET PROFILE CONTROLLERS
 const getProfile = async (req, res) => {
   const startTime = Date.now();
 
