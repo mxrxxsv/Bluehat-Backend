@@ -19,7 +19,6 @@ export const getContractById = async (contractId) => {
 // Submit feedback for completed work
 export const submitFeedback = async (contractId, feedbackData) => {
   try {
-    console.log("Submitting feedback:", { contractId, feedbackData });
     const response = await ContractAPI.post(
       `/${contractId}/feedback`,
       feedbackData
@@ -132,7 +131,6 @@ export const getWorkerReviewsById = async (workerId, options = {}) => {
 export const getClientContracts = async () => {
   try {
     const response = await ContractAPI.get("/client");
-    console.log("Client contracts response:", response.data);
     return response.data.data?.contracts || [];
   } catch (error) {
     console.error("Get client contracts failed:", error);
@@ -146,7 +144,6 @@ export const getClientContracts = async () => {
 export const getWorkerContracts = async () => {
   try {
     const response = await ContractAPI.get("/worker");
-    console.log("Worker contracts response:", response.data);
     return response.data.data?.contracts || [];
   } catch (error) {
     console.error("Get worker contracts failed:", error);

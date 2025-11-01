@@ -7,10 +7,6 @@ if (!baseURL) {
   console.error(
     "API base URL is not defined. Please check your environment variables."
   );
-} else if (isProduction) {
-  console.log("Running in production mode. API base URL:", baseURL);
-} else {
-  console.log("Running in development mode. API base URL:", baseURL);
 }
 
 export { baseURL };

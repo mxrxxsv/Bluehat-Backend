@@ -57,7 +57,7 @@ const AddEducation = ({ onClose, onAdd, onRefresh }) => {
         educationStatus: String(education.educationStatus || ""),
       };
 
-      console.log("Sending education data:", educationData);
+  // Debug log removed
 
       const res = await addEducation(educationData);
 

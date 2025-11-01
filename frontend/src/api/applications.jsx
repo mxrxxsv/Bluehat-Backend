@@ -1,144 +1,128 @@
-import axios from "axios";
-import { baseURL } from "../utils/appMode.js";
-const API = axios.create({
-  baseURL: baseURL + "/applications",
-  withCredentials: true,
-});
+// Facade module to centralize applications and invitations API calls
+// and delegate to canonical modules to avoid duplication.
 
-const InvitationAPI = axios.create({
-  baseURL: baseURL + "/invitations",
-  withCredentials: true,
-});
+import {
+  getWorkerApplications,
+  getClientApplications,
+  startApplicationDiscussion as startAppDiscussionCanonical,
+  markApplicationAgreement as markAppAgreementCanonical,
+} from "./jobApplication.jsx";
+
+import {
+  inviteWorker as inviteWorkerCanonical,
+  respondToInvitation as respondToInvitationCanonical,
+  getClientInvitations,
+  getWorkerInvitations,
+  startInvitationDiscussion as startInvitationDiscussionCanonical,
+  markInvitationAgreement as markInvitationAgreementCanonical,
+} from "./workerInvitation.jsx";
+
+// ==================== APPLICATIONS (FACADE) ====================
 
 export const getMyApplications = async () => {
   try {
-    const response = await API.get("/worker/sent");
-    return response.data.applications || [];
+    const res = await getWorkerApplications();
+    // Preserve previous return shape (array of applications)
+    return (
+      res?.applications ||
+      res?.data?.applications ||
+      res?.data?.data?.applications ||
+      []
+    );
   } catch (error) {
     console.error("Get applications failed:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to load applications"
+      error?.response?.data?.message || "Failed to load applications"
     );
   }
 };
 
 export const getMyClientApplications = async () => {
   try {
-    const response = await API.get("/client/received");
-    return response.data.applications || [];
+    const res = await getClientApplications();
+    return (
+      res?.applications ||
+      res?.data?.applications ||
+      res?.data?.data?.applications ||
+      []
+    );
   } catch (error) {
     console.error("Get client applications failed:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to load applications"
+      error?.response?.data?.message || "Failed to load applications"
     );
   }
 };
 
 export const startApplicationDiscussion = async (applicationId) => {
-  try {
-    const response = await API.patch(`/${applicationId}/start-discussion`);
-    return response.data;
-  } catch (error) {
-    console.error("Start discussion failed:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to start discussion"
-    );
-  }
+  return startAppDiscussionCanonical(applicationId);
 };
 
 export const markApplicationAgreement = async (applicationId) => {
-  try {
-    const response = await API.patch(`/${applicationId}/agreement`);
-    return response.data;
-  } catch (error) {
-    console.error("Mark agreement failed:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to mark agreement"
-    );
-  }
+  // Default to agreed = true to match previous implicit behavior
+  return markAppAgreementCanonical(applicationId, true);
 };
 
-// Invitation endpoints
+// ==================== INVITATIONS (FACADE) ====================
+
 export const getMyInvitations = async () => {
   try {
-    const response = await InvitationAPI.get("/worker/received");
-    return response.data.data.invitations || [];
+    const res = await getWorkerInvitations();
+    return (
+      res?.invitations ||
+      res?.data?.invitations ||
+      res?.data?.data?.invitations ||
+      []
+    );
   } catch (error) {
     console.error("Get invitations failed:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to load invitations"
+      error?.response?.data?.message || "Failed to load invitations"
     );
   }
 };
 
 export const getMySentInvitations = async () => {
   try {
-    const response = await InvitationAPI.get("/client/sent");
-    return response.data.data.invitations || [];
+    const res = await getClientInvitations();
+    return (
+      res?.invitations ||
+      res?.data?.invitations ||
+      res?.data?.data?.invitations ||
+      []
+    );
   } catch (error) {
     console.error("Get sent invitations failed:", error);
     throw new Error(
-      error.response?.data?.message || "Failed to load sent invitations"
+      error?.response?.data?.message || "Failed to load sent invitations"
     );
   }
 };
 
 export const inviteWorker = async (invitationData) => {
   try {
-    const { workerId, ...data } = invitationData;
-    const response = await InvitationAPI.post(
-      `/workers/${workerId}/invite`,
-      data
-    );
-    return response.data;
+    // Backward-compatible signature: inviteWorker({ workerId, ...data })
+    const { workerId, ...data } = invitationData || {};
+    if (!workerId) throw new Error("workerId is required");
+    return await inviteWorkerCanonical(workerId, data);
   } catch (error) {
     console.error("Invite worker failed:", error);
-    throw new Error(error.response?.data?.message || "Failed to invite worker");
+    throw new Error(error?.response?.data?.message || "Failed to invite worker");
   }
 };
 
 export const respondToInvitation = async (invitationId, actionData) => {
-  try {
-    const response = await InvitationAPI.patch(
-      `/${invitationId}/respond`,
-      actionData
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Respond to invitation failed:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to respond to invitation"
-    );
-  }
+  return respondToInvitationCanonical(invitationId, actionData);
 };
 
 export const startInvitationDiscussion = async (invitationId) => {
-  try {
-    const response = await InvitationAPI.patch(
-      `/${invitationId}/start-discussion`
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Start invitation discussion failed:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to start discussion"
-    );
-  }
+  return startInvitationDiscussionCanonical(invitationId);
 };
 
 export const markInvitationAgreement = async (invitationId, data) => {
-  try {
-    const response = await InvitationAPI.patch(
-      `/${invitationId}/agreement`,
-      data
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Mark invitation agreement failed:", error);
-    throw new Error(
-      error.response?.data?.message || "Failed to mark agreement"
-    );
-  }
+  // Accept either { agreed: boolean } or boolean; default to true
+  const agreed = typeof data === "boolean" ? data : data?.agreed ?? true;
+  return markInvitationAgreementCanonical(invitationId, agreed);
 };
 
 export default {

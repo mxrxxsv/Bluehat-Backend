@@ -33,10 +33,9 @@ const JobDetails = () => {
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        const res = await getJobById(id);
-        const jobData = res.data.data || res.data;
-        setJob(jobData);
-        console.log("Job data:", jobData);
+  const res = await getJobById(id);
+  const jobData = res.data.data || res.data;
+  setJob(jobData);
       } catch (err) {
         console.error("Error fetching job:", err);
         setError("Job not found.");

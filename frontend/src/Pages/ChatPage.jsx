@@ -221,7 +221,6 @@ const ChatPage = () => {
         // 🟢 Register this user to the socket connection
         if (myCredId && socket.current) {
           socket.current.emit("registerUser", myCredId);
-          console.log("✅ Registered user to socket:", myCredId);
         }
 
         const res = await getConversations();
