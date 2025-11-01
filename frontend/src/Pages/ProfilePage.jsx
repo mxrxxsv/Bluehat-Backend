@@ -321,8 +321,8 @@ const ProfilePage = () => {
         location: editJob.location?.trim() || undefined,
         price:
           editJob.price === "" ||
-          editJob.price === null ||
-          editJob.price === undefined
+            editJob.price === null ||
+            editJob.price === undefined
             ? undefined
             : Number(editJob.price),
       };
@@ -339,9 +339,9 @@ const ProfilePage = () => {
         prev.map((job) =>
           job.id === selectedJob.id
             ? {
-                ...job,
-                ...payload,
-              }
+              ...job,
+              ...payload,
+            }
             : job
         )
       );
@@ -510,8 +510,7 @@ const ProfilePage = () => {
                     <div className="flex justify-start mt-2">
                       {post.status && (
                         <span
-                          className={`px-3 py-1 rounded-full text-xs shadow-sm ${
-                            ((post.status || "").toLowerCase() === "open" &&
+                          className={`px-3 py-1 rounded-full text-xs shadow-sm ${((post.status || "").toLowerCase() === "open" &&
                               "bg-green-100 text-green-600") ||
                             ((post.status || "").toLowerCase() === "hired" &&
                               "bg-yellow-100 text-yellow-700") ||
@@ -525,7 +524,7 @@ const ProfilePage = () => {
                               "cancelled" &&
                               "bg-red-100 text-red-600") ||
                             "bg-gray-100 text-gray-600"
-                          }`}
+                            }`}
                         >
                           {(post.status || "").replace("_", " ")}
                         </span>
@@ -627,22 +626,20 @@ const ProfilePage = () => {
                   <button
                     onClick={() => setIsDeleteConfirmOpen(false)}
                     disabled={isJobDeleting}
-                    className={`px-4 py-2 ${
-                      isJobDeleting
+                    className={`px-4 py-2 ${isJobDeleting
                         ? "text-gray-300 cursor-not-allowed"
                         : "text-gray-500 hover:text-gray-700"
-                    }`}
+                      }`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteJob}
                     disabled={isJobDeleting}
-                    className={`px-4 py-2 rounded-lg ${
-                      isJobDeleting
+                    className={`px-4 py-2 rounded-lg ${isJobDeleting
                         ? "bg-red-300 cursor-not-allowed"
                         : "bg-red-500 hover:bg-red-600"
-                    } text-white`}
+                      } text-white`}
                   >
                     {isJobDeleting ? "Deleting..." : "Delete"}
                   </button>
@@ -666,22 +663,20 @@ const ProfilePage = () => {
                   <button
                     onClick={() => setIsUpdateConfirmOpen(false)}
                     disabled={isJobUpdating}
-                    className={`px-4 py-2 ${
-                      isJobUpdating
+                    className={`px-4 py-2 ${isJobUpdating
                         ? "text-gray-300 cursor-not-allowed"
                         : "text-gray-500 hover:text-gray-700"
-                    }`}
+                      }`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUpdateJob}
                     disabled={isJobUpdating}
-                    className={`px-4 py-2 rounded-lg ${
-                      isJobUpdating
+                    className={`px-4 py-2 rounded-lg ${isJobUpdating
                         ? "bg-blue-300 cursor-not-allowed"
                         : "bg-blue-500 hover:bg-blue-600"
-                    } text-white`}
+                      } text-white`}
                   >
                     {isJobUpdating ? "Saving..." : "Confirm"}
                   </button>
@@ -704,7 +699,7 @@ const ProfilePage = () => {
               </button>
             </div>
 
-                {/* ================= SKILLS ================= */}
+            {/* ================= SKILLS ================= */}
 
             <h3 className="text-xl font-semibold mb-3 text-gray-700 text-left flex justify-between items-center">
               Skills
@@ -718,7 +713,7 @@ const ProfilePage = () => {
               )}
             </h3>
             {currentUser.skillsByCategory &&
-            currentUser.skillsByCategory.length > 0 ? (
+              currentUser.skillsByCategory.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {currentUser.skillsByCategory.map((skill, index) => (
                   <div
@@ -1015,7 +1010,7 @@ const ProfilePage = () => {
                 )}
               </h3>
               {currentUser.certificates &&
-              currentUser.certificates.length > 0 ? (
+                currentUser.certificates.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {currentUser.certificates.map((cert, index) => (
                     <div
@@ -1107,6 +1102,10 @@ const ProfilePage = () => {
             >
               <X size={20} />
             </button>
+
+            <div>
+              <p className="text-left font-semibold">Upload Profile</p>
+            </div>
 
             <div className="flex flex-col items-center mt-5">
               <img
