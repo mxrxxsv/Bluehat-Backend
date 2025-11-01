@@ -158,13 +158,7 @@ const InviteWorkersPage = () => {
         };
       });
 
-      // Debug a small sample to verify shapes in console
-      if (import.meta?.env?.DEV && normalizedWorkers.length) {
-        // eslint-disable-next-line no-console
-        console.log("[InviteWorkers] fetched workers", {
-          count: normalizedWorkers.length,
-        });
-      }
+      // Debug logs removed
 
       // Enrich ratings/review counts from reviews API to ensure accuracy
       const enrichedWorkers = await enrichWorkersWithReviewStats(
@@ -258,11 +252,7 @@ const InviteWorkersPage = () => {
             totalRatings: isNaN(count) ? w.totalRatings : count,
           };
           result.push(updated);
-          console.log("[InviteWorkers] review stats fetched", {
-            workerId: w._id,
-            averageRating: updated.rating,
-            totalReviews: updated.totalRatings,
-          });
+          // Debug logs removed
         } else {
           result.push(w);
         }

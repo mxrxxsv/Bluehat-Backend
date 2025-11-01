@@ -201,11 +201,6 @@ const WorkerPortfolio = () => {
     }
 
     const fetchIds = Array.from(idsToFetch);
-    if (fetchIds.length) {
-      console.log("[WorkerPortfolio] Enriching job details for reviews", {
-        fetchIds,
-      });
-    }
     if (!fetchIds.length) return;
 
     let cancelled = false;
@@ -217,10 +212,7 @@ const WorkerPortfolio = () => {
             const payload = resp?.data || resp;
             const jobData =
               payload?.data?.job || payload?.data || payload?.job || payload;
-            console.log("[WorkerPortfolio] Job fetched for review", {
-              jobId: jid,
-              job: jobData,
-            });
+            // Debug log removed
             return [jid, jobData];
           } catch (err) {
             console.warn("[WorkerPortfolio] Failed to fetch job for review", {

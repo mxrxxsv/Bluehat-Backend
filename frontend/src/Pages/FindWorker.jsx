@@ -75,10 +75,6 @@ const FindWorker = () => {
 
         // Backend provides rating and totalRatings from Review collection
         setWorkers(all);
-        if (import.meta?.env?.DEV) {
-          // eslint-disable-next-line no-console
-          console.log("[FindWorker] fetched workers", { count: all.length });
-        }
       } catch {
         console.error("Error fetching workers");
       } finally {

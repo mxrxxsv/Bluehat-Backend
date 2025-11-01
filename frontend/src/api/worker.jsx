@@ -17,9 +17,8 @@ export const getWorkers = async (filters = {}) => {
 };
 
 // Search workers with filters (alias for getWorkers)
-export const searchWorkers = async (filters = {}) => {
-  return getWorkers(filters);
-};
+// Alias to maintain backward compatibility without duplicating logic
+export const searchWorkers = getWorkers;
 
 // Get worker by ID
 export const getWorkerById = async (workerId) => {

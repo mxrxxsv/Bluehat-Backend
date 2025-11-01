@@ -140,7 +140,7 @@ const ContractManagement = () => {
                 : await getClientContracts();
             setContracts(list || []);
           } catch (error) {
-            console.log("Failed to refresh contracts:", error);
+            console.error("Failed to refresh contracts:", error);
           }
         };
         [
@@ -160,8 +160,7 @@ const ContractManagement = () => {
           ? await getWorkerContracts()
           : await getClientContracts();
 
-      console.log("Contracts loaded:", contractsRes);
-      console.log("Current user:", user);
+        // Debug logs removed
       setContracts(contractsRes || []);
     } catch (error) {
       console.error("Failed to load contracts:", error);
@@ -175,20 +174,20 @@ const ContractManagement = () => {
       try {
         socketRef.current?.disconnect();
       } catch (error) {
-        console.log("Socket disconnect error:", error);
+          console.error("Socket disconnect error:", error);
       }
     };
   }, []);
 
   const handleStartWork = async (contractId) => {
     try {
-      console.log("Attempting to start work for contract:", contractId);
+        // Debug logs removed
       setActionLoading((prev) => ({
         ...prev,
         [contractId]: { ...(prev[contractId] || {}), starting: true },
       }));
       const result = await startWork(contractId);
-      console.log("Start work result:", result);
+        // Debug logs removed
       showNotification(
         "success",
         "Work Started",
@@ -212,13 +211,13 @@ const ContractManagement = () => {
 
   const handleCompleteWork = async (contractId) => {
     try {
-      console.log("Attempting to complete work for contract:", contractId);
+        // Debug logs removed
       setActionLoading((prev) => ({
         ...prev,
         [contractId]: { ...(prev[contractId] || {}), completing: true },
       }));
       const result = await completeWork(contractId);
-      console.log("Complete work result:", result);
+        // Debug logs removed
       showNotification(
         "success",
         "Work Completed",
@@ -279,15 +278,7 @@ const ContractManagement = () => {
         return;
       }
 
-      console.log(
-        "Submitting feedback for contract:",
-        feedbackModal.contract._id
-      );
-      console.log("Contract status:", feedbackModal.contract.contractStatus);
-      console.log("Feedback data:", {
-        rating: feedback.rating,
-        feedback: feedback.comment,
-      });
+        // Debug logs removed
       setSubmittingFeedback(true);
       await submitFeedback(feedbackModal.contract._id, {
         rating: feedback.rating,
@@ -371,7 +362,7 @@ const ContractManagement = () => {
         });
       } catch (error) {
         // non-fatal; ChatPage can still create lazily
-        console.log(
+        console.warn(
           "Conversation creation failed, will create lazily:",
           error.message
         );

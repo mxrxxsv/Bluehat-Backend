@@ -1,5 +1,6 @@
 import axios from "axios";
 import { baseURL } from "../utils/appMode.js";
+import { respondToApplication as respondToApplicationCanonical } from "./jobApplication.jsx";
 const API = axios.create({
   baseURL: baseURL + "/jobs",
   withCredentials: true, // Cookies are sent automatically
@@ -45,6 +46,6 @@ export const updateJob = (id, jobData) => API.put(`/${id}`, jobData);
 export const deleteJob = (id) => API.delete(`/${id}`);
 
 export const getJobApplications = (jobId) => API.get(`/${jobId}/applications`);
-
+// Delegate to canonical application API to avoid duplicate endpoint logic
 export const respondToApplication = (applicationId, action, message) =>
-  API.patch(`/applications/${applicationId}/respond`, { action, message });
+  respondToApplicationCanonical(applicationId, { action, message });

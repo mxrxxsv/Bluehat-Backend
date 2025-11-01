@@ -82,7 +82,6 @@ const ProfilePage = () => {
     getProfile()
       .then((res) => {
         setCurrentUser(res.data.data);
-        console.log(res.data.data);
         setLoading(false);
       })
       .catch(() => {
@@ -205,7 +204,6 @@ const ProfilePage = () => {
   };
 
   const handleDeletePortfolio = async (id) => {
-    console.log("Deleting portfolio ID:", id);
     try {
       await deletePortfolio(id);
       setCurrentUser((prev) => ({
@@ -221,7 +219,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteCertificate = async (id) => {
-    console.log("Deleting certificate ID:", id);
     try {
       await deleteCertificate(id);
       setCurrentUser((prev) => ({
@@ -237,7 +234,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteExperience = async (id) => {
-    console.log("Deleting experience ID:", id);
     try {
       await deleteExperience(id);
       setCurrentUser((prev) => ({
@@ -262,7 +258,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteEducation = async (id) => {
-    console.log("Deleting education ID:", id);
     try {
       await deleteEducation(id);
       setCurrentUser((prev) => ({
@@ -278,7 +273,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteSkillCategory = async (id) => {
-    console.log("Deleting skill category ID:", id);
     try {
       await removeSkillCategory(id);
       setCurrentUser((prev) => ({
