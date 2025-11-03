@@ -73,7 +73,7 @@ const Footer = () => {
                 </div>
             </div>
 
-            <div className="text-center text-sm mt-10 border-t border-[#252525] pt-4 font-bold text-gray-600">
+            <div className="text-center text-sm mt-10 border-t border-[#252525] pt-4 font-bold text-gray-700">
                 © {new Date().getFullYear()} FixIt. All rights reserved.
             </div>
         </footer>
