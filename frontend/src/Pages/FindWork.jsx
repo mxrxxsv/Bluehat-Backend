@@ -800,7 +800,7 @@ const FindWork = () => {
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
+                    <option key={cat._id} value={cat._id} className="text-black">
                       {cat.categoryName}
                     </option>
                   ))}
