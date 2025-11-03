@@ -1,13 +1,43 @@
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import discover from '../assets/discovery.png';
 import security from '../assets/security.png';
 import connect from '../assets/connect.png';
 import desktopSrc from '../assets/desktop.png';
 import mobileSrc from '../assets/mobile.jpg';
 
+// Watch demo URL: set your YouTube video link here (code-defined, no UI input)
+// Example: https://www.youtube.com/watch?v=XXXXXXXXXXX
+const DEMO_URL = "https://youtu.be/_Z-oh_dI15w";
+
+// Convert a YouTube link (watch, share, or embed) into an embeddable URL
+const toYouTubeEmbed = (url) => {
+    if (!url) return "";
+    try {
+        const u = new URL(url);
+        // youtu.be/<id>
+        if (u.hostname.includes('youtu.be')) {
+            const id = u.pathname.replace('/', '');
+            return id ? `https://www.youtube.com/embed/${id}` : "";
+        }
+        // youtube.com/watch?v=<id>
+        if (u.searchParams.has('v')) {
+            const id = u.searchParams.get('v');
+            return id ? `https://www.youtube.com/embed/${id}` : "";
+        }
+        // youtube.com/embed/<id>
+        if (u.pathname.startsWith('/embed/')) {
+            return url;
+        }
+        return "";
+    } catch {
+        return "";
+    }
+};
+
 const HomePage = () => {
-  
+    const [isDemoOpen, setIsDemoOpen] = useState(false);
+    const embedUrl = toYouTubeEmbed(DEMO_URL);
+
     useEffect(() => {
         const els = Array.from(document.querySelectorAll('.home-reveal'));
         if (!('IntersectionObserver' in window) || els.length === 0) return;
@@ -34,6 +64,16 @@ const HomePage = () => {
 
         return () => observer.disconnect();
     }, []);
+
+    // Close modal on ESC
+    useEffect(() => {
+        if (!isDemoOpen) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape') setIsDemoOpen(false);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isDemoOpen]);
 
     const features = [
         {
@@ -96,14 +136,61 @@ const HomePage = () => {
                     I'm looking for
                 </p>
 
-                <Link to="/find-work" className='flex mt-165 mx-auto md:mt-0 md:mx-0 h-13 w-88 bg-[#FFFFFF] border-2 border-solid rounded-[20px] text-start pt-3 pl-4 shadow-md border-[#89A8B2] opacity-80
+                <button
+                    type="button"
+                    onClick={() => { if (embedUrl) setIsDemoOpen(true); }}
+                    aria-label="Watch demo video"
+                    title={embedUrl ? "Watch demo" : "Set DEMO_URL to your YouTube link to enable"}
+                    className='relative flex items-center justify-center mt-165 mx-auto md:mt-0 md:mx-0 h-13 w-88 bg-[#FFFFFF] border-2 border-solid rounded-[20px] px-4 pl-12 shadow-md border-[#89A8B2] opacity-80 hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
                            md:absolute
-                           md:-top-[-38vw] md:left-[53.5vw] '>
-                    {/* -top-[-160vw] left-[2vw] */}
-                    Any Worker Field <span className='ml-45'>⋮</span>
-                </Link>
+                           md:-top-[-38vw] md:left-[53.5vw] '
+                    disabled={!embedUrl}
+                >
+                    <svg
+                        aria-hidden="true"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 md:w-6 md:h-6 text-[#89A8B2]"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                    >
+                        <circle cx="12" cy="12" r="11" className="opacity-20" />
+                        <path d="M10 8l6 4-6 4V8z" />
+                    </svg>
+                    <span className="text-[#252525] font-medium">Watch demo</span>
+                </button>
 
             </div>
+
+            {/* Demo Modal */}
+            {isDemoOpen && (
+                <div
+                    className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setIsDemoOpen(false)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Demo video"
+                >
+                    <div
+                        className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setIsDemoOpen(false)}
+                            className="absolute top-3 right-3 z-10 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/90 text-gray-800 hover:bg-white shadow cursor-pointer"
+                            aria-label="Close"
+                        >
+                            ✕
+                        </button>
+                        <iframe
+                            title="Demo video"
+                            src={`${embedUrl}?autoplay=1&rel=0`}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
+                    </div>
+                </div>
+            )}
 
             <div className='relative bottom-[120px] md:bottom-0 text-center home-reveal'>
                 <h1 className=' text-[28px] md:text-[32px] text-[#252525] opacity-85 font-medium mb-4 mx-15 md:mx-0 '>Empowering Filipino
@@ -177,7 +264,7 @@ const HomePage = () => {
                         </h2>
                         <p className="text-left sm:text-lg text-gray-600 mb-8 max-w-3xl">
                             Need a reliable professional? We’ve got you covered! Whether it’s fixing a leak, renovating a
-                            space, or handling heavy lifting, our skilled blue-collar workers are ready to help. Explore a
+                            space, or handling heavy lifting. Explore a
                             wide range of services and find the right expert for the job.
                         </p>
                         <div className="flex flex-col sm:flex-wrap sm:flex-row sm:justify-start gap-4 items-start">
