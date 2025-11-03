@@ -74,7 +74,7 @@ const VerifyEmail = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="text-3xl">❌</span>
@@ -86,13 +86,13 @@ const VerifyEmail = () => {
           <div className="space-y-3">
             <button
               onClick={() => navigate("/signup")}
-              className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+              className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors cursor-pointer"
             >
               Sign Up Again
             </button>
             <button
               onClick={() => navigate("/login")}
-              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 transition-colors cursor-pointer"
             >
               Go to Login
             </button>

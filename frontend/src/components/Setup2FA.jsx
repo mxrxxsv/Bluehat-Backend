@@ -213,7 +213,7 @@ const Setup2FA = () => {
         </div>
       )}
 
-      <div className="max-w-md w-full mt-30 bg-white rounded-2xl shadow-xl overflow-hidden">
+  <div className="max-w-md w-full mt-30 bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
         {/* <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 text-center">
           <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -248,41 +248,41 @@ const Setup2FA = () => {
           )}
 
           {/* Mobile Quick Setup */}
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-5 rounded-xl shadow-md">
+          <div className="bg-white border border-[#89A8B2]/30 p-5 rounded-xl shadow-sm">
             <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-white text-[#5669ff] bg-opacity-25 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+              <div className="w-10 h-10 bg-[#89A8B2] text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 1
               </div>
-              <h3 className="font-semibold text-lg">For Mobile Users</h3>
+              <h3 className="font-semibold text-lg text-[#252525]">For Mobile Users</h3>
             </div>
-            <p className="text-sm opacity-90 mb-4 leading-relaxed">
+            <p className="text-sm text-[#252525]/80 mb-4 leading-relaxed">
               Tap the button below to automatically open your authenticator app:
             </p>
             <a
               href={`otpauth://totp/FixIt%20(${encodeURIComponent(
                 email
               )})?secret=${totpSecret}&issuer=FixIt`}
-              className="block w-full bg-opacity-20 text-white text-center py-4 rounded-lg font-semibold border-2 border-white border-opacity-30 hover:bg-opacity-30 transition-all duration-200 backdrop-blur-sm"
+              className="block w-full text-[#252525] text-center py-3 rounded-lg font-semibold border-2 border-[#89A8B2] hover:bg-[#f4f6f6] transition-all duration-200"
             >
               Open in Authenticator App
             </a>
-            <p className="text-xs opacity-80 text-center mt-3 leading-relaxed">
+            <p className="text-xs text-[#252525]/70 text-center mt-3 leading-relaxed">
               Compatible with Google Authenticator, Microsoft Authenticator,
               Authy, 1Password, and more!
             </p>
           </div>
 
           {/* QR Code */}
-          <div className="border-2 border-gray-100 p-5 rounded-xl hover:border-blue-200 transition-colors">
+          <div className="border-2 border-gray-100 p-5 rounded-xl hover:border-[#89A8B2]/40 transition-colors">
             <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+              <div className="w-10 h-10 bg-[#89A8B2] text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 2
               </div>
-              <h3 className="font-semibold text-lg text-gray-800">
+              <h3 className="font-semibold text-lg text-[#252525]">
                 For Desktop Users
               </h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            <p className="text-sm text-[#252525]/80 mb-4 leading-relaxed">
               Scan this QR code with your phone's authenticator app:
             </p>
             {qrCode ? (
@@ -302,20 +302,20 @@ const Setup2FA = () => {
           </div>
 
           {/* Manual Setup */}
-          <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-xl">
+          <div className="bg-[#f4f6f6] border-2 border-[#cfe8f7] p-5 rounded-xl">
             <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+              <div className="w-10 h-10 bg-[#89A8B2] text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 3
               </div>
-              <h3 className="font-semibold text-lg text-gray-800">
+              <h3 className="font-semibold text-lg text-[#252525]">
                 Manual Setup
               </h3>
             </div>
-            <p className="text-sm mb-3 text-gray-700 leading-relaxed">
+            <p className="text-sm mb-3 text-[#252525]/80 leading-relaxed">
               If the above methods don't work, manually enter this secret key:
             </p>
-            <div className="bg-white p-4 rounded-lg border-2 border-dashed border-amber-300">
-              <p className="text-xs text-gray-600 mb-1">
+            <div className="bg-white p-4 rounded-lg border-2 border-dashed border-[#cfe8f7]">
+              <p className="text-xs text-[#252525]/70 mb-1">
                 Account: FixIt ({email})
               </p>
               <div className="font-mono text-sm break-all bg-gray-50 p-3 rounded border text-center tracking-wider">
@@ -325,18 +325,18 @@ const Setup2FA = () => {
             <button
               onClick={copySecret}
               disabled={!totpSecret}
-              className="mt-3 text-amber-600 text-sm hover:text-amber-700 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="mt-3 text-[#252525] text-sm hover:text-black hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Copy Secret Key
             </button>
           </div>
 
           {/* Verification Form */}
-          <div className="bg-gradient-to-r from-green-500 to-teal-500 p-5 rounded-xl text-white shadow-md">
-            <h3 className="font-semibold mb-4 text-center text-lg">
+          <div className="bg-gradient-to-r from-white to-[#eaf5fb] p-5 rounded-xl text-[#252525] shadow-md border border-[#89A8B2]/30">
+            <h3 className="font-semibold mb-4 text-center text-lg text-[#252525]">
               Complete Account Setup
             </h3>
-            <p className="text-sm opacity-90 text-center mb-4 leading-relaxed">
+            <p className="text-sm text-[#252525]/80 text-center mb-4 leading-relaxed">
               Enter the 6-digit code from your authenticator app:
             </p>
             <form id="verify-form" onSubmit={verifyTotp} className="space-y-4">
@@ -346,7 +346,7 @@ const Setup2FA = () => {
                   placeholder=""
                   value={otpCode}
                   onChange={handleInputChange}
-                  className="w-full p-4 rounded-lg text-center text-white text-xl font-mono tracking-[0.5em] border-2 border-transparent border-white focus:outline-none transition-all duration-200"
+                  className="w-full p-4 rounded-lg text-center text-[#252525] text-xl font-mono tracking-[0.5em] border-2 border-[#cfe8f7] focus:outline-none focus:ring-2 focus:ring-[#89A8B2] focus:border-[#89A8B2] bg-white transition-all duration-200"
                   maxLength="6"
                   disabled={verifying}
                   autoComplete="off"
@@ -368,7 +368,7 @@ const Setup2FA = () => {
               <button
                 type="submit"
                 disabled={otpCode.length !== 6 || verifying}
-                className="w-full bg-gray-800 text-white p-4 rounded-lg font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+                className="w-full bg-[#252525] text-white p-4 rounded-lg font-semibold hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
               >
                 {verifying ? (
                   <>
@@ -386,25 +386,25 @@ const Setup2FA = () => {
           </div>
 
           {/* Tips */}
-          <div className="bg-blue-50 border-2 border-blue-200 p-5 rounded-xl">
-            <h4 className="font-semibold text-blue-800 mb-3 flex items-center">
+          <div className="bg-[#f4f6f6] border-2 border-[#cfe8f7] p-5 rounded-xl">
+            <h4 className="font-semibold text-[#252525] mb-3 flex items-center">
               <span className="mr-2">💡</span>
               Quick Setup Tips
             </h4>
-            <ul className="text-sm text-blue-700 space-y-2 leading-relaxed">
-              <li className="flex items-start">
+            <ul className="text-sm text-[#252525]/80 space-y-2 leading-relaxed">
+              <li className="flex items-start text-left">
                 <span className="mr-2 mt-0.5">•</span>
                  Download Google Authenticator from your app store
               </li>
-              <li className="flex items-start">
+              <li className="flex items-start text-left">
                 <span className="mr-2 mt-0.5">•</span>
                 The 6-digit code changes every 30 seconds for security
               </li>
-              <li className="flex items-start">
+              <li className="flex items-start text-left">
                 <span className="mr-2 mt-0.5">•</span>
                 Save your secret key in a safe place as backup
               </li>
-              <li className="flex items-start">
+              <li className="flex items-start text-left">
                 <span className="mr-2 mt-0.5">•</span>
                 You'll need this code every time you log in to FixIt
               </li>
@@ -416,13 +416,13 @@ const Setup2FA = () => {
             <button
               onClick={resendQR}
               disabled={loading}
-              className="text-blue-600 text-sm hover:text-blue-700 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-[#89A8B2] text-sm hover:text-[#5d7a83] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Refresh QR Code
             </button>
             <button
               onClick={() => navigate("/login")}
-              className="text-gray-600 text-sm hover:text-gray-700 hover:underline font-medium transition-colors"
+              className="text-[#252525] text-sm hover:text-black hover:underline font-medium transition-colors"
             >
               ← Back to Login
             </button>
