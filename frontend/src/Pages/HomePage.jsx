@@ -1,9 +1,39 @@
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 import discover from '../assets/discovery.png';
 import security from '../assets/security.png';
 import connect from '../assets/connect.png';
+import desktopSrc from '../assets/desktop.png';
+import mobileSrc from '../assets/mobile.jpg';
 
 const HomePage = () => {
+  
+    useEffect(() => {
+        const els = Array.from(document.querySelectorAll('.home-reveal'));
+        if (!('IntersectionObserver' in window) || els.length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        // Enter viewport: show
+                        entry.target.classList.add('reveal-visible');
+                    } else {
+                        // Exit viewport: reset so it animates again next time
+                        entry.target.classList.remove('reveal-visible');
+                    }
+                });
+            },
+            { root: null, rootMargin: '0px', threshold: 0.12 }
+        );
+
+        els.forEach((el) => {
+            el.classList.add('reveal');
+            observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     const features = [
         {
@@ -35,7 +65,7 @@ const HomePage = () => {
     return (
         <>
 
-            <div className="relative w-full h-screen overflow-hidden">
+            <div className="relative w-full h-screen overflow-hidden home-reveal">
                 <div className="absolute bg-[#b8def79e] rounded-full 
                 w-[130vw] h-[130vw] -left-[45vw] -top-[10vw] 
                 md:w-[72vw] md:h-[72vw] md:-left-[20vw] md:-top-[27.5vw] ">
@@ -46,7 +76,7 @@ const HomePage = () => {
                 md:w-[83vw] md:h-[83vw] md:left-[23vw] md:-top-[55vw] ">
                 </div>
 
-                <p className='text-start text-[#252525] opacity-85 absolute z-10 font-semibold
+                <p className='text-start text-[#252525] opacity-85 absolute z-10 font-bold mdtext-base/20 
                   -top-[-55vw] pl-6  text-[38px] w-80
                   md:-top-[-17vw] md:pl-24 md:text-[64px]  md:w-150' >
                     We connect skilled worker to help you
@@ -75,16 +105,16 @@ const HomePage = () => {
 
             </div>
 
-            <div className='relative bottom-[120px] md:bottom-0 text-center'>
+            <div className='relative bottom-[120px] md:bottom-0 text-center home-reveal'>
                 <h1 className=' text-[28px] md:text-[32px] text-[#252525] opacity-85 font-medium mb-4 mx-15 md:mx-0 '>Empowering Filipino
                     Blue-Collar Workers</h1>
 
-                <p className='mx-5 md:mx-60 mb-15 text-[16px] md:text-[18px]'>A platform designed for Filipino blue-hat workers to
+                <p className='mx-5 md:mx-60 mb-15 text-[16px] md:text-[18px] text-gray-600'>A platform designed for Filipino bluecollar workers to
                     connect, showcase their skills, and find job opportunities. Engage in real-time chats, network with potential clients, and grow your professional reputation all in one place!</p>
 
             </div>
 
-            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15">
+            {/* <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15">
                 <div className="bg-gradient-to-r from-white to-[#cfe8f7] p-6 rounded-xl shadow-md">
                     <div className="flex flex-col md:flex-row gap-6 justify-around items-center text-center">
                         {features.map((feature, index) => (
@@ -96,9 +126,50 @@ const HomePage = () => {
                         ))}
                     </div>
                 </div>
+            </div> */}
+
+            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
+                <div className="p-6 rounded-xl">
+                    <div className="flex flex-col md:flex-row gap-8 items-stretch">
+                        {/* Responsive Showcase (overlapping desktop + mobile) with optional img src */}
+                        <div className="w-full md:w-2/3">
+                            <div className="relative w-full h-48 sm:h-60 md:h-80 lg:h-[28rem] xl:h-[34rem] rounded-xl bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
+                                {/* Desktop placeholder card */}
+                                <div className="absolute left-1/2 top-1/2 -translate-x-[52%] -translate-y-[55%] w-[88%] h-[70%] sm:h-[75%] md:h-[80%] rounded-xl bg-gradient-to-br from-gray-100 to-gray-300 border border-gray-300 shadow-md overflow-hidden">
+                                    {desktopSrc ? (
+                                        <img src={desktopSrc} alt="Desktop showcase" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>
+                                            <div className="h-6 w-full bg-gray-200/80 border-b border-gray-300 rounded-t-xl"></div>
+                                            <div className="p-4 text-gray-500 text-xs sm:text-sm">Desktop placeholder</div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Mobile placeholder card */}
+                                <div className="absolute right-4 bottom-4 sm:right-8 sm:bottom-8 w-20 h-36 sm:w-24 sm:h-44 md:w-48 md:h-72 lg:w-52 lg:h-98 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-300 border border-gray-300 shadow-lg overflow-hidden">
+                                    {mobileSrc ? (
+                                        <img src={mobileSrc} alt="Mobile showcase" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>
+                                            <div className="h-3 w-16 mx-auto mt-2 rounded-full bg-gray-300"></div>
+                                            <div className="p-3 text-gray-500 text-[10px] sm:text-xs">Mobile placeholder</div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Caption/Text (no UI inputs) */}
+                        <div className="w-full md:w-1/3 text-left self-center">
+                            <h3 className="text-xl font-semibold mb-2 text-[#252525]">FixIt</h3>
+                            <p className="text-gray-600">search by skill and location, chat in real time, send invitations and applications, sign work contracts, and hire with verified profiles and secure workflows all in one place.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15">
+            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
                 <div className="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-4 text-left">
@@ -122,6 +193,8 @@ const HomePage = () => {
                     </div>
                 </div>
             </div>
+
+
 
         </>
     );
