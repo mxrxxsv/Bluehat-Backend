@@ -5,9 +5,7 @@ import connect from '../assets/connect.png';
 import desktopSrc from '../assets/desktop.png';
 import mobileSrc from '../assets/mobile.jpg';
 
-// Watch demo URL: set your YouTube video link here (code-defined, no UI input)
-// Example: https://www.youtube.com/watch?v=XXXXXXXXXXX
-const DEMO_URL = "https://youtu.be/_Z-oh_dI15w";
+const DEMO_URL = "";
 
 // Convert a YouTube link (watch, share, or embed) into an embeddable URL
 const toYouTubeEmbed = (url) => {
@@ -233,10 +231,9 @@ const HomePage = () => {
     const categories = [
         "Construction & Renovation",
         "Repair & Maintenance",
-        "Logistics & Transport",
+        "Electrical & Plumbing",
         "Cleaning & Housekeeping",
-        "Landscaping & Outdoor Work",
-        "Factory & Industrial Work",
+        "Apprentice & Helper work",
     ];
 
     return (
