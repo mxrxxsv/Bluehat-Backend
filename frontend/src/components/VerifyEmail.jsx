@@ -58,13 +58,13 @@ const VerifyEmail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#f4f6f6] flex items-center justify-center p-4">
         <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-          <h2 className="text-2xl font-bold text-gray-800 mt-6">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#55b3f3] border-t-transparent mx-auto"></div>
+          <h2 className="text-2xl font-bold text-[#252525] mt-6">
             Verifying Your Email
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-[#252525]/80 mt-2">
             Please wait while we verify your email address...
           </p>
         </div>
@@ -74,25 +74,25 @@ const VerifyEmail = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#f4f6f6] flex items-center justify-center p-4">
         <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="text-3xl">❌</span>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          <h2 className="text-2xl font-bold text-[#252525] mb-4">
             Verification Failed
           </h2>
           <p className="text-red-600 mb-6">{error}</p>
           <div className="space-y-3">
             <button
               onClick={() => navigate("/signup")}
-              className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors cursor-pointer"
+              className="w-full bg-[#55b3f3] text-white py-3 px-4 rounded-lg font-semibold hover:bg-sky-600 transition-colors cursor-pointer"
             >
               Sign Up Again
             </button>
             <button
               onClick={() => navigate("/login")}
-              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 transition-colors cursor-pointer"
+              className="w-full bg-white text-[#252525] border border-gray-300 py-3 px-4 rounded-lg font-semibold hover:bg-[#f4f6f6] transition-colors cursor-pointer"
             >
               Go to Login
             </button>
