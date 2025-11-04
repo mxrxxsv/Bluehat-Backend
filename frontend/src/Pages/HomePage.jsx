@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import discover from '../assets/discovery.png';
 import security from '../assets/security.png';
 import connect from '../assets/connect.png';
@@ -36,6 +36,11 @@ const toYouTubeEmbed = (url) => {
 
 const HomePage = () => {
     const [isDemoOpen, setIsDemoOpen] = useState(false);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [nearBottom, setNearBottom] = useState(false);
+    const [footerVisible, setFooterVisible] = useState(false);
+    const scrollerRef = useRef(null);
+    const topRef = useRef(null);
     const embedUrl = toYouTubeEmbed(DEMO_URL);
 
     useEffect(() => {
@@ -75,6 +80,138 @@ const HomePage = () => {
         return () => window.removeEventListener('keydown', onKey);
     }, [isDemoOpen]);
 
+    // Helper: smooth scroll to top for the actual scrolling element (window/body/html)
+    const smoothScrollToTop = (duration = 700) => {
+        try {
+            const target = scrollerRef.current || document.scrollingElement || document.documentElement || document.body;
+            const start = (target && typeof target.scrollTop === 'number')
+                ? target.scrollTop
+                : (window.scrollY || window.pageYOffset || 0);
+            if (start <= 0) return; // already at top
+
+            const startTime = performance.now();
+            const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+            const step = (now) => {
+                const elapsed = now - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const y = Math.max(0, Math.round(start * (1 - easeOutCubic(t))));
+                // Write to both in case the app scrolls window or a root element
+                if (target && typeof target.scrollTop === 'number') target.scrollTop = y;
+                window.scrollTo(0, y);
+                if (t < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        } catch {
+            // Fallback: native smooth
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    // Detect primary scroll container and compute when near bottom
+    useEffect(() => {
+        const candidates = [
+            document.scrollingElement,
+            document.documentElement,
+            document.body,
+            document.getElementById('root'),
+            document.getElementById('app'),
+            document.querySelector('main'),
+            document.querySelector('.App'),
+        ].filter(Boolean);
+
+        const isScrollable = (el) => {
+            if (!el) return false;
+            try {
+                const canScroll = (el.scrollHeight - el.clientHeight) > 0;
+                if (el === document.body || el === document.documentElement) return canScroll;
+                const style = window.getComputedStyle(el);
+                const oy = (style.overflowY || '').toLowerCase();
+                return canScroll && (oy.includes('auto') || oy.includes('scroll') || oy.includes('overlay'));
+            } catch { return false; }
+        };
+
+        scrollerRef.current = candidates.find(isScrollable) || document.scrollingElement || document.documentElement || document.body;
+
+        const calcNearBottom = () => {
+            const el = scrollerRef.current;
+            const stCandidates = [
+                window.scrollY,
+                window.pageYOffset,
+                document.documentElement ? document.documentElement.scrollTop : 0,
+                document.body ? document.body.scrollTop : 0,
+                el && typeof el.scrollTop === 'number' ? el.scrollTop : 0,
+            ].filter((v) => typeof v === 'number');
+            const chCandidates = [
+                window.innerHeight,
+                document.documentElement ? document.documentElement.clientHeight : 0,
+                document.body ? document.body.clientHeight : 0,
+                el && el.clientHeight ? el.clientHeight : 0,
+            ].filter((v) => typeof v === 'number');
+            const shCandidates = [
+                document.documentElement ? document.documentElement.scrollHeight : 0,
+                document.body ? document.body.scrollHeight : 0,
+                el && el.scrollHeight ? el.scrollHeight : 0,
+            ].filter((v) => typeof v === 'number');
+
+            const scrollTop = Math.max.apply(null, stCandidates);
+            const clientHeight = Math.max.apply(null, chCandidates);
+            const scrollHeight = Math.max.apply(null, shCandidates);
+
+            // Show only when near the bottom (within 120px), hide otherwise
+            const bottomGap = Math.max(0, scrollHeight - (scrollTop + clientHeight));
+            const nb = bottomGap <= 120;
+            setNearBottom(nb);
+        };
+
+        // Attach listeners
+        const el = scrollerRef.current;
+        window.addEventListener('scroll', calcNearBottom, { passive: true });
+        if (el && el !== document.body && el !== document.documentElement) {
+            el.addEventListener('scroll', calcNearBottom, { passive: true });
+        }
+        window.addEventListener('resize', calcNearBottom);
+        // Initial compute
+        calcNearBottom();
+
+        return () => {
+            window.removeEventListener('scroll', calcNearBottom);
+            if (el && el !== document.body && el !== document.documentElement) {
+                el.removeEventListener('scroll', calcNearBottom);
+            }
+            window.removeEventListener('resize', calcNearBottom);
+        };
+    }, []);
+
+    // Observe footer visibility to drive button visibility when footer enters viewport
+    useEffect(() => {
+        const footerCandidates = [
+            document.querySelector('footer'),
+            document.getElementById('footer'),
+            document.querySelector('.footer'),
+            document.querySelector('.site-footer'),
+        ].filter(Boolean);
+        const target = footerCandidates[0];
+        if (!('IntersectionObserver' in window) || !target) {
+            setFooterVisible(false);
+            return;
+        }
+        const obs = new IntersectionObserver(
+            (entries) => {
+                const anyVisible = entries.some((e) => e.isIntersecting);
+                setFooterVisible(anyVisible);
+            },
+            { root: null, threshold: 0.1 }
+        );
+        obs.observe(target);
+        return () => obs.disconnect();
+    }, []);
+
+    // Combine signals: show button if near bottom or footer is visible
+    useEffect(() => {
+        setShowScrollTop(nearBottom || footerVisible);
+    }, [nearBottom, footerVisible]);
+
     const features = [
         {
             title: 'Browse & Discover',
@@ -104,6 +241,8 @@ const HomePage = () => {
 
     return (
         <>
+            {/* Top sentinel for reliable scrollIntoView */}
+            <div ref={topRef} aria-hidden="true" />
 
             <div className="relative w-full h-auto md:h-screen overflow-x-hidden md:overflow-hidden home-reveal">
                 <div className="absolute bg-[#b8def79e] rounded-full 
@@ -277,6 +416,31 @@ const HomePage = () => {
             </div>
 
 
+
+            {/* Back to top button (fixed bottom-right, shows near bottom or after scrolling) */}
+            {showScrollTop && (
+            <button
+                type="button"
+                onClick={() => {
+                    try {
+                        if (topRef.current && typeof topRef.current.scrollIntoView === 'function') {
+                            topRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        } else {
+                            smoothScrollToTop(800);
+                        }
+                    } catch {
+                        smoothScrollToTop(800);
+                    }
+                }}
+                aria-label="Back to top"
+                title="Back to top"
+                className="fixed z-[9999] pointer-events-auto bottom-4 right-4 md:bottom-6 md:right-6 inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#252525] text-white shadow-lg hover:bg-[#111] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-400 transition active:scale-95"
+            >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
+                    <path d="M12 4l-7 7h4v9h6v-9h4l-7-7z" />
+                </svg>
+            </button>
+            )}
 
         </>
     );
