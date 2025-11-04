@@ -494,7 +494,7 @@ const FindWork = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35 animate-fade-in">
 
       <VerificationNotice user={user} />
 
@@ -545,7 +545,7 @@ const FindWork = () => {
 
           {/* Desktop filters dropdown popover */}
           {showDesktopFilters && (
-            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20 animate-scale-in">
               {/* Location */}
               <div className="flex items-stretch gap-2 mb-3">
                 <input
@@ -625,12 +625,12 @@ const FindWork = () => {
         <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/40 animate-fade-in"
             onClick={() => setShowMobileFilters(false)}
             aria-hidden="true"
           />
           {/* Bottom sheet panel */}
-          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-800">Filters</h3>
               <button
@@ -936,7 +936,7 @@ const FindWork = () => {
 
       {/* Success Modal */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-slide-up">
           <CheckCircle size={20} /> Job posted successfully!
         </div>
       )}
@@ -944,7 +944,7 @@ const FindWork = () => {
       {/* Job Posts Display (inner scroll like FindWorker) */}
       {filteredJobs.length > 0 ? (
         <div ref={listRef} style={{ height: listHeight }} className="custom-scrollbar flex flex-col overflow-y-auto pr-2">
-          <div className="space-y-4 pb-4">
+          <div className="space-y-4 pb-4 stagger-children">
             {filteredJobs.map((job) => {
               const toIdString = (val) => {
                 if (!val) return "";

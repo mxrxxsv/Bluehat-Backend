@@ -218,7 +218,7 @@ const FindWorker = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35 animate-fade-in">
 
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-2">
@@ -267,7 +267,7 @@ const FindWorker = () => {
 
           {/* Desktop filters dropdown popover */}
           {showDesktopFilters && (
-            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20 animate-scale-in">
               {/* Location */}
               <div className="flex items-stretch gap-2 mb-3">
                 <input
@@ -352,12 +352,12 @@ const FindWorker = () => {
         <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/40 animate-fade-in"
             onClick={() => setShowMobileFilters(false)}
             aria-hidden="true"
           />
           {/* Bottom sheet panel */}
-          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-800">Filters</h3>
               <button
@@ -459,7 +459,7 @@ const FindWorker = () => {
           No workers found matching your criteria
         </div>
       ) : (
-        <div className="custom-scrollbar flex flex-col overflow-y-auto pr-2 h-[calc(100vh-230px)] md:h-[calc(100vh-220px)]">
+  <div className="custom-scrollbar flex flex-col overflow-y-auto pr-2 h-[calc(100vh-230px)] md:h-[calc(100vh-220px)] stagger-children">
           {filteredWorkers.map((worker) => {
             // Prefer backend-provided average rating; fallback to computing from reviews if present
             const avgRating = Number.isFinite(worker.rating)
