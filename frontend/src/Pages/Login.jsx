@@ -11,6 +11,8 @@ const Login = () => {
   const [loginData, setLoginData] = useState(null);
   const [resendTimer, setResendTimer] = useState(60);
   const [loading, setLoading] = useState(false);
+  const [otpAttemptsLeft, setOtpAttemptsLeft] = useState(null);
+  const [otpRetryAfter, setOtpRetryAfter] = useState(0);
 
   const [showModal, setShowModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -35,6 +37,8 @@ const Login = () => {
         setLoginData(trimmedForm);
         setStep("otp");
         setResendTimer(60);
+        setOtpAttemptsLeft(null);
+        setOtpRetryAfter(0);
       } else if (res.data.success) {
         setShowModal(true);
         setTimeout(() => {
@@ -71,7 +75,21 @@ const Login = () => {
         }, 2000);
       }
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || "Invalid OTP");
+      const code = err?.response?.data?.code;
+      const msg = err?.response?.data?.message;
+      // Track attempts left and rate limit for better UX alignment with backend
+      if (code === "INVALID_TOTP") {
+        setOtpAttemptsLeft(
+          typeof err?.response?.data?.attemptsLeft === "number"
+            ? err.response.data.attemptsLeft
+            : null
+        );
+      }
+      if (code === "TOTP_RATE_LIMITED") {
+        const wait = Number(err?.response?.data?.retryAfter || 0);
+        setOtpRetryAfter(wait);
+      }
+      setErrorMessage(msg || (code === "INVALID_TOTP" ? "Invalid authenticator code" : "Invalid OTP"));
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 2000);
     } finally {
@@ -105,6 +123,15 @@ const Login = () => {
     }
     return () => clearInterval(timer);
   }, [step, resendTimer]);
+
+  // Countdown for TOTP rate limiting
+  useEffect(() => {
+    if (otpRetryAfter <= 0) return;
+    const t = setInterval(() => {
+      setOtpRetryAfter((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [otpRetryAfter]);
 
   return (
     <div className="flex justify-center items-center min-h-screen w-full bg-gray-50 relative">
@@ -201,7 +228,12 @@ const Login = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300 cursor-pointer"
+                  disabled={loading}
+                  className={`w-full px-3 py-2 text-base font-medium text-white rounded-lg focus:ring-4 focus:ring-blue-300 ${
+                    loading
+                      ? "bg-[#55b3f3]/60 cursor-not-allowed"
+                      : "bg-[#55b3f3] hover:bg-blue-300 cursor-pointer"
+                  }`}
                 >
                   {loading ? "Logging in..." : "Login"}
                 </button>
@@ -216,7 +248,7 @@ const Login = () => {
               <form className="space-y-6" onSubmit={handleOtpSubmit}>
                 <div>
                   <label htmlFor="otp" className="block mb-2 text-sm font-medium text-gray-900">
-                    Enter the 6-digit OTP 
+                    Enter the 6-digit Authenticator code
                   </label>
                   <input
                     type="text"
@@ -228,6 +260,17 @@ const Login = () => {
                     placeholder="------"
                     required
                   />
+                  {(otpAttemptsLeft !== null || otpRetryAfter > 0) && (
+                    <div className="mt-2 text-xs text-gray-600 text-center">
+                      {otpRetryAfter > 0 ? (
+                        <span>Please wait {otpRetryAfter}s before trying again.</span>
+                      ) : (
+                        otpAttemptsLeft !== null && (
+                          <span>Attempts left: {otpAttemptsLeft}</span>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* <div className="flex justify-between items-center text-sm text-gray-700">
@@ -242,9 +285,18 @@ const Login = () => {
 
                 <button
                   type="submit"
-                  className="w-full px-3 py-2 text-base font-medium text-white bg-[#55b3f3] rounded-lg hover:bg-blue-300 focus:ring-4 focus:ring-blue-300 cursor-pointer"
+                  disabled={otpRetryAfter > 0 || loading}
+                  className={`w-full px-3 py-2 text-base font-medium text-white rounded-lg focus:ring-4 focus:ring-blue-300 ${
+                    otpRetryAfter > 0 || loading
+                      ? "bg-[#55b3f3]/60 cursor-not-allowed"
+                      : "bg-[#55b3f3] hover:bg-blue-300 cursor-pointer"
+                  }`}
                 >
-                  {loading ? "Verifying..." : "Verify OTP"}
+                  {loading
+                    ? "Verifying..."
+                    : otpRetryAfter > 0
+                    ? `Try again in ${otpRetryAfter}s`
+                    : "Verify Code"}
                 </button>
                 <button
                   type="button"

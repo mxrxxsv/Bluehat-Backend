@@ -1253,11 +1253,11 @@ const login = async (req, res) => {
 
     if (!isPasswordCorrect) {
       // Increment login attempts on failed password
-      await matchingUser.incloginAttempts();
+      await matchingUser.incLoginAttempts();
 
       logger.warn("Failed login attempt - invalid password", {
         email: email,
-        attempts: matchingUser.loginAttempts + 1,
+        attempts: matchingUser.loginAttempts,
         ip: req.ip,
         userAgent: req.get("User-Agent"),
         timestamp: new Date().toISOString(),
