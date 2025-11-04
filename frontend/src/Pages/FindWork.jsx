@@ -43,6 +43,16 @@ const FindWork = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
+  const [portfolioSetupCompleted, setPortfolioSetupCompleted] = useState({
+    profilePhoto: false,
+    biography: false,
+    portfolio: false,
+    certificates: false,
+    experience: false,
+    education: false,
+    skills: false,
+  });
+  const [portfolioSetupInitialStep, setPortfolioSetupInitialStep] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -327,6 +337,32 @@ const FindWork = () => {
           const education = Array.isArray(userData.education)
             ? userData.education
             : [];
+
+          const hasProfilePhoto = Boolean(userData?.image);
+          const completedFlags = {
+            profilePhoto: hasProfilePhoto,
+            biography: biography.length > 0,
+            portfolio: portfolios.length > 0,
+            certificates: certificates.length > 0,
+            experience: experiences.length > 0,
+            education: education.length > 0,
+            skills: skills.length > 0,
+          };
+
+          setPortfolioSetupCompleted(completedFlags);
+
+          // determine first incomplete step order: 1 photo, 2 bio, 3 portfolio, 4 certificates, 5 experience, 6 education, 7 skills
+          const stepOrder = [
+            { key: "profilePhoto", step: 1 },
+            { key: "biography", step: 2 },
+            { key: "portfolio", step: 3 },
+            { key: "certificates", step: 4 },
+            { key: "experience", step: 5 },
+            { key: "education", step: 6 },
+            { key: "skills", step: 7 },
+          ];
+          const firstIncomplete = stepOrder.find(({ key }) => !completedFlags[key]);
+          setPortfolioSetupInitialStep(firstIncomplete ? firstIncomplete.step : 7);
 
           const shouldShowModal =
             portfolios.length === 0 ||
@@ -891,7 +927,11 @@ const FindWork = () => {
 
       {/* Show Portfolio Setup */}
       {showPortfolioSetup && (
-        <PortfolioSetup onClose={() => setShowPortfolioSetup(false)} />
+        <PortfolioSetup
+          onClose={() => setShowPortfolioSetup(false)}
+          completed={portfolioSetupCompleted}
+          initialStep={portfolioSetupInitialStep}
+        />
       )}
 
       {/* Success Modal */}

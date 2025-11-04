@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   createPortfolio,
+  uploadProfilePicture,
   uploadCertificate,
   addExperience,
   addSkillCategory,
@@ -11,12 +12,16 @@ import { getProfile } from "../api/profile";
 import { baseURL } from "../utils/appMode";
 import { addEducation } from "../api/education";
 
-const PortfolioSetup = ({ onClose, onComplete }) => {
+const PortfolioSetup = ({ onClose, onComplete, completed = {}, initialStep = 1 }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState("");
   const [availableSkills, setAvailableSkills] = useState([]);
+
+  // Profile photo state
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profilePreview, setProfilePreview] = useState(null);
 
   const [portfolios, setPortfolios] = useState([]);
   const [portfolioFile, setPortfolioFile] = useState(null);
@@ -53,6 +58,53 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
   const [educationLoading, setEducationLoading] = useState(false);
   const [educationError, setEducationError] = useState("");
 
+  // Helpers to skip completed steps
+  const isCompleted = (n) => {
+    switch (n) {
+      case 1:
+        return !!completed.profilePhoto;
+      case 2:
+        return !!completed.biography;
+      case 3:
+        return !!completed.portfolio;
+      case 4:
+        return !!completed.certificates;
+      case 5:
+        return !!completed.experience;
+      case 6:
+        return !!completed.education;
+      case 7:
+        return !!completed.skills;
+      default:
+        return false;
+    }
+  };
+
+  const findNextIncomplete = (from) => {
+    let s = from + 1;
+    while (s <= 7 && isCompleted(s)) s++;
+    return s > 7 ? 7 : s;
+  };
+
+  const findPrevIncomplete = (from) => {
+    let s = from - 1;
+    while (s >= 1 && isCompleted(s)) s--;
+    return s < 1 ? 1 : s;
+  };
+
+  // On mount or when initialStep changes, jump to first incomplete step
+  useEffect(() => {
+    // If provided initial step is completed, move to the next available incomplete step
+    let start = initialStep || 1;
+    if (isCompleted(start)) {
+      // try forward first
+      const forward = findNextIncomplete(start - 1);
+      start = isCompleted(forward) ? 1 : forward;
+    }
+    setStep(start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStep]);
+
   useEffect(() => {
     getProfile()
       .then((res) => {
@@ -64,6 +116,13 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
       })
       .catch(() => setCurrentUser(null));
   }, []);
+
+  // Revoke object URL when preview changes/unmounts
+  useEffect(() => {
+    return () => {
+      if (profilePreview) URL.revokeObjectURL(profilePreview);
+    };
+  }, [profilePreview]);
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -96,6 +155,20 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Profile photo upload
+  const handleUploadProfilePicture = () => {
+    if (!profileImageFile) return;
+    const formData = new FormData();
+    formData.append("image", profileImageFile);
+    handleUpload(uploadProfilePicture, formData, () => {
+      if (profilePreview) URL.revokeObjectURL(profilePreview);
+      setProfileImageFile(null);
+      setProfilePreview(null);
+      // Proceed to next step automatically
+      setStep(findNextIncomplete(1));
+    });
   };
 
   // Portfolio upload
@@ -176,7 +249,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           Complete Your Profile
         </h2>
         <p className="text-center text-sm text-gray-500 mb-6">
-          Step {step} of 6
+          Step {step} of 7
         </p>
 
         {error && (
@@ -186,8 +259,54 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           <p className="text-blue-500 text-sm mb-4 text-center">Uploading...</p>
         )}
 
-        {/* STEP 1: Biography */}
+        {/* STEP 1: Profile Photo */}
         {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700">Add Profile Photo</h3>
+            <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
+              A clear profile photo helps clients recognize and trust you.
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-28 h-28 rounded-full bg-gray-100 ring-2 ring-[#55b3f3]/30 overflow-hidden shadow-sm">
+                {profilePreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profilePreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No photo</div>
+                )}
+              </div>
+              <DropzoneFileInput
+                shape="circle"
+                sizeClass="w-28 h-28"
+                showInlinePreview={false}
+                onFileSelect={(file) => {
+                  if (profilePreview) URL.revokeObjectURL(profilePreview);
+                  setProfileImageFile(file);
+                  try {
+                    const url = URL.createObjectURL(file);
+                    setProfilePreview(url);
+                  } catch {
+                    setProfilePreview(null);
+                  }
+                }}
+                accept="image/*"
+                label="profile-photo"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={handleUploadProfilePicture}
+                disabled={loading || !profileImageFile}
+                className="px-4 py-2 bg-[#00a6f4] text-white rounded-lg hover:bg-blue-400 cursor-pointer disabled:opacity-50"
+              >
+                {loading ? "Uploading..." : "Upload Photo"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Biography */}
+        {step === 2 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">
               Add Your Biography
@@ -210,7 +329,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
                     updateWorkerBiography,
                     { biography },
                     () => {
-                      setStep(2);
+                      setStep(findNextIncomplete(2));
                     },
                     2000
                   );
@@ -224,8 +343,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           </div>
         )}
 
-        {/* STEP 2: Portfolio */}
-        {step === 2 && (
+        {/* STEP 3: Portfolio */}
+        {step === 3 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">
               Add Portfolio
@@ -269,8 +388,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           </div>
         )}
 
-        {/* STEP 3: Certificates */}
-        {step === 3 && (
+        {/* STEP 4: Certificates */}
+        {step === 4 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">
               Upload Certificates
@@ -311,8 +430,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           </div>
         )}
 
-        {/* STEP 4: Experience */}
-        {step === 4 && (
+        {/* STEP 5: Experience */}
+        {step === 5 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">
               Add Experience
@@ -406,8 +525,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           </div>
         )}
 
-        {/* STEP 5: Education */}
-        {step === 5 && (
+        {/* STEP 6: Education */}
+        {step === 6 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">Add Education</h3>
             <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
@@ -590,8 +709,8 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
           </div>
         )}
 
-        {/* STEP 6: Skills */}
-        {step === 6 && (
+        {/* STEP 7: Skills */}
+        {step === 7 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-700">Add Skills</h3>
             <div className="bg-blue-50 border-l-4 border-[#55b3f3] text-[#252525] p-3 rounded-md text-sm shadow-sm text-left">
@@ -643,7 +762,7 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
         <div className="flex justify-between mt-8">
           <button
             disabled={step === 1}
-            onClick={() => setStep(step - 1)}
+            onClick={() => setStep(findPrevIncomplete(step))}
             className={`px-4 py-2 rounded-lg ${step === 1
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer"
@@ -652,9 +771,9 @@ const PortfolioSetup = ({ onClose, onComplete }) => {
             Previous
           </button>
 
-          {step < 6 ? (
+          {step < 7 ? (
             <button
-              onClick={() => setStep(step + 1)}
+              onClick={() => setStep(findNextIncomplete(step))}
               className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-blue-300 cursor-pointer"
             >
               Next
