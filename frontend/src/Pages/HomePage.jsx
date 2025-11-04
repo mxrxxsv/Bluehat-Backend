@@ -105,7 +105,7 @@ const HomePage = () => {
     return (
         <>
 
-            <div className="relative w-full h-screen overflow-hidden home-reveal">
+            <div className="relative w-full h-screen overflow-x-hidden md:overflow-hidden home-reveal">
                 <div className="absolute bg-[#b8def79e] rounded-full 
                 w-[130vw] h-[130vw] -left-[45vw] -top-[10vw] 
                 md:w-[72vw] md:h-[72vw] md:-left-[20vw] md:-top-[27.5vw] ">
@@ -116,23 +116,18 @@ const HomePage = () => {
                 md:w-[83vw] md:h-[83vw] md:left-[23vw] md:-top-[55vw] ">
                 </div>
 
-                <p className='text-start text-[#252525] opacity-85 absolute z-10 font-bold mdtext-base/20 
-                  -top-[-55vw] pl-6  text-[38px] w-80
-                  md:-top-[-17vw] md:pl-24 md:text-[64px]  md:w-150' >
+                                <p className='text-start text-[#252525] opacity-85 z-10 font-bold pl-6 text-[38px] w-80 mt-30 md:mt-0
+                                    md:absolute md:-top-[-17vw] md:pl-24 md:text-[64px]  md:w-150' >
                     We connect skilled worker to help you
                 </p>
 
-
-
-                <p className='text-start text-[#252525] absolute font-light
-                      -top-[-130vw] pl-6 w-80 text-[20px]
-                      md:-top-[-30vw] md:left-[100vh] md:pl-24 md:w-120'>
+                                <p className='text-start text-[#252525] font-light opacity-80 z-10 mt-4 pl-6 w-80 text-[20px]
+                                            md:absolute md:-top-[-30vw] md:left-[100vh] md:pl-24 md:w-120'>
                     Find high quality talent or open jobs that keep you in control.
                 </p>
 
-                <p className='text-start text-[#252525] absolute font-light opacity-80
-                      -top-[-150vw] pl-6 w-80 text-[18px]
-                      md:-top-[-35vw] md:left-[100vh] md:pl-24 md:w-120'>
+                                <p className='text-start text-[#252525] font-light opacity-80 z-10 mt-2 pl-6 w-80 text-[18px]
+                                            md:absolute md:-top-[-35vw] md:left-[100vh] md:pl-24 md:w-120'>
                     I'm looking for
                 </p>
 
@@ -141,7 +136,7 @@ const HomePage = () => {
                     onClick={() => { if (embedUrl) setIsDemoOpen(true); }}
                     aria-label="Watch demo video"
                     title={embedUrl ? "Watch demo" : "Set DEMO_URL to your YouTube link to enable"}
-                    className='relative flex items-center justify-center mt-165 mx-auto md:mt-0 md:mx-0 h-13 w-88 bg-[#FFFFFF] border-2 border-solid rounded-[20px] px-4 pl-12 shadow-md border-[#89A8B2] opacity-80 hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+                                        className='relative flex items-center justify-center mt-[70px] mx-auto md:mt-0 md:mx-0 h-[52px] w-[22rem] max-w-[90vw] bg-[#FFFFFF] border-2 border-solid rounded-[20px] px-4 pl-12 shadow-md border-[#89A8B2] opacity-80 hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
                            md:absolute
                            md:-top-[-38vw] md:left-[53.5vw] '
                     disabled={!embedUrl}
@@ -192,7 +187,7 @@ const HomePage = () => {
                 </div>
             )}
 
-            <div className='relative bottom-[120px] md:bottom-0 text-center home-reveal'>
+            <div className='relative bottom-[70px] md:bottom-0 text-center home-reveal'>
                 <h1 className=' text-[28px] md:text-[32px] text-[#252525] opacity-85 font-medium mb-4 mx-15 md:mx-0 '>Empowering Filipino
                     Blue-Collar Workers</h1>
 
@@ -215,7 +210,7 @@ const HomePage = () => {
                 </div>
             </div> */}
 
-            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
+            <div className="relative bottom-[70px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
                 <div className="p-6 rounded-xl">
                     <div className="flex flex-col md:flex-row gap-8 items-stretch">
                         {/* Responsive Showcase (overlapping desktop + mobile) with optional img src */}
@@ -256,7 +251,7 @@ const HomePage = () => {
                 </div>
             </div>
 
-            <div className="relative bottom-[120px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
+            <div className="relative bottom-[70px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
                 <div className="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-4 text-left">

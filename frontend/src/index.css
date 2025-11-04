@@ -56,6 +56,10 @@ nav {
   }
 }
 
+/* Intersection-based reveal helpers for HomePage */
+.reveal { opacity: 0; transform: translateY(12px); }
+.reveal-visible { animation: slide-up .6s ease-out both; }
+
 /* ---- Lightweight page and list animations ---- */
 @keyframes fade-in {
   from { opacity: 0 }
