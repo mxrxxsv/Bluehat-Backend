@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Upload, CheckCircle, AlertCircle, Info, Loader2 } from "lucide-react";
 import {
   uploadIDPicture,
@@ -157,9 +158,9 @@ const IDSetup = ({ onClose }) => {
   };
 
 
-  return (
-    <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6">
+  return createPortal(
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6 mx-4">
 
         {/* Close Button */}
         <button
@@ -315,7 +316,8 @@ const IDSetup = ({ onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

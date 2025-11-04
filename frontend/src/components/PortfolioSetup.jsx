@@ -12,6 +12,8 @@ import { getProfile } from "../api/profile";
 import { baseURL } from "../utils/appMode";
 import { addEducation } from "../api/education";
 
+import { createPortal } from "react-dom";
+
 const PortfolioSetup = ({ onClose, onComplete, completed = {}, initialStep = 1 }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -236,8 +238,8 @@ const PortfolioSetup = ({ onClose, onComplete, completed = {}, initialStep = 1 }
     setSkillCategory([]); // reset selection
   };
 
-  return (
-    <div className="fixed inset-0 bg-white/20 backdrop-blur-md flex justify-center items-center z-50 p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-md flex justify-center items-center z-[2000] p-4" role="dialog" aria-modal="true">
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl relative">
         <button
           onClick={onClose}
@@ -267,18 +269,10 @@ const PortfolioSetup = ({ onClose, onComplete, completed = {}, initialStep = 1 }
               A clear profile photo helps clients recognize and trust you.
             </div>
             <div className="flex flex-col items-center gap-4">
-              <div className="w-28 h-28 rounded-full bg-gray-100 ring-2 ring-[#55b3f3]/30 overflow-hidden shadow-sm">
-                {profilePreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profilePreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No photo</div>
-                )}
-              </div>
               <DropzoneFileInput
                 shape="circle"
-                sizeClass="w-28 h-28"
-                showInlinePreview={false}
+                sizeClass="w-40 h-40"
+                showInlinePreview={true}
                 onFileSelect={(file) => {
                   if (profilePreview) URL.revokeObjectURL(profilePreview);
                   setProfileImageFile(file);
@@ -788,7 +782,8 @@ const PortfolioSetup = ({ onClose, onComplete, completed = {}, initialStep = 1 }
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

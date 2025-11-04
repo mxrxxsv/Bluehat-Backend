@@ -259,7 +259,7 @@ const Header = () => {
 
   if (authLoading) {
     return (
-      <header className="w-full fixed top-0 left-0 z-20 bg-[#f4f6f6] h-[80px]">
+      <header className="w-full fixed top-0 left-0 z-10 bg-[#f4f6f6] h-[80px]">
 
       </header>
     );
@@ -268,7 +268,7 @@ const Header = () => {
 
   return (
 
-    <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
+  <header className="w-full fixed top-0 left-0 z-10 bg-[#f4f6f6] pt-4">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
         <Link
           to={user ? "/find-work" : "/home"}
@@ -338,7 +338,7 @@ const Header = () => {
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-30 mt-10 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-100"
+                        className="absolute right-30 mt-10 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-40"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
@@ -405,7 +405,7 @@ const Header = () => {
                       {/* {user?.fname || user?.email} */}
                     </span>
 
-                    <div className="relative z-[1050]" ref={profileDropdownRef}>
+                    <div className="relative" ref={profileDropdownRef}>
                       {/* <img
                         src={profile}
                         alt="Profile"
@@ -429,7 +429,7 @@ const Header = () => {
                         />
                       </div>
                       {showDropdown && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-40">
                           <ul className="py-2 text-sm text-gray-700">
                             <li>
                               <button
@@ -513,7 +513,7 @@ const Header = () => {
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-50"
+                        className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-40"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
