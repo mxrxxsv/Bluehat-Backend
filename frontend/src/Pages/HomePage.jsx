@@ -105,7 +105,7 @@ const HomePage = () => {
     return (
         <>
 
-            <div className="relative w-full h-screen overflow-x-hidden md:overflow-hidden home-reveal">
+            <div className="relative w-full h-auto md:h-screen overflow-x-hidden md:overflow-hidden home-reveal">
                 <div className="absolute bg-[#b8def79e] rounded-full 
                 w-[130vw] h-[130vw] -left-[45vw] -top-[10vw] 
                 md:w-[72vw] md:h-[72vw] md:-left-[20vw] md:-top-[27.5vw] ">
@@ -136,7 +136,7 @@ const HomePage = () => {
                     onClick={() => { if (embedUrl) setIsDemoOpen(true); }}
                     aria-label="Watch demo video"
                     title={embedUrl ? "Watch demo" : "Set DEMO_URL to your YouTube link to enable"}
-                                        className='relative flex items-center justify-center mt-[70px] mx-auto md:mt-0 md:mx-0 h-[52px] w-[22rem] max-w-[90vw] bg-[#FFFFFF] border-2 border-solid rounded-[20px] px-4 pl-12 shadow-md border-[#89A8B2] opacity-80 hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+                                        className='relative flex items-center justify-center mt-6 mx-auto md:mt-0 md:mx-0 h-[52px] w-[22rem] max-w-[90vw] bg-[#FFFFFF] border-2 border-solid rounded-[20px] px-4 pl-12 shadow-md border-[#89A8B2] opacity-80 hover:shadow-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
                            md:absolute
                            md:-top-[-38vw] md:left-[53.5vw] '
                     disabled={!embedUrl}
@@ -187,12 +187,12 @@ const HomePage = () => {
                 </div>
             )}
 
-            <div className='relative bottom-[70px] md:bottom-0 text-center home-reveal'>
-                <h1 className=' text-[28px] md:text-[32px] text-[#252525] opacity-85 font-medium mb-4 mx-15 md:mx-0 '>Empowering Filipino
+            <div className='relative mt-10 mb-10 md:my-0 md:bottom-0 text-center home-reveal'>
+                <h1 className='text-2xl sm:text-4xl md:text-5xl font-bold text-[#252525] opacity-85 mb-4 mx-15 md:mx-0 '>Empowering Filipino
                     Blue-Collar Workers</h1>
 
                 <p className='mx-5 md:mx-60 mb-15 text-[16px] md:text-[18px] text-gray-600'>A platform designed for Filipino bluecollar workers to
-                    connect, showcase their skills, and find job opportunities. Engage in real-time chats, network with potential clients, and grow your professional reputation all in one place!</p>
+                    connect, showcase their skills, and find job opportunities. Engage in real-time chats, and grow your professional reputation all in one place!</p>
 
             </div>
 
@@ -210,7 +210,7 @@ const HomePage = () => {
                 </div>
             </div> */}
 
-            <div className="relative bottom-[70px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
+            <div className="relative md:bottom-0 mx-5 my-10 md:mx-20 md:my-15 home-reveal">
                 <div className="p-6 rounded-xl">
                     <div className="flex flex-col md:flex-row gap-8 items-stretch">
                         {/* Responsive Showcase (overlapping desktop + mobile) with optional img src */}
@@ -251,7 +251,7 @@ const HomePage = () => {
                 </div>
             </div>
 
-            <div className="relative bottom-[70px] md:bottom-0 mx-5 my-5 md:mx-20 md:my-15 home-reveal">
+            <div className="relative md:bottom-0 mx-5 my-10 md:mx-20 md:my-15 home-reveal">
                 <div className="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-7xl mx-auto">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-800 mb-4 text-left">
