@@ -657,11 +657,11 @@ const InviteWorkersPage = () => {
                     </span>
 
                   </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5">
+                  <p className="text-gray-700 mt-1 text-left flex items-start gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 flex-none">
                       <Briefcase size={20} className="text-[#55B2F3]" />
                     </span>
-                    <span className="line-clamp-1 md:text-base">{job.description}</span>
+                    <span className="md:text-base break-words whitespace-pre-line">{job.description}</span>
                   </p>
 
                   <div className="flex flex-wrap gap-2 mt-3">

@@ -4,6 +4,8 @@ import { Clock, MapPin, Briefcase, ArrowLeft, X } from "lucide-react";
 import { getProfile } from "../api/profile";
 import { getJobById } from "../api/jobs";
 import { applyToJob } from "../api/jobApplication";
+import IDSetup from "../components/IDSetup";
+import VerificationNotice from "../components/VerificationNotice";
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -15,6 +17,17 @@ const JobDetails = () => {
 
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [showIdSetup, setShowIdSetup] = useState(false);
+  const [portfolioSetupCompleted, setPortfolioSetupCompleted] = useState({
+    profilePhoto: false,
+    biography: false,
+    portfolio: false,
+    certificates: false,
+    experience: false,
+    education: false,
+    skills: false,
+  });
+  const [portfolioSetupInitialStep, setPortfolioSetupInitialStep] = useState(1);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -52,7 +65,43 @@ const JobDetails = () => {
       try {
         const res = await getProfile();
         if (res.data.success) {
-          setCurrentUser(res.data.data);
+          const userData = res.data.data;
+          setCurrentUser(userData);
+
+          // Build completion flags similar to FindWork
+          if (userData?.userType === "worker") {
+            const biography = typeof userData.biography === "string" ? userData.biography.trim() : "";
+            const portfolios = Array.isArray(userData.portfolio) ? userData.portfolio : [];
+            const certificates = Array.isArray(userData.certificates) ? userData.certificates : [];
+            const skills = Array.isArray(userData.skillsByCategory) ? userData.skillsByCategory : [];
+            const experiences = Array.isArray(userData.experience) ? userData.experience : [];
+            const education = Array.isArray(userData.education) ? userData.education : [];
+            const hasProfilePhoto = Boolean(userData?.image);
+
+            const completedFlags = {
+              profilePhoto: hasProfilePhoto,
+              biography: biography.length > 0,
+              portfolio: portfolios.length > 0,
+              certificates: certificates.length > 0,
+              experience: experiences.length > 0,
+              education: education.length > 0,
+              skills: skills.length > 0,
+            };
+
+            setPortfolioSetupCompleted(completedFlags);
+
+            const stepOrder = [
+              { key: "profilePhoto", step: 1 },
+              { key: "biography", step: 2 },
+              { key: "portfolio", step: 3 },
+              { key: "certificates", step: 4 },
+              { key: "experience", step: 5 },
+              { key: "education", step: 6 },
+              { key: "skills", step: 7 },
+            ];
+            const firstIncomplete = stepOrder.find(({ key }) => !completedFlags[key]);
+            setPortfolioSetupInitialStep(firstIncomplete ? firstIncomplete.step : 7);
+          }
         }
       } catch (err) {
         console.error("❌ Error fetching user:", err);
@@ -108,6 +157,8 @@ const JobDetails = () => {
 
   return (
     <div className="max-w-5xl p-4 md:mx-auto pt-35 md:pt-45">
+      {/* Verification Notice like FindWork */}
+      <VerificationNotice user={currentUser} />
       {/* Back Button */}
       <div className="mb-4">
         <button
@@ -150,11 +201,11 @@ const JobDetails = () => {
             </span>
           </div>
 
-          <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-            <span className="flex items-center justify-center w-5 h-5">
+          <p className="text-gray-700 mt-1 text-left flex items-start gap-2">
+            <span className="flex items-center justify-center w-5 h-5 flex-none">
               <Briefcase size={20} className="text-[#55B2F3]" />
             </span>
-            <span className="line-clamp-1 md:text-base">{job.description}</span>
+            <span className="md:text-base break-words whitespace-pre-line">{job.description}</span>
           </p>
 
           <div className="flex flex-wrap gap-2 mt-3 hidden md:flex">
@@ -184,19 +235,30 @@ const JobDetails = () => {
       </article>
 
       {/* Bottom Action Button */}
-      <div className="flex justify-end md:mt-5">
+      <div className="flex justify-end md:mt-5 gap-2">
         {String(job?.status || "").toLowerCase() === "open" && (
           loadingUser ? (
             <p className="text-gray-500">Checking user...</p>
           ) : currentUser ? (
             <>
               {currentUser.userType === "worker" ? (
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
-                >
-                  Apply
-                </button>
+                <>
+                  {!currentUser.isVerified ? (
+                    <button
+                      onClick={() => setShowIdSetup(true)}
+                      className="bg-amber-500 mt-4 md:mt-0 hover:bg-amber-600 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+                    >
+                      Verify
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowModal(true)}
+                      className="bg-[#55b3f3] mt-4  md:mt-0 hover:bg-sky-500 text-white px-6 py-2 rounded-full shadow font-semibold cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </>
               ) : currentUser.userType === "client" &&
                 job.client?.credentialId._id === currentUser.id ? (
                 <button
@@ -306,6 +368,11 @@ const JobDetails = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ID Setup Modal */}
+      {showIdSetup && (
+        <IDSetup onClose={() => setShowIdSetup(false)} />
       )}
     </div>
   );

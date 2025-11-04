@@ -22,6 +22,7 @@ const Modal = ({ children, onClose }) => (
 );
 
 const ClientSignup = () => {
+  const topRef = useRef(null);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +62,21 @@ const ClientSignup = () => {
     window.scrollTo(0, 0);
   }, []);
 
+  // Ensure we can absolutely jump to the very top across browsers and nested scrollers
+  const forceScrollToTop = () => {
+    try { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); } catch {}
+    try { if (document?.documentElement) document.documentElement.scrollTop = 0; } catch {}
+    try { if (document?.body) document.body.scrollTop = 0; } catch {}
+    try { topRef.current?.scrollIntoView({ behavior: "auto", block: "start" }); } catch {}
+    try {
+      requestAnimationFrame(() => {
+        try { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); } catch {}
+        try { if (document?.documentElement) document.documentElement.scrollTop = 0; } catch {}
+        try { if (document?.body) document.body.scrollTop = 0; } catch {}
+      });
+    } catch {}
+  };
+
   useEffect(() => {
     let countdown;
     if (showOTPModal && timer > 0) {
@@ -68,6 +84,11 @@ const ClientSignup = () => {
     }
     return () => clearTimeout(countdown);
   }, [timer, showOTPModal]);
+
+  // When loading starts, jump to the very top so the user sees the loading indicator immediately
+  useEffect(() => {
+    if (isLoading) forceScrollToTop();
+  }, [isLoading]);
 
   const handleChange = (e) => {
     const { id, value, type, checked, dataset } = e.target;
@@ -248,8 +269,9 @@ const ClientSignup = () => {
     e.preventDefault();
     setShowPasswordStrength(true);
     if (validate()) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Turn on loading and immediately jump to the absolute top (no smooth)
       setIsLoading(true);
+      forceScrollToTop();
       try {
         await signup(formData);
         setShowOTPModal(true);
@@ -455,6 +477,15 @@ const ClientSignup = () => {
 
   return (
     <>
+      <div ref={topRef} />
+      {isLoading && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none">
+          <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-3 py-1 flex items-center justify-center gap-2 shadow-sm">
+            <div className="animate-spin rounded-full h-3 w-3 border-2 border-sky-500 border-t-transparent" />
+            <span className="text-xs text-gray-700">Creating your account…</span>
+          </div>
+        </div>
+      )}
       <form
         onSubmit={handleCreateAccount}
         className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto mt-30 p-6 bg-white shadow-md rounded-lg"
@@ -475,12 +506,7 @@ const ClientSignup = () => {
           </div>
         )}
 
-        {isLoading && (
-          <div className="text-center mb-4">
-            <div className="loader border-4 border-blue-500 border-t-transparent w-8 h-8 rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm text-gray-500 mt-2">Processing...</p>
-          </div>
-        )}
+        {/* Top-level fixed banner already shows loading; remove in-form spinner to avoid duplication */}
 
         <div className="grid gap-6 mb-6 md:grid-cols-2">
           <div>
@@ -610,33 +636,35 @@ const ClientSignup = () => {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="relative">
+            <div>
               <label
                 htmlFor="password"
                 className="block mb-2 text-sm font-medium text-gray-900 text-left"
               >
                 Password
               </label>
-              <input
-                ref={setFieldRef("password")}
-                type={showPassword ? "text" : "password"}
-                id="password"
-                value={formData.password}
-                onChange={handleChange}
-                onFocus={() => setShowPasswordStrength(true)}
-                onBlur={() => setShowPasswordStrength(false)}
-                // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
-                className={inputClass("password", "pr-10")}
-                placeholder="********"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 top-6.5 right-3 flex items-center text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+              <div className="relative">
+                <input
+                  ref={setFieldRef("password")}
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => setShowPasswordStrength(true)}
+                  onBlur={() => setShowPasswordStrength(false)}
+                  // className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 pr-10"
+                  className={inputClass("password", "pr-10")}
+                  placeholder="********"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {showPasswordStrength && (
                 <ul className="text-xs text-left text-gray-700 mt-1 ml-2 list-disc">
                   <li

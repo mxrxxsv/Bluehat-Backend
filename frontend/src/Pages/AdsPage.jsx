@@ -104,7 +104,7 @@ const AdsPage = () => {
 
   return (
     <>
-      <div className="mt-30 md:mt-35 mb-6 max-w-2xl mx-auto px-4">
+      <div className="mt-30 md:mt-35 mb-6 max-w-2xl mx-auto px-4 animate-fade-in">
         <h1 className="text-2xl md:text-3xl font-bold text-[#252525] opacity-90">
           Free Government Training and Certifications
         </h1>
@@ -123,7 +123,7 @@ const AdsPage = () => {
             </div>
           </div>
         ) : (
-          <ul className="space-y-4">
+          <ul className="space-y-4 stagger-children">
             {adsPrepared.map((ad) => (
               <li key={ad._id} className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden">
                 {/* Content (text first like FB) */}
