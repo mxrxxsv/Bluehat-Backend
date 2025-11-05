@@ -12,7 +12,7 @@ const BaseModal = ({ open, onClose, children, widthClass = "max-w-lg" }) => {
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40"
+  className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40"
       onClick={onClose} // close when clicking outside the modal
     >
       <div

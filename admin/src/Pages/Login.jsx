@@ -106,7 +106,7 @@ const Login = () => {
 
       {/* Modal for code verification */}
       {showCodeModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-20">
+  <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-50 z-[2000]">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
             <h2 className="text-xl font-semibold text-center mb-4">Enter Verification Code</h2>
             <input

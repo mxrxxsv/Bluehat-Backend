@@ -294,7 +294,7 @@ const HomePage = () => {
             {/* Demo Modal */}
             {isDemoOpen && (
                 <div
-                    className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                    className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                     onClick={() => setIsDemoOpen(false)}
                     role="dialog"
                     aria-modal="true"

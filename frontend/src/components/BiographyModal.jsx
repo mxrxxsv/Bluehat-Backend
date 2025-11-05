@@ -26,7 +26,7 @@ const BiographyModal = ({ biography, onClose, onSave }) => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[2000]">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-3xl p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">
           Update Biography

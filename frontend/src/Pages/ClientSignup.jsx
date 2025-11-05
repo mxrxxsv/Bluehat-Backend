@@ -7,7 +7,7 @@ import axios from "axios";
 const PHIL_API = "https://psgc.gitlab.io/api";
 
 const Modal = ({ children, onClose }) => (
-  <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-80 flex justify-center items-center z-50 shadow-ml">
+  <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-80 flex justify-center items-center z-[2000] shadow-ml">
     <div className="bg-white rounded-lg p-6 max-w-md w-full relative">
       <button
         className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"

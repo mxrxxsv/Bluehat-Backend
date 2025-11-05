@@ -137,7 +137,7 @@ const Login = () => {
     <div className="flex justify-center items-center min-h-screen w-full bg-gray-50 relative">
       {/* ✅ Success Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-[2000]">
           <div className="bg-white rounded-lg shadow-lg p-8 w-80 text-center relative">
             <div className="checkmark-container mx-auto">
               <svg className="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
@@ -153,7 +153,7 @@ const Login = () => {
 
       {/* ❌ Error Modal */}
       {showErrorModal && (
-        <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-[2000]">
           <div className="bg-white rounded-lg shadow-lg p-8 w-80 text-center relative">
             <div className="errormark-container mx-auto">
               <svg className="errormark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">

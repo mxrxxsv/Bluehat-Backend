@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   MapPin,
   Briefcase,
@@ -620,107 +621,100 @@ const FindWork = () => {
         {/* Desktop: toggle handled inside search bar; no inline button here */}
       </div>
 
-      {/* Mobile filters modal */}
-      {showMobileFilters && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 animate-fade-in"
-            onClick={() => setShowMobileFilters(false)}
-            aria-hidden="true"
-          />
-          {/* Bottom sheet panel */}
-          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-gray-800">Filters</h3>
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(false)}
-                className="p-2 rounded-full hover:bg-gray-100"
-                aria-label="Close filters"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Mobile filters modal (portaled) */}
+      {showMobileFilters &&
+        createPortal(
+          <div className="fixed inset-0 z-[2000] md:hidden" role="dialog" aria-modal="true">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40 animate-fade-in"
+              onClick={() => setShowMobileFilters(false)}
+              aria-hidden="true"
+            />
+            {/* Bottom sheet panel */}
+            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-800">Filters</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  aria-label="Close filters"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Location */}
+              <div className="flex items-stretch gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Filter by location"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={handleLocationKeyPress}
+                  className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLocation(locationInput.trim())}
+                  className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+              {/* Category */}
+              <div className="mb-3">
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Sorting */}
+              <div className="flex gap-3 flex-wrap mb-3">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
+                >
+                  <option value="createdAt">Date Posted</option>
+                  <option value="price">Price</option>
+                  <option value="updatedAt">Last Updated</option>
+                </select>
+                <select
+                  value={order}
+                  onChange={(e) => setOrder(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+              {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
+                <button
+                  onClick={() => {
+                    setFilterCategory("");
+                    setLocation("");
+                    setSearch("");
+                    setSortBy("createdAt");
+                    setOrder("desc");
+                  }}
+                  className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
-            {/* Location */}
-            <div className="flex items-stretch gap-2 mb-3">
-              <input
-                type="text"
-                placeholder="Filter by location"
-                value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                onKeyDown={handleLocationKeyPress}
-                className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <button
-                type="button"
-                onClick={() => setLocation(locationInput.trim())}
-                className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-              >
-                Apply
-              </button>
-            </div>
-            {/* Category */}
-            <div className="mb-3">
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Sorting */}
-            <div className="flex gap-3 flex-wrap mb-3">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
-              >
-                <option value="createdAt">Date Posted</option>
-                <option value="price">Price</option>
-                <option value="updatedAt">Last Updated</option>
-              </select>
-              <select
-                value={order}
-                onChange={(e) => setOrder(e.target.value)}
-                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
-            </div>
-            {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
-              <button
-                onClick={() => {
-                  setFilterCategory("");
-                  setLocation("");
-                  setSearch("");
-                  setSortBy("createdAt");
-                  setOrder("desc");
-                }}
-                className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
-              >
-                Clear all filters
-              </button>
-            )}
-            {/* <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(false)}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400"
-              >
-                Done
-              </button>
-            </div> */}
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Post Box */}
       {user?.userType === "client" && (
@@ -742,10 +736,11 @@ const FindWork = () => {
         </div>
       )}
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
+      {/* Modal (portaled) */}
+      {isModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
             {/* CHANGED: Close uses draft check */}
             <button
               onClick={handleCloseModal}
@@ -860,67 +855,72 @@ const FindWork = () => {
                 Post Job
               </button>
             </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
 
-      {/* Draft confirmation modal */}
-      {showDraftConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
-          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
-            <h3 className="text-lg font-semibold mb-4">Save draft</h3>
-            <p className="text-gray-600 mb-6">
-              You have unsaved input. Do you want to save it as a draft or
-              discard it?
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={handleDiscardDraft}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer transition-colors"
-              >
-                Discard
-              </button>
-              <button
-                onClick={handleSaveDraft}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
-              >
-                Save Draft
-              </button>
+      {/* Draft confirmation modal (portaled) */}
+      {showDraftConfirm &&
+        createPortal(
+          <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
+              <h3 className="text-lg font-semibold mb-4">Save draft</h3>
+              <p className="text-gray-600 mb-6">
+                You have unsaved input. Do you want to save it as a draft or
+                discard it?
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={handleDiscardDraft}
+                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
+                >
+                  Save Draft
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
-      {/* Validation/Alert Modal */}
-      {alertModal.open && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
-          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {alertModal.title || "Notice"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Validation/Alert Modal (portaled) */}
+      {alertModal.open &&
+        createPortal(
+          <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {alertModal.title || "Notice"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                  className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+                >
+                  OK
+                </button>
+              </div>
             </div>
-            <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ID Setup Modal */}
       {showIdSetup && <IDSetup onClose={() => setShowIdSetup(false)} />}

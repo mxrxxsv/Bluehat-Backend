@@ -26,7 +26,7 @@ const Sidebar = () => {
     <>
       {/* ✅ Loading Modal */}
       {isLoggingOut && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-40">
+  <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-white bg-opacity-40">
           <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center gap-3">
             <svg
               className="w-8 h-8 animate-spin text-blue-500"

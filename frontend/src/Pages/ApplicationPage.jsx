@@ -1096,7 +1096,7 @@ const ApplicationsPage = () => {
 
       {/* Modal for Full Details */}
       {selectedApp && (
-        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-50 px-3">
+        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-[2000] px-3">
           <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg relative">
             <button
               onClick={() => setSelectedApp(null)}
@@ -1338,7 +1338,7 @@ const ApplicationsPage = () => {
 
       {/* Modal for Invitation Details */}
       {selectedInvitation && (
-        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-50 px-3">
+  <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-[2000] px-3">
           <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-md sm:max-w-lg relative">
             <button
               onClick={() => setSelectedInvitation(null)}
@@ -1641,7 +1641,7 @@ const ApplicationsPage = () => {
 
       {/* Notice Modal */}
       {notice?.open && (
-        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-[60] px-3">
+  <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex items-center justify-center z-[2000] px-3">
           <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 w-full max-w-sm relative">
             <button
               onClick={() => setNotice({ open: false, title: "", message: "", variant: "info" })}
