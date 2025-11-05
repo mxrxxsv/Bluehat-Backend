@@ -179,7 +179,6 @@ const IDSetup = ({ onClose }) => {
   const handleUpload = async (type) => {
     const userId = currentUser?.id;
     if (!userId) {
-      // alert("User ID is missing. Please log in again.");
       return;
     }
 
@@ -197,8 +196,7 @@ const IDSetup = ({ onClose }) => {
       const statusRes = await getVerificationStatus(userId);
       setStatus(statusRes.data || statusRes);
     } catch (err) {
-      console.error("Upload failed:", err.response?.data || err.message);
-      // alert(err.response?.data?.message || "Upload failed. Please try again.");
+  console.error("Upload failed:", err.response?.data || err.message);
     } finally {
       setIdLoading(false);
       setSelfieLoading(false);

@@ -343,6 +343,44 @@ const applyToJob = async (req, res) => {
       logger.warn("Socket emit failed for applyToJob", { error: e.message });
     }
 
+    // Email: notify client about new application (non-blocking)
+    try {
+      const clientCredential = await mongoose
+        .model("Credential")
+        .findById(job.clientId.credentialId)
+        .select("+email");
+
+      if (clientCredential && clientCredential.email) {
+        await sendJobProgressEmail(
+          clientCredential.email,
+          "application_submitted",
+          application.jobId?.description || "FixIt Job",
+          {
+            proposedRate: application.proposedRate,
+            message: application.message,
+            applicationId: application._id,
+            jobId: application.jobId?._id || jobId,
+          }
+        );
+
+        logger.info("Client application email sent successfully", {
+          applicationId: application.id,
+          clientEmail: clientCredential.email,
+        });
+      } else {
+        logger.warn("Client email not available; skipping application email", {
+          clientCredentialFound: !!clientCredential,
+          credentialId: job.clientId?.credentialId,
+        });
+      }
+    } catch (emailErr) {
+      logger.warn("Failed to send application email to client", {
+        error: emailErr.message,
+        applicationId: application.id,
+        clientId: job.clientId?.id,
+      });
+    }
+
     const processingTime = Date.now() - startTime;
 
     logger.info("Job application submitted successfully", {

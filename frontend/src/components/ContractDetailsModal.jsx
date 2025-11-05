@@ -19,12 +19,15 @@ import {
 import { getContractById } from "../api/feedback.jsx";
 import worker from "../assets/worker.png";
 import client from "../assets/client.png";
+import { getWorkerReviewsById, getClientReviewsById } from "../api/feedback.jsx";
 
 const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   const navigate = useNavigate();
   const [contractDetails, setContractDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Fallback averages fetched from review stats when backend didn't include profile averages
+  const [avgOverrides, setAvgOverrides] = useState({ worker: null, client: null });
 
   // Helper function to safely access contract data
   const getContract = () => {
@@ -122,6 +125,54 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
       fetchContractDetails();
     }
   }, [isOpen, contractId, fetchContractDetails]);
+
+  // Fetch historical averages if backend didn't provide them and there are no contract-local reviews yet
+  useEffect(() => {
+    const c = getContract();
+    if (!isOpen || !c) return;
+
+    const reviews = getReviews();
+    const hasClientLocal = reviews.some((r) => (r?.revieweeType || "").toLowerCase() === "client");
+    const hasWorkerLocal = reviews.some((r) => (r?.revieweeType || "").toLowerCase() === "worker");
+
+    const clientId = c?.clientId?._id || c?.clientId?.id || null;
+    const workerId = c?.workerId?._id || c?.workerId?.id || null;
+
+    const clientAvgExisting = c?.clientId?.averageRating;
+    const workerAvgExisting = c?.workerId?.averageRating;
+
+    const tasks = [];
+    // Only fetch if: no contract-local review for that side AND no valid average provided in contract payload
+    if (!hasClientLocal && clientId && !(typeof clientAvgExisting === "number" && clientAvgExisting > 0)) {
+      tasks.push(
+        getClientReviewsById(clientId, { page: 1, limit: 1 })
+          .then((resp) => {
+            const avg = resp?.data?.statistics?.averageRating;
+            if (typeof avg === "number") {
+              setAvgOverrides((prev) => ({ ...prev, client: avg }));
+            }
+          })
+          .catch(() => {})
+      );
+    }
+    if (!hasWorkerLocal && workerId && !(typeof workerAvgExisting === "number" && workerAvgExisting > 0)) {
+      tasks.push(
+        getWorkerReviewsById(workerId, { page: 1, limit: 1 })
+          .then((resp) => {
+            const avg = resp?.data?.statistics?.averageRating;
+            if (typeof avg === "number") {
+              setAvgOverrides((prev) => ({ ...prev, worker: avg }));
+            }
+          })
+          .catch(() => {})
+      );
+    }
+    // Fire and forget; callers don't need await
+    if (tasks.length) {
+      Promise.allSettled(tasks);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, contractDetails]);
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -235,6 +286,8 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
       : Number.isFinite(clientAvgBackend) && clientAvgBackend > 0 &&
         (getContract()?.clientId?.totalJobsPosted ?? 0) > 0
       ? clientAvgBackend
+      : (typeof avgOverrides.client === "number" && avgOverrides.client > 0)
+      ? avgOverrides.client
       : null;
 
   const workerAvgRating =
@@ -243,6 +296,8 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
       : Number.isFinite(workerAvgBackend) && workerAvgBackend > 0 &&
         (getContract()?.workerId?.totalJobsCompleted ?? 0) > 0
       ? workerAvgBackend
+      : (typeof avgOverrides.worker === "number" && avgOverrides.worker > 0)
+      ? avgOverrides.worker
       : null;
 
   const clientJobsPosted = getContract()?.clientId?.totalJobsPosted;

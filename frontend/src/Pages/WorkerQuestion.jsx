@@ -28,7 +28,7 @@ const WorkerQuestion = () => {
     const handleSubmit = () => {
         setLoading(true);
         setTimeout(() => {
-            alert("Form Submitted!");
+            console.info("Form Submitted");
             navigate("/find-work");
         }, 2000); // 2 second delay for loading screen
     };

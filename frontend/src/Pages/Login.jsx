@@ -19,6 +19,7 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showOtpToast, setShowOtpToast] = useState(false);
 
   const navigate = useNavigate();
 
@@ -103,7 +104,8 @@ const Login = () => {
 
   const handleResend = () => {
     setResendTimer(60);
-    alert("OTP resent to your email.");
+    setShowOtpToast(true);
+    setTimeout(() => setShowOtpToast(false), 2000);
   };
 
   const handleBackToLogin = () => {
@@ -135,6 +137,12 @@ const Login = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen w-full bg-gray-50 relative">
+      {/* Info Toast */}
+      {showOtpToast && (
+        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg z-[2000]">
+          OTP resent to your email.
+        </div>
+      )}
       {/* ✅ Success Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-white bg-opacity-40 flex justify-center items-center z-[2000]">
