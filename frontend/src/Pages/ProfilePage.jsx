@@ -407,7 +407,7 @@ const ProfilePage = () => {
           <button
             type="button"
             aria-label="Edit profile photo"
-            className="absolute top-0 right-0 z-10 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
+            className="absolute top-0 right-0 z-0 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
             onClick={() => setIsModalOpen(true)}
           >
             <Pencil size={14} className="text-gray-400" />
@@ -433,7 +433,7 @@ const ProfilePage = () => {
               <button
                 type="button"
                 aria-label="Edit biography"
-                className="absolute top-[-1px] right-[-1px] md:top-[-8px] md:right-[-10px] z-10 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
+                className="absolute bottom-2 right-2 z-0 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
                 onClick={() => setIsBioModalOpen(true)}
               >
                 <Pencil size={14} className="text-gray-400" />

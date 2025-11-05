@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Star, Send, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
@@ -21,6 +22,9 @@ const FeedbackPage = () => {
     timeliness: "",
     wouldRecommend: null,
   });
+
+  // UI alert modal (system-styled) to replace blocking alerts
+  const [alertModal, setAlertModal] = useState({ open: false, title: "", message: "" });
 
   useEffect(() => {
     const fetchUserAndContract = async () => {
@@ -69,7 +73,7 @@ const FeedbackPage = () => {
       }
     } catch (error) {
       console.error("Failed to load contract:", error);
-      alert("Failed to load contract details.");
+      setAlertModal({ open: true, title: "Unable to load", message: "Failed to load contract details." });
     } finally {
       setLoading(false);
     }
@@ -83,23 +87,22 @@ const FeedbackPage = () => {
     e.preventDefault();
 
     if (feedback.rating === 0) {
-      alert("Please provide a rating.");
+      setAlertModal({ open: true, title: "Missing rating", message: "Please provide a rating." });
       return;
     }
 
     if (!feedback.comment.trim()) {
-      alert("Please provide a comment.");
+      setAlertModal({ open: true, title: "Missing comment", message: "Please provide a comment." });
       return;
     }
 
     setSubmitting(true);
     try {
       await submitFeedback(contractId, feedback);
-      alert("Feedback submitted successfully! Thank you for your review.");
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to submit feedback:", error);
-      alert(error.message || "Failed to submit feedback. Please try again.");
+      setAlertModal({ open: true, title: "Submit failed", message: error.message || "Failed to submit feedback. Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -343,6 +346,33 @@ const FeedbackPage = () => {
           )}
         </div>
       </div>
+
+      {/* Alert Modal (system-styled) */}
+      {alertModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]">
+          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full relative">
+            <button
+              type="button"
+              onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+              className="p-1 rounded-full hover:bg-gray-100 text-gray-500 absolute top-3 right-3"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-800 pr-8">{alertModal.title || "Notice"}</h3>
+            <p className="text-gray-600 mt-4 whitespace-pre-line">{alertModal.message}</p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

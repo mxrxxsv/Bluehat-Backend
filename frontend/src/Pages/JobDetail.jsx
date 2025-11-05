@@ -129,10 +129,7 @@ const JobDetails = () => {
 
       // Close modal and show success
       setShowModal(false);
-      alert(
-        "Application submitted successfully! You can now view it in the Applications page."
-      );
-
+     
       // Optionally navigate to applications page
       navigate("/applications");
     } catch (err) {

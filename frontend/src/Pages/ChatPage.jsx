@@ -743,7 +743,7 @@ const ChatPage = () => {
                         setIsSidebarOpen(false);
                       }
                     }}
-                    className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""
+                    className={`flex items-center w-full p-3 text-gray-900 rounded-md border-b-2 border-gray-300 hover:bg-[#f0f0f0] hover:shadow-sm text-left cursor-pointer ${selectedContactId === otherCred ? "bg-gray-100" : ""
                       }`}
                   >
                     <img
@@ -751,7 +751,7 @@ const ChatPage = () => {
                       alt={name}
                       className="w-8 h-8 rounded-full mr-2 object-cover"
                     />
-                    {name}
+                    <span className="line-clamp-1">{name}</span>
                   </button>
                 </li>
               );
@@ -882,9 +882,11 @@ const ChatPage = () => {
                               }
                               : prev
                           );
-                          alert("Work started");
+                          setAgreeToastMessage("Work started");
+                          setShowAgreeToast(true);
                         } catch (e) {
-                          alert(e.message);
+                          setAgreeToastMessage(e.message || "Failed to start work");
+                          setShowAgreeToast(true);
                         }
                       }}
                       className="px-3 py-2 rounded-lg bg-sky-500 text-white cursor-pointer"
@@ -908,9 +910,11 @@ const ChatPage = () => {
                               }
                               : prev
                           );
-                          alert("Marked completed");
+                          setAgreeToastMessage("Marked completed");
+                          setShowAgreeToast(true);
                         } catch (e) {
-                          alert(e.message);
+                          setAgreeToastMessage(e.message || "Failed to complete work");
+                          setShowAgreeToast(true);
                         }
                       }}
                       className="px-3 py-2 rounded-lg bg-sky-500 text-white cursor-pointer"
@@ -936,9 +940,11 @@ const ChatPage = () => {
                               }
                               : prev
                           );
-                          alert("Confirmed completion");
+                          setAgreeToastMessage("Confirmed completion");
+                          setShowAgreeToast(true);
                         } catch (e) {
-                          alert(e.message);
+                          setAgreeToastMessage(e.message || "Failed to confirm completion");
+                          setShowAgreeToast(true);
                         }
                       }}
                       className="px-3 py-2 rounded-lg bg-green-600 text-white cursor-pointer"
@@ -1062,7 +1068,8 @@ const ChatPage = () => {
                           } catch (_) { }
                         }, 1500);
                       } catch (e) {
-                        alert(e.message || "Failed to mark agreement");
+                        setAgreeToastMessage(e.message || "Failed to mark agreement");
+                        setShowAgreeToast(true);
                       }
                     }}
                     className="px-3 py-2 rounded-lg bg-green-500 text-white cursor-pointer hover:bg-green-600"
@@ -1088,9 +1095,11 @@ const ChatPage = () => {
                         const key = getSelfAgreedKey(agreementContext);
                         if (key) sessionStorage.removeItem(key);
                       } catch (_) { }
-                      alert("Noted. You can continue the discussion in chat.");
+                      setAgreeToastMessage("Noted. You can continue the discussion in chat.");
+                      setShowAgreeToast(true);
                     } catch (e) {
-                      alert(e.message || "Failed to update agreement");
+                      setAgreeToastMessage(e.message || "Failed to update agreement");
+                      setShowAgreeToast(true);
                     }
                   }}
                   className="px-3 py-2 rounded-lg border cursor-pointer hover:bg-[#f4f6f6] hover:shadow-sm border-gray-400 text-gray-700 bg-white"
@@ -1107,7 +1116,7 @@ const ChatPage = () => {
           <div
             className={`${
               // shrink the chat area if any banner or toast is showing
-              contractBanner || showAgreeToast
+              contractBanner || showAgreeToast || showAgreementBanner
                 ? "h-[340px] md:h-[250px]"
                 : "h-full md:h-[400px]"
               } overflow-y-auto px-2 transition-all duration-300 text-left`}

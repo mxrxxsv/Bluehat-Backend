@@ -265,28 +265,41 @@ const FindWork = () => {
   // Handle posting a new job
   const handlePostJob = async (e) => {
     e.preventDefault();
-    if (!newJob.description || !newJob.location || !newJob.priceOffer) {
+
+    // Client-side validation aligned with backend rules (Joi):
+    const errs = [];
+    const desc = (newJob.description || '').trim();
+    const loc = (newJob.location || '').trim();
+    const priceNum = Number(newJob.priceOffer);
+
+    if (!desc) errs.push("Description is required.");
+    if (desc && desc.length < 20) errs.push("Description must be at least 20 characters.");
+
+    if (!loc) errs.push("Location is required.");
+    if (loc && loc.length < 2) errs.push("Location must be at least 2 characters.");
+
+    if (!selectedCategory) errs.push("Category is required.");
+
+    if (newJob.priceOffer === '' || newJob.priceOffer === null || Number.isNaN(priceNum)) {
+      errs.push("Price is required and must be a valid number.");
+    } else if (priceNum < 0) {
+      errs.push("Price cannot be negative.");
+    }
+
+    if (errs.length) {
       setAlertModal({
         open: true,
-        title: "Complete required fields",
-        message:
-          "Please fill out all required fields",
+        title: "Validation failed",
+        message: errs.map((m) => `• ${m}`).join("\n"),
       });
       return;
     }
-    if (!selectedCategory) {
-      setAlertModal({
-        open: true,
-        title: "Select a category",
-        message: "Please select a category for your job post.",
-      });
-      return;
-    }
+
     try {
       const jobData = {
-        description: newJob.description,
-        location: newJob.location,
-        price: parseFloat(newJob.priceOffer),
+        description: desc,
+        location: loc,
+        price: priceNum,
         category: selectedCategory,
       };
 
@@ -302,10 +315,31 @@ const FindWork = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
+      const data = error?.response?.data;
+      let title = data?.code === 'VALIDATION_ERROR' ? 'Validation failed' : 'Failed to post job';
+      let details = [];
+
+      if (data?.code === 'VALIDATION_ERROR' && Array.isArray(data?.errors)) {
+        details = data.errors.map((e) => `• ${e.field}: ${e.message}`);
+      } else if (data?.code === 'INAPPROPRIATE_CONTENT') {
+        const reason = data?.reason ? `\nReason: ${data.reason}` : '';
+        details = [
+          `• ${data?.message || 'Content does not meet our community guidelines.'}${reason}`,
+        ];
+      } else if (typeof data?.message === 'string') {
+        details = [
+          `• ${data.message}`,
+        ];
+      } else {
+        details = [
+          '• Something went wrong while posting your job. Please try again.',
+        ];
+      }
+
       setAlertModal({
         open: true,
-        title: "Failed to post job",
-        message: error.response?.data?.message || "Something went wrong while posting your job. Please try again.",
+        title,
+        message: details.join('\n'),
       });
     }
   };

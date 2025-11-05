@@ -176,62 +176,57 @@ workContractSchema.pre("save", async function (next) {
             client.credentialId
           ).select("+email");
 
-          // Determine email type based on contract status
-          let emailType;
+          // Determine email type based on contract status per recipient
+          let workerEmailType = null;
+          let clientEmailType = null;
           switch (this.contractStatus) {
             case "active":
-              emailType = "work_started";
-              break;
             case "in_progress":
-              emailType = "work_started";
+              workerEmailType = "work_started"; // notify worker they can start/are in progress
               break;
             case "awaiting_client_confirmation":
-              emailType = "work_completed";
+              // Worker just clicked "Work Done" – acknowledge to worker; notify client to review using existing template
+              workerEmailType = "awaiting_client_confirmation";
+              clientEmailType = "work_completed";
               break;
             case "completed":
-              emailType = "work_completed";
+              workerEmailType = "work_completed";
+              clientEmailType = "work_completed";
               break;
             case "cancelled":
-              emailType = "contract_cancelled";
+              workerEmailType = "contract_cancelled";
+              clientEmailType = "contract_cancelled";
               break;
             default:
-              emailType = null;
+              break;
           }
 
-          if (emailType) {
-            // Send email to worker
-            if (workerCredential && workerCredential.email) {
-              await sendJobProgressEmail(
-                workerCredential.email,
-                emailType,
-                job.title,
-                {
-                  agreedRate: this.agreedRate,
-                  contractStatus: this.contractStatus,
-                  contractId: this._id,
-                  jobId: job._id,
-                }
-              );
-            }
+          const jobTitle = job?.title || job?.description || "FixIt Job";
+          const commonData = {
+            agreedRate: this.agreedRate,
+            contractStatus: this.contractStatus,
+            contractId: this._id,
+            jobId: job?._id,
+          };
 
-            // Send email to client (except for work_started which is worker-initiated)
-            if (
-              clientCredential &&
-              clientCredential.email &&
-              emailType !== "work_started"
-            ) {
-              await sendJobProgressEmail(
-                clientCredential.email,
-                emailType,
-                job.title,
-                {
-                  agreedRate: this.agreedRate,
-                  contractStatus: this.contractStatus,
-                  contractId: this._id,
-                  jobId: job._id,
-                }
-              );
-            }
+          // Send email to worker
+          if (workerEmailType && workerCredential && workerCredential.email) {
+            await sendJobProgressEmail(
+              workerCredential.email,
+              workerEmailType,
+              jobTitle,
+              commonData
+            );
+          }
+
+          // Send email to client
+          if (clientEmailType && clientCredential && clientCredential.email) {
+            await sendJobProgressEmail(
+              clientCredential.email,
+              clientEmailType,
+              jobTitle,
+              commonData
+            );
           }
         }
       } catch (emailError) {

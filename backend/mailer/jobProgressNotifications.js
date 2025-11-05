@@ -18,7 +18,7 @@ const EMAIL_TEMPLATES = {
         <p>Hello!</p>
         <p>You have received a new job invitation on FixIt platform.</p>
         <p><strong>Job:</strong> {jobTitle}</p>
-        <p><strong>Proposed Rate:</strong> {proposedRate}/hour</p>
+        <p><strong>Proposed Rate:</strong> ₱{proposedRate}</p>
         <p><strong>Message:</strong> {message}</p>
         <p>Please log in to your FixIt account to view the full details and respond to this invitation.</p>
         <p><a href="{frontendUrl}/dashboard" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Invitation</a></p>
@@ -71,6 +71,23 @@ const EMAIL_TEMPLATES = {
     `,
   },
 
+  application_submitted: {
+    subject: "New Job Application - FixIt",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">New Job Application Received</h2>
+        <p>Hello!</p>
+        <p>You have received a new application for your job on FixIt.</p>
+        <p><strong>Job:</strong> {jobTitle}</p>
+        <p><strong>Proposed Rate:</strong> ₱{proposedRate}</p>
+        <p><strong>Message:</strong> {message}</p>
+        <p>Please log in to your FixIt account to review the application and respond.</p>
+        <p><a href="{frontendUrl}/dashboard" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Application</a></p>
+        <p>Best regards,<br>The FixIt Team</p>
+      </div>
+    `,
+  },
+
   application_rejected: {
     subject: "Application Update - FixIt",
     html: `
@@ -108,7 +125,7 @@ const EMAIL_TEMPLATES = {
         <p>Hello!</p>
         <p>Work has started on your project on FixIt.</p>
         <p><strong>Job:</strong> {jobTitle}</p>
-        <p><strong>Rate:</strong> {agreedRate}/hour</p>
+        <p><strong>Rate:</strong> ₱{agreedRate}</p>
         <p>Please log in to your FixIt account to track the progress.</p>
         <p><a href="{frontendUrl}/dashboard" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Progress</a></p>
         <p>Best regards,<br>The FixIt Team</p>
@@ -126,6 +143,23 @@ const EMAIL_TEMPLATES = {
         <p><strong>Job:</strong> {jobTitle}</p>
         <p>Please log in to your FixIt account to review and confirm completion.</p>
         <p><a href="{frontendUrl}/dashboard" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Work</a></p>
+        <p>Best regards,<br>The FixIt Team</p>
+      </div>
+    `,
+  },
+
+  // Worker-side acknowledgement when they click "Work Done"
+  awaiting_client_confirmation: {
+    subject: "Waiting for Client Confirmation - FixIt",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Work Completion Submitted</h2>
+        <p>Hello!</p>
+        <p>You've marked your work as completed for:</p>
+        <p><strong>Job:</strong> {jobTitle}</p>
+        <p>The client has been notified and needs to confirm completion. We'll let you know once it's confirmed.</p>
+        <p>You can track the status from your dashboard.</p>
+        <p><a href="{frontendUrl}/dashboard" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Contract Status</a></p>
         <p>Best regards,<br>The FixIt Team</p>
       </div>
     `,

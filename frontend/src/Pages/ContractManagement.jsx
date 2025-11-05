@@ -143,14 +143,78 @@ const ContractManagement = () => {
             console.error("Failed to refresh contracts:", error);
           }
         };
-        [
-          "contract:created",
-          "contract:updated",
-          "contract:feedback",
-          // Ensure UI refreshes when either party submits a review
-          "contract:review_submitted",
-        ].forEach((ev) => {
-          socketRef.current.on(ev, refreshContracts);
+        // Map statuses to friendly notifications
+        const notifyForStatus = (status) => {
+          const role = (user?.userType || "").toLowerCase();
+          const s = String(status || "").toLowerCase();
+          switch (s) {
+            case "active":
+              return {
+                type: "info",
+                title: "Contract Active",
+                message: "A contract is now active.",
+              };
+            case "in_progress":
+              return role === "client"
+                ? {
+                    type: "info",
+                    title: "Work Started",
+                    message:
+                      "The worker has started working on your contract.",
+                  }
+                : {
+                    type: "info",
+                    title: "Work Started",
+                    message:
+                      "You can now continue working on this contract.",
+                  };
+            case "awaiting_client_confirmation":
+              return role === "client"
+                ? {
+                    type: "info",
+                    title: "Review Required",
+                    message:
+                      "The worker marked work as completed. Please confirm completion.",
+                  }
+                : {
+                    type: "info",
+                    title: "Waiting for Confirmation",
+                    message:
+                      "Work marked as completed. Waiting for client confirmation.",
+                  };
+            case "completed":
+              return {
+                type: "success",
+                title: "Contract Completed",
+                message: "Work completion confirmed.",
+              };
+            case "cancelled":
+              return {
+                type: "warning",
+                title: "Contract Cancelled",
+                message: "This contract has been cancelled.",
+              };
+            default:
+              return {
+                type: "info",
+                title: "Contract Updated",
+                message: "A contract was updated.",
+              };
+          }
+        };
+
+        // Listen for contract lifecycle events; only refresh the list
+        socketRef.current.on("contract:created", async () => {
+          try { await refreshContracts(); } catch (_) {}
+        });
+
+        socketRef.current.on("contract:updated", async () => {
+          try { await refreshContracts(); } catch (_) {}
+        });
+
+        // Note: backend emits `contract:review_submitted` when a review is added
+        socketRef.current.on("contract:review_submitted", async () => {
+          try { await refreshContracts(); } catch (_) {}
         });
       }
 
