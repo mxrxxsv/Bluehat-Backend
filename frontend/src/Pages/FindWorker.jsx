@@ -349,7 +349,7 @@ const FindWorker = () => {
 
       {/* Mobile filters modal */}
       {showMobileFilters && (
-        <div className="fixed inset-0 z-40 md:hidden">
+  <div className="fixed inset-0 z-[2000] md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 animate-fade-in"

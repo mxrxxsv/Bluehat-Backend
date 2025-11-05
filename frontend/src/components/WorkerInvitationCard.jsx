@@ -239,7 +239,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 p-4">
+  <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Invite {worker.firstName} {worker.lastName}
@@ -313,7 +313,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
 
       {/* Feedback Modal */}
       {feedback.show && (
-        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 transition-opacity duration-300 animate-fadeIn">
+  <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] transition-opacity duration-300 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center transform transition-transform duration-300 scale-100 animate-scaleIn">
             <div className="flex flex-col items-center gap-3">
               {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}

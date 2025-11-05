@@ -741,7 +741,7 @@ const ContractManagement = () => {
 
         {/* Feedback Modal */}
         {feedbackModal.show && (
-          <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-[2000]">
             <div className="bg-white rounded-xl p-6 w-[90%] max-w-md mx-auto shadow-xl">
               <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">
                 Submit Feedback

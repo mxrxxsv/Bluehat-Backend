@@ -282,7 +282,7 @@ const JobDetails = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex justify-center items-center z-50 pointer-events-none">
+  <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-40 flex justify-center items-center z-[2000] pointer-events-none">
           <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md relative shadow-md pointer-events-auto">
             <button
               onClick={() => setShowModal(false)}

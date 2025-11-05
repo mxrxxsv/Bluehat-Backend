@@ -141,7 +141,7 @@ const ResetPassword = () => {
 
       {/* ✅ Modal Popup */}
       {modal.show && (
-        <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-40 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-40 z-[2000]">
           <div className="bg-white rounded-md shadow-md p-6 w-80 text-center">
             <h3
               className={`text-lg font-semibold mb-2 ${

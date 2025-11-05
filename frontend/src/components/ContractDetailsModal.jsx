@@ -249,7 +249,7 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
   const workerJobsCompleted = getContract()?.workerId?.totalJobsCompleted;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm p-4 md:p-4">
+    <div className="fixed inset-0 z-[2000] flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm p-4 md:p-4">
       <div className="bg-white w-full h-[92vh] md:h-auto md:max-w-4xl md:max-h-[90vh] rounded-t-2xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl md:rounded-t-xl">

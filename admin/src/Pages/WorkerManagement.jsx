@@ -711,7 +711,7 @@ const WorkerManagement = () => {
 
         {/* Worker Details Modal */}
         {showModal && selectedWorker && (
-          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[1000]">
+          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[2000]">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-800">
@@ -984,7 +984,7 @@ const WorkerManagement = () => {
 
         {/* Block Worker Modal */}
         {showBlockModal && blockingWorker && (
-          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[1001]">
+          <div className="fixed inset-0 flex items-center justify-center bg-[#f4f6f6] bg-opacity-50 z-[2000]">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">

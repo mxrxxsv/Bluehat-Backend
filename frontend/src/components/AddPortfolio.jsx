@@ -55,7 +55,7 @@ const AddPortfolio = ({ onClose, onAdd, onRefresh }) => {
   return (
     <>
       {/* Main Add Portfolio Modal */}
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
         <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
           <button
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -116,7 +116,7 @@ const AddPortfolio = ({ onClose, onAdd, onRefresh }) => {
 
       {/* Error Modal */}
       {errorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
           <div className="bg-white rounded-2xl p-6 w-80 shadow-lg relative text-center">
             <h3 className="text-lg font-semibold text-red-500 mb-3">Error</h3>
             <p className="text-gray-600">{errorModal}</p>
