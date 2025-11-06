@@ -151,10 +151,17 @@ const WorkerPortfolio = () => {
           } catch { }
         }
 
-        const arr = Array.isArray(jobs) ? jobs : [];
-        setUserJobs(arr);
-        // Default to existing job tab when jobs are available
-        if (arr.length > 0) {
+        // Filter out ineligible jobs: completed/working (and common variants)
+        const rawArr = Array.isArray(jobs) ? jobs : [];
+        const filteredArr = rawArr.filter((j) => {
+          const statusRaw = j?.status || j?.currentStatus || "";
+          const s = String(statusRaw).toLowerCase().replace(/\s+/g, "_");
+          return !["completed", "working", "in_progress", "in-progress"].includes(s);
+        });
+
+        setUserJobs(filteredArr);
+        // Default to existing job tab when eligible jobs are available
+        if (filteredArr.length > 0) {
           setUseExistingJob(true);
           // Do not auto-select any job; selection should always be explicit
         } else {
@@ -704,8 +711,15 @@ const WorkerPortfolio = () => {
                   let finalJobId = selectedJobId;
                   let proposedRate = 0;
                   if (useExistingJob) {
-                    const jobObj = userJobs.find((j) => (j._id || j.id) === selectedJobId) || {};
-                    finalJobId = selectedJobId;
+                    const jobObj = userJobs.find((j) => (j._id || j.id) === selectedJobId);
+                    if (!jobObj) throw new Error("Selected job is no longer eligible. Please select another open job.");
+                    // Extra safety: validate status again
+                    const statusRaw = jobObj?.status || jobObj?.currentStatus || "";
+                    const s = String(statusRaw).toLowerCase().replace(/\s+/g, "_");
+                    if (["completed", "working", "in_progress", "in-progress"].includes(s)) {
+                      throw new Error("This job can't be used for new invitations.");
+                    }
+                    finalJobId = jobObj._id || jobObj.id;
                     proposedRate = Number(jobObj.price || 0);
                     if (!finalJobId) throw new Error("No job selected");
                   } else {
@@ -759,7 +773,7 @@ const WorkerPortfolio = () => {
                     </div>
                   ) : userJobs.length === 0 ? (
                     <div className="p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
-                      You have no job posts yet. Switch to "Create a new job post".
+                      You have no available job posts. Switch to "Create a new job post".
                     </div>
                   ) : (
                     <div className="max-h-64 overflow-auto custom-scrollbar space-y-3">
