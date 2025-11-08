@@ -554,7 +554,7 @@ const FindWork = () => {
             Search
           </button> */}
 
-          {/* Mobile filters trigger next to Search (inline) */}
+          {/* Mobile filters trigger next to Search*/}
           <button
             type="button"
             onClick={() => setShowMobileFilters(true)}
@@ -775,120 +775,120 @@ const FindWork = () => {
         createPortal(
           <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
             <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
-            {/* CHANGED: Close uses draft check */}
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+              {/* CHANGED: Close uses draft check */}
+              <button
+                onClick={handleCloseModal}
+                className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
 
-            {/* Job Preview: show only after user inputs something; no loading skeleton */}
-            {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
-              <div className="mt-6 pt-2">
-                <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={user?.image || currentUser.avatar}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <span className="text-md font-semibold text-[#252525]">
-                        {user?.fullName || "Client Name"}
+              {/* Job Preview: show only after user inputs something; no loading skeleton */}
+              {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
+                <div className="mt-6 pt-2">
+                  <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={user?.image || currentUser.avatar}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="text-md font-semibold text-[#252525]">
+                          {user?.fullName || "Client Name"}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {/* <Clock size={16} /> Just now */}
                       </span>
                     </div>
-                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                      {/* <Clock size={16} /> Just now */}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5">
-                      <Briefcase size={20} className="text-[#55B2F3]" />
-                    </span>
-                    <span className="line-clamp-1 md:text-base">
-                      {newJob.description}
-                    </span>
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedCategory ? (
-                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
-                        {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <Briefcase size={20} className="text-[#55B2F3]" />
                       </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No category selected</span>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={16} />
-                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
-                        {newJob.location}
+                      <span className="line-clamp-1 md:text-base">
+                        {newJob.description}
                       </span>
-                    </span>
-                    <span className="font-bold text-green-400">
-                      {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
-                    </span>
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedCategory ? (
+                        <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
+                          {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No category selected</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} />
+                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                          {newJob.location}
+                        </span>
+                      </span>
+                      <span className="font-bold text-green-400">
+                        {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Job Creation Form */}
-            <form onSubmit={handlePostJob} className="space-y-3">
-              <textarea
-                placeholder="Job description"
-                value={newJob.description}
-                onChange={(e) =>
-                  setNewJob({ ...newJob, description: e.target.value })
-                }
-                className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
-                rows="3"
-              />
-              <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
-                Address
-              </label>
-              <AddressInput
-                value={newJob.location}
-                onChange={(address) =>
-                  setNewJob({ ...newJob, location: address })
-                }
-              />
-              <div>
+              {/* Job Creation Form */}
+              <form onSubmit={handlePostJob} className="space-y-3">
+                <textarea
+                  placeholder="Job description"
+                  value={newJob.description}
+                  onChange={(e) =>
+                    setNewJob({ ...newJob, description: e.target.value })
+                  }
+                  className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
+                  rows="3"
+                />
                 <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
-                  Category
+                  Address
                 </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
+                <AddressInput
+                  value={newJob.location}
+                  onChange={(address) =>
+                    setNewJob({ ...newJob, location: address })
+                  }
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
+                    Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id} className="text-black">
+                        {cat.categoryName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  type="number"
+                  placeholder="Price offer (₱)"
+                  value={newJob.priceOffer}
+                  onChange={(e) =>
+                    setNewJob({ ...newJob, priceOffer: e.target.value })
+                  }
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
+                  min="0"
+                  step="0.01"
+                />
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
                 >
-                  <option value="">Select a category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id} className="text-black">
-                      {cat.categoryName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <input
-                type="number"
-                placeholder="Price offer (₱)"
-                value={newJob.priceOffer}
-                onChange={(e) =>
-                  setNewJob({ ...newJob, priceOffer: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
-                min="0"
-                step="0.01"
-              />
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
-              >
-                Post Job
-              </button>
-            </form>
+                  Post Job
+                </button>
+              </form>
             </div>
           </div>,
           document.body
