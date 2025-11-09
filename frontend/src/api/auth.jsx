@@ -14,3 +14,4 @@ export const checkAuth = () => API.get("/check-auth");
 export const Logout = () => API.post("/logout");
 export const forgotPassword = (data) => API.post("/forgot-password", data);
 export const resetPassword = (data) => API.post("/reset-password", data);
+export const changePassword = (data) => API.post("/change-password", data);

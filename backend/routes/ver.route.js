@@ -27,6 +27,7 @@ const {
   resetPassword,
   resendEmailVerification,
   getQRCode,
+  changePassword,
 } = require("../controllers/ver.controller");
 
 // ✅ Security headers for authentication routes
@@ -191,6 +192,13 @@ router.get("/check-auth", verifyToken, checkAuth);
  * @access  Private
  */
 router.post("/logout", verifyToken, logout);
+
+/**
+ * @route   POST /auth/change-password
+ * @desc    Authenticated user changes password
+ * @access  Private
+ */
+router.post("/change-password", verifyToken, authLimiter, changePassword);
 
 router.post("/get-qr", verifyLimiter, getQRCode);
 // ==================== ERROR HANDLING ====================

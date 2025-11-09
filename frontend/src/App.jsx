@@ -25,6 +25,7 @@ import InviteWorkersPage from "./Pages/InviteWorkersPage";
 import FeedbackPage from "./Pages/FeedbackPage";
 import ContractManagement from "./Pages/ContractManagement";
 import ClientProfile from "./Pages/ClientProfile";
+import ChangePassword from "./Pages/ChangePassword";
 function App() {
   return (
     <>
@@ -43,6 +44,7 @@ function App() {
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
+  <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/applications" element={<ApplicationsPage />} />

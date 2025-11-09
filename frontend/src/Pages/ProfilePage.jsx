@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Clock, MapPin, Briefcase, X, Tag, Pencil } from "lucide-react";
 import { getProfile } from "../api/profile";
 import {
@@ -393,7 +394,11 @@ const ProfilePage = () => {
   return (
     <div className="max-w-6xl mx-auto p-6 mt-[100px]">
       {/* Profile Header */}
-      <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow rounded-[20px] p-6 mb-10">
+      <div className="relative flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow rounded-[20px] p-6 mb-10">
+        {/* 3-dot menu */}
+        <div className="absolute top-4 right-4 text-sm">
+          <ThreeDotMenu />
+        </div>
         <div className="relative w-24 h-24 shrink-0">
           <img
             src={
@@ -1158,3 +1163,45 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
+// Inline 3-dot menu component (kept simple, could be extracted later)
+const ThreeDotMenu = () => {
+  const [open, setOpen] = React.useState(false);
+  const toggle = () => setOpen((o) => !o);
+  const close = () => setOpen(false);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      // Close if clicking outside
+      if (!e.target.closest(".three-dot-wrapper")) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, []);
+
+  return (
+    <div className="three-dot-wrapper relative select-none">
+      <button
+        type="button"
+        aria-label="Menu"
+        onClick={toggle}
+        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition cursor-pointer border border-gray-200"
+      >
+        <span className="text-gray-600 text-xl leading-none">⋮</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-2">
+          <Link
+            to="/change-password"
+            onClick={close}
+            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+          >
+            Change Password
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+};
