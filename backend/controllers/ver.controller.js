@@ -249,6 +249,36 @@ const resetPasswordSchema = Joi.object({
     }),
 });
 
+// Change password (authenticated) schema
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().min(1).max(128).required().messages({
+    "any.required": "Current password is required",
+  }),
+  newPassword: Joi.string()
+    .min(12)
+    .max(128)
+    .custom((value, helpers) => {
+      if (!isPasswordStrong(value)) {
+        return helpers.error("password.weak", {
+          feedback: getPasswordStrengthFeedback(value),
+        });
+      }
+      return value;
+    })
+    .required()
+    .messages({
+      "password.weak": "Password does not meet security requirements",
+      "any.required": "New password is required",
+    }),
+  confirmNewPassword: Joi.string()
+    .valid(Joi.ref("newPassword"))
+    .required()
+    .messages({
+      "any.only": "Passwords do not match",
+      "any.required": "Please confirm your new password",
+    }),
+});
+
 const verifyTokenSchema = Joi.object({
   token: Joi.string()
     .pattern(/^\d{6}$/)
@@ -1989,6 +2019,113 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// ==================== CHANGE PASSWORD (AUTH USER) ====================
+const changePassword = async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { error, value } = changePasswordSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        code: "VALIDATION_ERROR",
+        errors: error.details.map((detail) => ({
+          field: detail.path.join("."),
+          message: detail.message,
+        })),
+      });
+    }
+
+    const { currentPassword, newPassword } = sanitizeInput(value);
+
+    // Fetch credential with password selected
+    const credential = await Credential.findById(req.user.id).select(
+      "+password +loginAttempts +lockUntil +totpAttempts +totpBlockedUntil"
+    );
+
+    if (!credential) {
+      return res.status(404).json({
+        success: false,
+        message: "Account not found",
+        code: "ACCOUNT_NOT_FOUND",
+      });
+    }
+
+    // Compare current password
+    const match = await bcrypt.compare(currentPassword, credential.password);
+    if (!match) {
+      // Increment login attempts style counters for security monitoring
+      credential.loginAttempts = (credential.loginAttempts || 0) + 1;
+      if (credential.loginAttempts >= 5 && !credential.lockUntil) {
+        credential.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes
+      }
+      await credential.save();
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+        code: "CURRENT_PASSWORD_INVALID",
+      });
+    }
+
+    // Prevent reuse of the same password hash (simple check)
+    const samePassword = await bcrypt.compare(newPassword, credential.password);
+    if (samePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+        code: "PASSWORD_REUSE_NOT_ALLOWED",
+      });
+    }
+
+    // Update password
+    credential.password = await bcrypt.hash(newPassword, SALT_RATE);
+    credential.loginAttempts = 0;
+    credential.lockUntil = undefined;
+    credential.totpAttempts = 0;
+    credential.totpBlockedUntil = undefined;
+    await credential.save();
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Password changed", {
+      userId: credential._id,
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+      code: "PASSWORD_CHANGE_SUCCESS",
+      meta: {
+        processingTime: `${processingTime}ms`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    const processingTime = Date.now() - startTime;
+    logger.error("Change password failed", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id,
+      ip: req.ip,
+      processingTime: `${processingTime}ms`,
+      timestamp: new Date().toISOString(),
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to change password",
+      code: "PASSWORD_CHANGE_FAILED",
+    });
+  }
+};
+
 const resendEmailVerification = async (req, res) => {
   const startTime = Date.now();
 
@@ -2282,4 +2419,5 @@ module.exports = {
   resetPassword,
   resendEmailVerification,
   getQRCode,
+  changePassword,
 };
