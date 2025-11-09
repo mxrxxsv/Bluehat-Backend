@@ -44,14 +44,14 @@ function App() {
         <Route path="/clientsignup" element={<ClientSignup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgetpass" element={<ForgetPass />} />
-  <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/workerquestion" element={<WorkerQuestion />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/applications" element={<ApplicationsPage />} />
         <Route path="/invite-workers/:jobId" element={<InviteWorkersPage />} />
         <Route path="/feedback/:contractId" element={<FeedbackPage />} />
         <Route path="/contracts" element={<ContractManagement />} />
-  <Route path="/client/:id" element={<ClientProfile />} />
+        <Route path="/client/:id" element={<ClientProfile />} />
 
         <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
@@ -103,7 +103,7 @@ function App() {
             </ProtectedRoute>
           }
         /> */}
-        
+
       </Routes>
 
       <Footer />
