@@ -52,7 +52,6 @@ function App() {
         <Route path="/feedback/:contractId" element={<FeedbackPage />} />
         <Route path="/contracts" element={<ContractManagement />} />
         <Route path="/client/:id" element={<ClientProfile />} />
-
         <Route path="/find-workers" element={<FindWorker />} />
         <Route path="/find-work" element={<FindWork />} />
         <Route path="/ads" element={<AdsPage />} />
