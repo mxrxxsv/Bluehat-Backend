@@ -5,7 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Get all workers with filtering
 export const getWorkers = async (filters = {}) => {
   try {
     const response = await API.get("/", { params: filters });
@@ -16,8 +15,6 @@ export const getWorkers = async (filters = {}) => {
   }
 };
 
-// Search workers with filters (alias for getWorkers)
-// Alias to maintain backward compatibility without duplicating logic
 export const searchWorkers = getWorkers;
 
 // Get worker by ID

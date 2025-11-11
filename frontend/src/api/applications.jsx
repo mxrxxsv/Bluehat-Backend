@@ -1,6 +1,3 @@
-// Facade module to centralize applications and invitations API calls
-// and delegate to canonical modules to avoid duplication.
-
 import {
   getWorkerApplications,
   getClientApplications,

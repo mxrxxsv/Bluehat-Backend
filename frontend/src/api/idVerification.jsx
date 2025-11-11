@@ -5,9 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// ======================
-// Upload ID picture
-// ======================
 export const uploadIDPicture = async (userId, file) => {
   const formData = new FormData();
   formData.append("image", file);
@@ -20,9 +17,6 @@ export const uploadIDPicture = async (userId, file) => {
   return data;
 };
 
-// ======================
-// Upload Selfie
-// ======================
 export const uploadSelfie = async (userId, file) => {
   const formData = new FormData();
   formData.append("image", file);
@@ -35,9 +29,7 @@ export const uploadSelfie = async (userId, file) => {
   return data;
 };
 
-// ======================
-// Check verification status
-// ======================
+
 export const getVerificationStatus = async () => {
   const { data } = await API.get("/status");
   return data;

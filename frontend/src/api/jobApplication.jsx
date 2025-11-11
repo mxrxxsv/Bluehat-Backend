@@ -5,8 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// ==================== JOB APPLICATION API ====================
-
 // Apply to a job (Worker only, verified)
 export const applyToJob = async (jobId, applicationData) => {
   try {

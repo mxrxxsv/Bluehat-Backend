@@ -6,7 +6,6 @@ const API = axios.create({
   withCredentials: true, // Cookies are sent automatically
 });
 
-// ✅ Get all jobs with optional category and location filters
 export const getAllJobs = (options = {}) => {
   const {
     page = 1,
@@ -46,6 +45,6 @@ export const updateJob = (id, jobData) => API.put(`/${id}`, jobData);
 export const deleteJob = (id) => API.delete(`/${id}`);
 
 export const getJobApplications = (jobId) => API.get(`/${jobId}/applications`);
-// Delegate to canonical application API to avoid duplicate endpoint logic
+
 export const respondToApplication = (applicationId, action, message) =>
   respondToApplicationCanonical(applicationId, { action, message });
