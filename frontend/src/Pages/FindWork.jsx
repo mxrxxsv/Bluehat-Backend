@@ -472,57 +472,73 @@ const FindWork = () => {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
-          {/* Search + Filters Skeleton */}
+          {/* Optional verification notice skeleton */}
+          <div className="h-10 bg-white border border-gray-200 rounded-[12px] shadow-sm w-full" />
+
+          {/* Search + Filters Skeleton (mirror main UI layout) */}
           <div className="relative w-full md:flex-1 mb-2">
-            <div className="w-full h-11 bg-gray-200 rounded-[18px]" />
+            {/* Search input shell */}
+            <div className="w-full h-12 bg-white border border-gray-200 shadow rounded-[18px]" />
+            {/* Left search icon placeholder */}
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 bg-gray-200 rounded" />
+            {/* Desktop Filters button placeholder */}
             <div className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 h-8 w-24 bg-gray-200 rounded-[14px]" />
+            {/* Mobile Filters button placeholder */}
             <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 h-8 w-20 bg-gray-200 rounded-[14px]" />
           </div>
 
-          {/* Post Box Skeleton (client only) */}
+          {/* Post Box Skeleton (client only) to match 'Post a work...' */}
           {user?.userType === "client" && (
             <div className="bg-white shadow rounded-[20px] p-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-200" />
-                <div className="flex-1 h-10 bg-gray-100 rounded-full" />
+                <div className="flex-1 h-10 bg-gray-100 rounded-full flex items-center px-4">
+                  <div className="h-3 w-28 bg-gray-200 rounded-full" />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Job Card Skeletons */}
+          {/* Job Card Skeletons (mirror job card UI) */}
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="rounded-[20px] p-4 bg-white shadow-sm">
-              {/* Header: avatar + name/time + date */}
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200" />
-                  <div className="flex flex-col gap-1">
-                    <div className="h-4 bg-gray-200 rounded w-32" />
-                    <div className="h-3 bg-gray-200 rounded w-20" />
+              <div className="rounded-xl p-2 bg-white">
+                {/* Header: avatar + name + date */}
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-200" />
+                    <div className="flex flex-col gap-1">
+                      <div className="h-4 bg-gray-200 rounded w-32" />
+                    </div>
                   </div>
+                  <div className="h-4 bg-gray-200 rounded w-20" />
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-16" />
-              </div>
 
-              {/* Description line */}
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
-
-              {/* Category chips */}
-              <div className="flex gap-2 mt-2">
-                <div className="h-6 bg-gray-200 rounded-full w-24" />
-                <div className="h-6 bg-gray-200 rounded-full w-20" />
-              </div>
-
-              {/* Footer: location + price */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gray-200 rounded" />
-                  <div className="h-4 bg-gray-200 rounded w-40" />
+                {/* Description line with icon placeholder */}
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-5 h-5 bg-gray-200 rounded" />
+                  <div className="h-5 bg-gray-200 rounded w-3/4" />
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-16" />
+
+                {/* Category chip (single like real UI) */}
+                <div className="flex gap-2 mt-3">
+                  <div className="h-6 bg-gray-200 rounded-md w-28" />
+                </div>
+
+                {/* Footer: location + price */}
+                <div className="flex justify-between items-center mt-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                    <div className="h-4 bg-gray-200 rounded w-44" />
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded w-16" />
+                </div>
               </div>
             </div>
           ))}
+
+          {/* Load more button skeleton */}
+          <div className="mx-auto h-10 w-36 bg-white border border-gray-200 rounded-md shadow" />
         </div>
       </div>
     );
