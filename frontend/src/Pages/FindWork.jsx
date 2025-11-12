@@ -1064,11 +1064,12 @@ const FindWork = () => {
                         <button
                           type="button"
                           onClick={(e) => {
+                            if (!user) return; // Not logged in: allow card click to proceed
                             e.stopPropagation();
                             if (clientProfileId) navigate(`/client/${clientProfileId}`);
                           }}
-                          className="focus:outline-none"
-                          title="View client profile"
+                          className={`focus:outline-none ${user ? '' : 'cursor-default'}`}
+                          title={user ? "View client profile" : "Log in to view profile"}
                         >
                           <img
                             src={
@@ -1076,7 +1077,7 @@ const FindWork = () => {
                               currentUser.avatar
                             }
                             alt="Client Avatar"
-                            className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                            className={`w-8 h-8 rounded-full object-cover ${user ? 'cursor-pointer' : 'cursor-default'}`}
                           />
                         </button>
                         <div className="flex flex-col">
