@@ -409,7 +409,7 @@ const InviteWorkersPage = () => {
 
           {/* Search and Filters (FindWork-like, no card background) */}
           <div ref={desktopFilterContainerRef} className="relative w-full mb-8">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-5" />
             <input
               type="text"
               placeholder="Search by name, skills, or bio..."

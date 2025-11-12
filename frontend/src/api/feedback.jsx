@@ -9,7 +9,7 @@ const ContractAPI = axios.create({
 export const getContractById = async (contractId) => {
   try {
     const response = await ContractAPI.get(`/${contractId}`);
-    return response.data; // Return the full response data which includes contract, review, etc.
+    return response.data; 
   } catch (error) {
     console.error("Get contract failed:", error);
     throw new Error(error.response?.data?.message || "Failed to load contract");
@@ -98,7 +98,6 @@ export const getClientReviewsById = async (clientId, options = {}) => {
     const response = await ContractAPI.get(`/reviews/client/${clientId}`, {
       params,
     });
-    // Returns: { success, data: { reviews, pagination, statistics, client }, ... }
     return response.data;
   } catch (error) {
     console.error("Get client reviews failed:", error);

@@ -5,8 +5,6 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// ==================== WORKER INVITATION API ====================
-
 // Invite worker to job (Client only)
 export const inviteWorker = async (workerId, invitationData) => {
   try {
@@ -60,7 +58,6 @@ export const cancelInvitation = async (invitationId) => {
   }
 };
 
-// ==================== NEW AGREEMENT FLOW API ====================
 
 // Start discussion phase for invitation (Worker only)
 export const startInvitationDiscussion = async (invitationId) => {

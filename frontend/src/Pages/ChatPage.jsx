@@ -1113,6 +1113,10 @@ const ChatPage = () => {
 
         {/* CHAT MESSAGES */}
         <div className="p-4 sm:ml-64 overflow-hidden">
+          {(() => {
+            const hasConversation = Boolean(currentConversationId && selectedContactId);
+            return (
+              <>
           <div
             className={`${
               // shrink the chat area if any banner or toast is showing
@@ -1121,7 +1125,15 @@ const ChatPage = () => {
                 : "h-full md:h-[400px]"
               } overflow-y-auto px-2 transition-all duration-300 text-left`}
           >
-            {messages.map((msg, index) => {
+            {!hasConversation ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <div className="text-2xl mb-2">No conversation</div>
+                  {/* <p className="text-sm">Select a contact from the sidebar to start messaging.</p> */}
+                </div>
+              </div>
+            ) : (
+              messages.map((msg, index) => {
               const senderCred = idToString(msg?.sender?.credentialId);
               const currentCred = getCredentialIdFromUser(currentUser);
               const isMe =
@@ -1279,56 +1291,63 @@ const ChatPage = () => {
                   </div>
                 </div>
               );
-            })}
+            })
+            )}
 
             {/* Scroll anchor */}
             <div ref={messagesEndRef}></div>
           </div>
-
           {/* INPUT */}
-          <div className="bg-white h-16 w-full p-2 m-2 rounded-[30px] shadow-md md:mx-0 md:mt-12">
-            <form
-              onSubmit={handleSendMessage}
-              className="flex items-center w-full"
-            >
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                maxLength={100}
-                placeholder={
-                  editingMessageId
-                    ? "Edit your message..."
-                    : "Type your message..."
-                }
-                className="flex-1 px-4 py-2 border-none outline-none rounded-[30px]"
-              />
-
-              <button
-                type="submit"
-                className="ml-2 p-2.5 text-sm font-medium text-white bg-sky-600 rounded-full border hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 flex items-center justify-center cursor-pointer"
+          {hasConversation ? (
+            <div className="bg-white h-16 w-full p-2 m-2 rounded-[30px] shadow-md md:mx-0 md:mt-12">
+              <form
+                onSubmit={handleSendMessage}
+                className="flex items-center w-full"
               >
-                {editingMessageId ? (
-                  "Save"
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                    stroke="currentColor"
-                    className="w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-                    />
-                  </svg>
-                )}
-              </button>
-            </form>
-          </div>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  maxLength={100}
+                  placeholder={
+                    editingMessageId
+                      ? "Edit your message..."
+                      : "Type your message..."
+                  }
+                  className="flex-1 px-4 py-2 border-none outline-none rounded-[30px]"
+                />
+
+                <button
+                  type="submit"
+                  className="ml-2 p-2.5 text-sm font-medium text-white bg-sky-600 rounded-full border hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 flex items-center justify-center cursor-pointer"
+                >
+                  {editingMessageId ? (
+                    "Save"
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="m-2 md:mx-0 md:mt-12 h-16" />
+          )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
