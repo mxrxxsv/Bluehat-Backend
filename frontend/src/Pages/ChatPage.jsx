@@ -720,7 +720,7 @@ const ChatPage = () => {
       <aside
         ref={sidebarRef}
         // duration-300
-        className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white/20 backdrop-blur-md border border-white/30 md:bg-[#f4f6f6] ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`absolute top-50 md:top-48 left-0 z-10 w-full md:w-65 h-134 transition-transform bg-white/20 backdrop-blur-md md:bg-[#f4f6f6] border-r border-gray-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
           } overflow-hidden h-[600px] md:h-[500px]`}
         aria-label="Sidebar"
       >
