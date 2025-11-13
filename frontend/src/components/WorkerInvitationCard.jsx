@@ -76,7 +76,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
 
       setShowInviteModal(false);
       setInviteMessage("");
-  setProposedRate("");
+      setProposedRate("");
       onInviteSent?.();
 
       setFeedback({
@@ -126,7 +126,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
               className="text-left"
               title="View profile"
             >
-              <h3 className="text-lg font-semibold text-[#545454] flex items-center gap-2 hover:underline">
+              <h3 className="text-lg font-semibold text-[#545454] flex items-center gap-2 hover:underline cursor-pointer">
                 <User className="w-5 h-5 text-blue-500" />
                 {worker.firstName} {worker.lastName}
               </h3>
@@ -198,7 +198,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
           {(worker.availability || worker.status) && (
             <span
               className={
-                "font-medium px-2 py-1 rounded-full " +
+                "font-medium px-2 py-1 rounded-full text-xs " +
                 (isBusy
                   ? "bg-red-50 text-red-600 border border-red-200"
                   : "bg-green-100 text-green-600")
@@ -239,7 +239,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
 
       {/* Invite Modal */}
       {showInviteModal && (
-  <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] p-4">
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               Invite {worker.firstName} {worker.lastName}
@@ -313,7 +313,7 @@ const WorkerInvitationCard = ({ worker, jobId, onInviteSent, jobPrice }) => {
 
       {/* Feedback Modal */}
       {feedback.show && (
-  <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] transition-opacity duration-300 animate-fadeIn">
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] transition-opacity duration-300 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center transform transition-transform duration-300 scale-100 animate-scaleIn">
             <div className="flex flex-col items-center gap-3">
               {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}
