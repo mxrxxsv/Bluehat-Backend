@@ -182,8 +182,10 @@ const JobDetails = () => {
                       : "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
                 }
                 alt={job.client?.name || "Client Avatar"}
-                className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                onClick={goToClientProfile}
+                className={`w-8 h-8 rounded-full object-cover ${currentUser ? 'cursor-pointer' : 'cursor-default'}`}
+                onClick={currentUser ? goToClientProfile : undefined}
+                title={currentUser ? 'View client profile' : 'Log in to view profile'}
+                aria-disabled={!currentUser}
               />
               <span className="text-md md:text-base font-bold text-[#252525]">
                 {job.client?.name || "Client Name"}
