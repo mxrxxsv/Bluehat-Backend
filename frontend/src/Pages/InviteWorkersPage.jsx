@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Filter, MapPin, Star, ArrowLeft, X, Briefcase, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Star, ArrowLeft, X, Briefcase, SlidersHorizontal } from "lucide-react";
 import Header from "../components/Header";
 import WorkerInvitationCard from "../components/WorkerInvitationCard";
 import { getProfile } from "../api/profile";
@@ -21,10 +21,9 @@ const InviteWorkersPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState({
     location: "",
-    minRating: "",
-    experienceLevel: "",
-    availability: "",
   });
+  // Sort options similar to FindWork (no ascending/descending toggle)
+  const [sortBy, setSortBy] = useState("rating"); // rating | reviews
   const [locationInput, setLocationInput] = useState("");
 
   // FindWork-like filters UI state
@@ -266,7 +265,7 @@ const InviteWorkersPage = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [searchTerm, filters, workers]);
+  }, [searchTerm, filters, sortBy, workers]);
 
   // Handlers similar to FindWork page
   const handleSearchKeyDown = (e) => {
@@ -302,29 +301,32 @@ const InviteWorkersPage = () => {
       );
     }
 
-    // Filter by minimum rating
-    if (filters.minRating) {
-      const min = parseFloat(filters.minRating);
-      filtered = filtered.filter((w) => {
-        const rating = Number(w?.rating ?? 0);
-        const total = Number(w?.totalRatings ?? 0);
-        // When filtering by rating, exclude unrated workers (totalRatings === 0)
-        return total > 0 && rating >= min;
+    // Sorting (fixed to descending semantics where applicable)
+    const by = String(sortBy || "rating");
+    if (by === "rating") {
+      filtered.sort((a, b) => {
+        const ra = Number(a?.rating || 0);
+        const rb = Number(b?.rating || 0);
+        if (rb !== ra) return rb - ra; // desc
+        const ca = Number(a?.totalRatings || 0);
+        const cb = Number(b?.totalRatings || 0);
+        return cb - ca; // tie-breaker by reviews desc
       });
-    }
-
-    // Filter by experience level
-    if (filters.experienceLevel) {
-      filtered = filtered.filter(
-        (worker) => worker.experienceLevel === filters.experienceLevel
-      );
-    }
-
-    // Filter by availability
-    if (filters.availability) {
-      filtered = filtered.filter(
-        (worker) => worker.availability === filters.availability
-      );
+    } else if (by === "reviews") {
+      filtered.sort((a, b) => {
+        const ca = Number(a?.totalRatings || 0);
+        const cb = Number(b?.totalRatings || 0);
+        if (cb !== ca) return cb - ca; // desc
+        const ra = Number(a?.rating || 0);
+        const rb = Number(b?.rating || 0);
+        return rb - ra; // tie-breaker by rating desc
+      });
+    } else if (by === "name") {
+      filtered.sort((a, b) => {
+        const na = (a?.nameText ?? `${a?.firstName || ""} ${a?.lastName || ""}`.trim().toLowerCase());
+        const nb = (b?.nameText ?? `${b?.firstName || ""} ${b?.lastName || ""}`.trim().toLowerCase());
+        return na.localeCompare(nb);
+      });
     }
 
     setFilteredWorkers(filtered);
@@ -462,44 +464,25 @@ const InviteWorkersPage = () => {
                     Apply
                   </button>
                 </div>
-                <select
-                  value={filters.minRating}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="4.5">4.5+ Stars</option>
-                  <option value="5">5 Stars</option>
-                </select>
-                <select
-                  value={filters.experienceLevel}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Experience</option>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                  <option value="Expert">Expert</option>
-                </select>
-                <select
-                  value={filters.availability}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
-                >
-                  <option value="">Any Availability</option>
-                  <option value="Available">Available</option>
-                  <option value="Busy">Busy</option>
-                  <option value="Part-time">Part-time</option>
-                </select>
-                {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
+                {/* Sorting (no asc/desc toggle) */}
+                <div className="flex gap-3 flex-wrap mb-3">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
+                  >
+                    <option value="rating">Rating</option>
+                    <option value="reviews">Total Reviews</option>
+                  </select>
+                </div>
+                {(filters.location || searchTerm || sortBy !== "rating") && (
                   <button
                     onClick={() => {
                       setSearchTerm("");
                       setSearchInput("");
                       setLocationInput("");
-                      setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                      setFilters({ location: "" });
+                      setSortBy("rating");
                     }}
                     className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
                   >
@@ -561,50 +544,24 @@ const InviteWorkersPage = () => {
                     </div>
                     <div className="mb-3">
                       <select
-                        value={filters.minRating}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, minRating: e.target.value }))}
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
                         className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
                       >
-                        <option value="">Any Rating</option>
-                        <option value="4">4+ Stars</option>
-                        <option value="4.5">4.5+ Stars</option>
-                        <option value="5">5 Stars</option>
-                      </select>
-                    </div>
-                    <div className="mb-3">
-                      <select
-                        value={filters.experienceLevel}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, experienceLevel: e.target.value }))}
-                        className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      >
-                        <option value="">Any Experience</option>
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                        <option value="Expert">Expert</option>
-                      </select>
-                    </div>
-                    <div className="mb-3">
-                      <select
-                        value={filters.availability}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, availability: e.target.value }))}
-                        className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      >
-                        <option value="">Any Availability</option>
-                        <option value="Available">Available</option>
-                        <option value="Busy">Busy</option>
-                        <option value="Part-time">Part-time</option>
+                        <option value="rating">Rating</option>
+                        <option value="reviews">Total Reviews</option>
                       </select>
                     </div>
                   </>
                 )}
-                {(filters.location || filters.minRating || filters.experienceLevel || filters.availability || searchTerm) && (
+                {(filters.location || searchTerm || sortBy !== "rating") && (
                   <button
                     onClick={() => {
                       setSearchTerm("");
                       setSearchInput("");
                       setLocationInput("");
-                      setFilters({ location: "", minRating: "", experienceLevel: "", availability: "" });
+                      setFilters({ location: "" });
+                      setSortBy("rating");
                     }}
                     className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
                   >
@@ -637,7 +594,6 @@ const InviteWorkersPage = () => {
                         className="w-8 h-8 rounded-full object-cover cursor-pointer"
                         onClick={goToClientProfile}
                       />
-
                       <span
                         onClick={goToClientProfile}
                         className="text-md font-bold text-[#252525] cursor-pointer"

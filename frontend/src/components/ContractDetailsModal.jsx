@@ -349,17 +349,23 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
             <div className="space-y-8">
               {/* Basic Contract Info */}
               <div className="bg-gray-50 rounded-lg p-4 md:p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="text-left">
+                {/* On mobile, show status badge above; on desktop, content first and badge to the right with spacing */}
+                <div className="flex flex-col md:flex-row md:items-start md:justify-start md:gap-4 mb-4">
+                  {/* Status badge first on mobile; second on desktop with left margin for spacing */}
+                  <div className="order-1 md:order-2 mb-3 md:mb-0 self-start md:self-auto md:ml-6">
+                    {getStatusBadge(getContract()?.contractStatus)}
+                  </div>
+                  {/* Main content fills below on mobile */}
+                  <div className="order-2 md:order-1 text-left w-full md:flex-1">
                     <h3 className="text-lg md:text-xl font-semibold text-[#545454] mb-2">
                       {getContract()?.jobId?.title ||
                         getContract()?.jobId?.description ||
                         "Contract Work"}
                     </h3>
-                    <p className="text-gray-600 mb-3 text-sm md:text-base">
+                    {/* <p className="text-gray-600 mb-3 text-sm md:text-base">
                       {getContract()?.jobId?.description ||
                         "No description available"}
-                    </p>
+                    </p> */}
                     <div className="flex items-start gap-3 md:gap-4 text-sm text-gray-600 mb-3 flex-col md:flex-row">
                       <div className="flex items-center gap-1">
                         <span className="font-medium">
@@ -380,7 +386,6 @@ const ContractDetailsModal = ({ contractId, isOpen, onClose }) => {
                       )}
                     </div>
                   </div>
-                  {getStatusBadge(getContract()?.contractStatus)}
                 </div>
 
                 {/* Contract Timeline */}
