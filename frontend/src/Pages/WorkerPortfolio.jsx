@@ -351,9 +351,9 @@ const WorkerPortfolio = () => {
                     : "bg-[#55b3f3] hover:bg-sky-500")
                 }
               >
-                <Send className="w-4 h-4 mt-1 mr-2" /> 
+                <Send className="w-4 h-4 mt-1 mr-2" />
                 Invite Worker
-                
+
               </button>
             )}
 
@@ -755,8 +755,41 @@ const WorkerPortfolio = () => {
                   setInviteFeedback({ show: true, message: "Invitation sent successfully!" });
                 } catch (err) {
                   console.error("[WorkerPortfolio] Invite flow failed", err);
-                  const msg = err?.response?.data?.message || err?.message || "Something went wrong.";
-                  setInviteFeedback({ show: true, message: msg });
+
+                  // Parse backend error structure (see backend/controllers/job.controller.js)
+                  // - Validation errors: { success:false, message:"Validation error", code: "VALIDATION_ERROR", errors: [{ field, message, value }] }
+                  // - Duplicate / other errors: { success:false, message, code: "DUPLICATE_ERROR" }
+                  // - Generic server error: { success:false, message, code: "JOB_ERROR" }
+                  let userMessage = "Something went wrong.";
+
+                  if (err?.response && err.response.data) {
+                    const data = err.response.data;
+
+                    // Validation error -> show field messages if available
+                    if (data.code === "VALIDATION_ERROR" && Array.isArray(data.errors) && data.errors.length > 0) {
+                      const fieldMsgs = data.errors.map((e) => {
+                        if (e && e.field && e.message) return `${e.field}: ${e.message}`;
+                        if (e && e.message) return e.message;
+                        return JSON.stringify(e);
+                      });
+                      userMessage = fieldMsgs.join("; ") || data.message || "Validation error";
+                    } else if (data.message && data.code) {
+                      // Known error with a code (e.g., duplicate)
+                      userMessage = data.message;
+                      // Show code in dev to aid debugging
+                      if (process.env.NODE_ENV !== "production") userMessage += ` (${data.code})`;
+                    } else if (data.message) {
+                      userMessage = data.message;
+                    }
+                  } else if (err.request) {
+                    // Request sent but no response (network/server unreachable)
+                    userMessage = "Network error: failed to reach server. Please check your connection and try again.";
+                  } else if (err.message) {
+                    // Other errors
+                    userMessage = err.message;
+                  }
+
+                  setInviteFeedback({ show: true, message: userMessage });
                 } finally {
                   setSendingInvite(false);
                 }

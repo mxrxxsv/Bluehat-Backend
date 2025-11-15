@@ -83,8 +83,8 @@ const FindWork = () => {
 
   const [showIdSetup, setShowIdSetup] = useState(false);
 
-  // NEW: UI-styled alert/validation modal
-  const [alertModal, setAlertModal] = useState({ open: false, title: "", message: "" });
+  // NEW: UI-styled feedback modal (matches WorkerPortfolio)
+  const [feedback, setFeedback] = useState({ show: false, message: "" });
 
   // NEW: Reset form helper
   const resetForm = () => {
@@ -267,31 +267,29 @@ const FindWork = () => {
     e.preventDefault();
 
     // Client-side validation aligned with backend rules (Joi):
-    const errs = [];
     const desc = (newJob.description || '').trim();
     const loc = (newJob.location || '').trim();
     const priceNum = Number(newJob.priceOffer);
 
-    if (!desc) errs.push("Description is required.");
-    if (desc && desc.length < 20) errs.push("Description must be at least 20 characters.");
-
-    if (!loc) errs.push("Location is required.");
-    if (loc && loc.length < 2) errs.push("Location must be at least 2 characters.");
-
-    if (!selectedCategory) errs.push("Category is required.");
-
-    if (newJob.priceOffer === '' || newJob.priceOffer === null || Number.isNaN(priceNum)) {
-      errs.push("Price is required and must be a valid number.");
-    } else if (priceNum < 0) {
-      errs.push("Price cannot be negative.");
+    // If any required field is missing, show a generic message (WorkerPortfolio style)
+    const missingRequired = !desc || !loc || !selectedCategory || newJob.priceOffer === '' || newJob.priceOffer === null;
+    if (missingRequired) {
+      setFeedback({ show: true, message: 'Please complete the job details.' });
+      return;
     }
 
+    // Additional validations (lengths, numeric constraints). We collect these but show only the first problem.
+    const errs = [];
+    if (desc.length < 20) errs.push('Description must be at least 20 characters.');
+    if (loc.length < 2) errs.push('Location must be at least 2 characters.');
+    if (Number.isNaN(priceNum)) errs.push('Price must be a valid number.');
+    else if (priceNum < 0) errs.push('Price cannot be negative.');
+
     if (errs.length) {
-      setAlertModal({
-        open: true,
-        title: "Validation failed",
-        message: errs.map((m) => `• ${m}`).join("\n"),
-      });
+      const first = errs[0];
+      const moreCount = errs.length - 1;
+      const message = moreCount > 0 ? `${first} (and ${moreCount} more)` : first;
+      setFeedback({ show: true, message });
       return;
     }
 
@@ -315,32 +313,38 @@ const FindWork = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
-      const data = error?.response?.data;
-      let title = data?.code === 'VALIDATION_ERROR' ? 'Validation failed' : 'Failed to post job';
-      let details = [];
 
-      if (data?.code === 'VALIDATION_ERROR' && Array.isArray(data?.errors)) {
-        details = data.errors.map((e) => `• ${e.field}: ${e.message}`);
-      } else if (data?.code === 'INAPPROPRIATE_CONTENT') {
-        const reason = data?.reason ? `\nReason: ${data.reason}` : '';
-        details = [
-          `• ${data?.message || 'Content does not meet our community guidelines.'}${reason}`,
-        ];
-      } else if (typeof data?.message === 'string') {
-        details = [
-          `• ${data.message}`,
-        ];
-      } else {
-        details = [
-          '• Something went wrong while posting your job. Please try again.',
-        ];
+      // Match WorkerPortfolio parsing and produce a concise single message
+      let userMessage = "Something went wrong.";
+
+      if (error?.response && error.response.data) {
+        const data = error.response.data;
+
+        if (data.code === 'VALIDATION_ERROR' && Array.isArray(data.errors) && data.errors.length > 0) {
+          // Show only the first server validation error to avoid overwhelming the user
+          const firstErr = data.errors[0];
+          let firstMsg = '';
+          if (firstErr && firstErr.field && firstErr.message) firstMsg = `${firstErr.field}: ${firstErr.message}`;
+          else if (firstErr && firstErr.message) firstMsg = firstErr.message;
+          else firstMsg = JSON.stringify(firstErr);
+          if (data.errors.length > 1) firstMsg += ` (and ${data.errors.length - 1} more)`;
+          userMessage = firstMsg || data.message || 'Validation error';
+        } else if (data.code === 'INAPPROPRIATE_CONTENT') {
+          const reason = data?.reason ? ` Reason: ${data.reason}` : '';
+          userMessage = `${data?.message || 'Content does not meet our community guidelines.'}${reason}`;
+        } else if (data.code === 'DUPLICATE_ERROR') {
+          userMessage = data.message || 'A similar job already exists.';
+        } else if (data.message) {
+          userMessage = data.message;
+          if (data.code && process.env.NODE_ENV !== 'production') userMessage += ` (${data.code})`;
+        }
+      } else if (error.request) {
+        userMessage = 'Network error: failed to reach server. Please check your connection and try again.';
+      } else if (error.message) {
+        userMessage = error.message;
       }
 
-      setAlertModal({
-        open: true,
-        title,
-        message: details.join('\n'),
-      });
+      setFeedback({ show: true, message: userMessage });
     }
   };
 
@@ -940,29 +944,15 @@ const FindWork = () => {
         )}
 
       {/* Validation/Alert Modal (portaled) */}
-      {alertModal.open &&
+      {feedback.show &&
         createPortal(
-          <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]" role="dialog" aria-modal="true">
-            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {alertModal.title || "Notice"}
-                </h3>
+          <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000]">
+            <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center">
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-gray-700 text-base font-medium whitespace-pre-line">{feedback.message}</p>
                 <button
-                  type="button"
-                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                  className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+                  onClick={() => setFeedback({ show: false, message: "" })}
+                  className="mt-3 px-5 py-2 bg-[#55b3f3] text-white rounded-lg hover:bg-sky-600 transition-colors"
                 >
                   OK
                 </button>
