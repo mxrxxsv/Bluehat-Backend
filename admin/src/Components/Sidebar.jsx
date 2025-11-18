@@ -280,24 +280,6 @@ const Sidebar = () => {
               </Link>
             </li>
 
-            {/* Reports */}
-            <li>
-              <Link
-                to="/reports"
-                className="flex items-center p-2 text-gray-900 rounded-lg  group hover:border-blue-300 hover:border-l-4"
-              >
-                <svg
-                  className="w-5 h-5 text-[#55b3f3]"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M4 2a2 2 0 0 0-2 2v12c0 1.103.897 2 2 2h12a2 2 0 0 0 2-2V7.828a2 2 0 0 0-.586-1.414l-3.828-3.828A2 2 0 0 0 12.172 2H4Zm5 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1ZM5 11a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Zm0 3a1 1 0 0 1 1-1h3a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z" />
-                </svg>
-                <span className="flex-1 ms-3 whitespace-nowrap">Reports</span>
-              </Link>
-            </li>
-
             {/* ✅ Logout */}
             <li>
               <button

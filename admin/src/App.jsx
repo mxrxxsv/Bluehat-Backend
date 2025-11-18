@@ -9,7 +9,6 @@ import Job from "./Pages/Job";
 import ClientManagement from "./Pages/ClientManagement";
 import WorkerManagement from "./Pages/WorkerManagement";
 import Verification from "./Pages/Verification";
-import Report from "./Pages/Report";
 
 function App() {
   const location = useLocation();
@@ -83,15 +82,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Verification />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute>
-                <Report />
               </ProtectedRoute>
             }
           />

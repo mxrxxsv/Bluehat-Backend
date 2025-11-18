@@ -28,7 +28,6 @@ const workerManagementRoute = require("./routes/workerManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification.route");
 const messageRoute = require("./routes/message.route");
 const dashboardRoutes = require("./routes/dashboard.route");
-const reportRoute = require("./routes/report.route");
 
 // Hiring system routes
 const applicationRoute = require("./routes/jobApplication.route");
@@ -105,7 +104,6 @@ app.use("/client-management", clientManagementRoute);
 app.use("/worker-management", workerManagementRoute);
 app.use("/messages", messageRoute);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/reports", reportRoute);
 
 // Hiring system routes
 app.use("/applications", applicationRoute);
@@ -144,7 +142,7 @@ if (process.env.SERVE_FRONTEND === "true") {
     const hasFileExtension = path.extname(req.path) !== "";
 
     // Known API route prefixes to exclude from SPA fallback
-    const isApiRoute = /^\/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api\/dashboard|applications|invitations|contracts|job-management|reports)(\/|$)/.test(
+    const isApiRoute = /^\/(ver|admin|advertisement|jobs|workers|skills|profile|id-verification|client-management|worker-management|messages|api\/dashboard|applications|invitations|contracts|job-management)(\/|$)/.test(
       req.path
     );
 
