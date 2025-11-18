@@ -7,6 +7,8 @@ import {
   ChevronRight,
   Search,
   Filter,
+  MapPin,
+  Briefcase,
 } from "lucide-react";
 
 const Job = () => {
@@ -320,69 +322,112 @@ const Job = () => {
           )}
 
           {jobLoading ? (
-            <p className="text-gray-500">Loading jobs...</p>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+              {Array.from({ length: filters.limit }).map((_, i) => (
+                <div
+                  key={i}
+                  className="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm animate-pulse"
+                >
+                  <div className="flex justify-between mb-2">
+                    <div className="h-4 w-40 bg-gray-200 rounded" />
+                    <div className="h-8 w-8 bg-gray-200 rounded-lg" />
+                  </div>
+                  <div className="h-3 w-full bg-gray-100 rounded mb-2" />
+                  <div className="h-3 w-3/4 bg-gray-100 rounded mb-4" />
+                  <div className="flex flex-wrap gap-2">
+                    <div className="h-6 w-20 bg-gray-200 rounded-full" />
+                    <div className="h-6 w-28 bg-gray-200 rounded-full" />
+                    <div className="h-6 w-16 bg-gray-200 rounded-full" />
+                  </div>
+                  <div className="h-3 w-32 bg-gray-100 rounded mt-4" />
+                </div>
+              ))}
+            </div>
           ) : jobError ? (
             <p className="text-red-500">{jobError}</p>
           ) : jobs.length === 0 ? (
             <p className="text-gray-600">No jobs found.</p>
           ) : (
-            <ul className="space-y-3">
-              {jobs.map((job) => (
-                <li
-                  key={job.id}
-                  className="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition duration-200 relative"
-                >
-                  {/* Delete Button - Top Right */}
-                  <button
-                    onClick={() => openDeleteModal(job)}
-                    disabled={deleteLoading === job.id}
-                    className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200 cursor-pointer"
-                    title="Delete job post"
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+              {jobs.map((job) => {
+                const statusColors = {
+                  open: "bg-yellow-100 text-yellow-700",
+                  completed: "bg-green-100 text-green-700",
+                  in_progress: "bg-blue-100 text-blue-700",
+                  hired: "bg-purple-100 text-purple-700",
+                  cancelled: "bg-red-100 text-red-700",
+                };
+                return (
+                  <div
+                    key={job.id}
+                    className="p-5 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition relative group"
                   >
-                    {deleteLoading === job.id ? (
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    ) : (
-                      <Trash2 size={20} />
-                    )}
-                  </button>
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => openDeleteModal(job)}
+                      disabled={deleteLoading === job.id}
+                      className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                      title="Delete job post"
+                    >
+                      {deleteLoading === job.id ? (
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                      ) : (
+                        <Trash2 size={18} />
+                      )}
+                    </button>
 
-                  {/* Job Content */}
-                  <div className="pr-12">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                      {job.category?.name || "Unknown Category"}
-                    </h2>
-                    <p className="text-gray-600 mb-2">{job.description}</p>
-                    <div className="flex flex-wrap gap-2 text-sm text-gray-500 mt-3">
-                      <span className="px-3 py-1 bg-[#55b3f3] text-[#f4f6f6] rounded-full">
+                    {/* Header */}
+                    <div className="flex items-start gap-3 pr-10">
+                      <div className="w-10 h-10 rounded-full bg-[#55b3f3]/10 flex items-center justify-center">
+                        <Briefcase className="w-5 h-5 text-[#55b3f3]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-semibold text-gray-800 truncate">
+                          {job.category?.name || "Unknown Category"}
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Posted {new Date(job.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-gray-700 mt-3 line-clamp-2">
+                      {job.description || "No description provided."}
+                    </p>
+
+                    {/* Meta badges */}
+                    <div className="flex flex-wrap gap-2 mt-4 text-sm">
+                      <span className="px-3 py-1.5 rounded-full bg-[#55b3f3] text-white font-medium">
                         ₱{job.price?.toLocaleString() || "N/A"}
                       </span>
-                      <span className="px-3 py-1 border rounded-full">
-                        {job.location}
-                      </span>
+                      {job.location && (
+                        <span className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 flex items-center gap-1">
+                          <MapPin className="w-4 h-4" /> {job.location}
+                        </span>
+                      )}
                       <span
-                        className={`px-3 py-1 rounded-full ${
-                          job.status === "open"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : job.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : job.status === "in_progress"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-700"
+                        className={`px-3 py-1.5 rounded-full ${
+                          statusColors[job.status] || "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {job.status}
+                        {job.status || "unknown"}
                       </span>
                     </div>
-                    <p className="text-gray-500 text-sm mt-3">
-                      Posted by: {job.client?.name || "Unknown"}
-                    </p>
-                    <p className="text-gray-400 text-xs mt-1">
-                      {new Date(job.createdAt).toLocaleDateString()}
-                    </p>
+
+                    {/* Footer */}
+                    <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                      <span className="truncate">
+                        Client: {job.client?.name || "Unknown"}
+                      </span>
+                      <span className="opacity-70">
+                        ID: {job.id?.slice(-6) || "—"}
+                      </span>
+                    </div>
                   </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
 
           {/* Pagination Controls */}
