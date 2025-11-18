@@ -5,7 +5,7 @@ import connect from '../assets/connect.png';
 import desktopSrc from '../assets/desktop.png';
 import mobileSrc from '../assets/mobile.jpg';
 
-const DEMO_URL = "";
+const DEMO_URL = "https://youtu.be/Ca78O9dJT4Q";
 
 // Convert a YouTube link (watch, share, or embed) into an embeddable URL
 const toYouTubeEmbed = (url) => {

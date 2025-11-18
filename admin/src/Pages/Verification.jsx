@@ -89,7 +89,7 @@ const Verification = () => {
 
     try {
       setActionLoading(true);
-      await rejectVerification(selectedWorker._id, reason, true);
+      await rejectVerification(selectedWorker.credentialId, reason, true);
       setPendingVerifications((prev) =>
         prev.filter((w) => w._id !== selectedWorker._id)
       );
