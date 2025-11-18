@@ -72,8 +72,10 @@ const WorkerManagement = () => {
       const params = {
         page: currentPage,
         search: searchTerm.trim() || undefined,
-        status: statusFilter,
-        verification: verificationFilter,
+        // Backend expects `blockedStatus` for blocked/active/all
+        blockedStatus: statusFilter,
+        // Backend expects `verificationStatus` for verification filter
+        verificationStatus: verificationFilter,
         sortBy,
         order: sortOrder,
       };

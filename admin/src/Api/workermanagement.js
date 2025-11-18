@@ -43,11 +43,24 @@ export const getWorkers = async (params = {}) => {
     if (params.page) queryParams.append("page", params.page);
     if (params.limit) queryParams.append("limit", params.limit);
 
-    // Add filter parameters
+    // Add filter parameters (align with backend controller expectations)
     if (params.search) queryParams.append("search", params.search);
-    if (params.status) queryParams.append("status", params.status);
+
+    // Blocked status filter: expected by backend as `blockedStatus`
+    if (params.blockedStatus)
+      queryParams.append("blockedStatus", params.blockedStatus);
+
+    // Optional filters supported by backend
+    if (params.accountStatus)
+      queryParams.append("accountStatus", params.accountStatus);
+    if (params.workStatus)
+      queryParams.append("workStatus", params.workStatus);
+
+    // Verification status filter
     if (params.verificationStatus)
       queryParams.append("verificationStatus", params.verificationStatus);
+
+    // Sorting
     if (params.sortBy) queryParams.append("sortBy", params.sortBy);
     if (params.order) queryParams.append("order", params.order);
 
